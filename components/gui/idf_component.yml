@@ -1,0 +1,8 @@
+description: GUI menu
+url: https://github.com/nicolai-electronics/esp32-component-gui-menu
+repository: git://git@github.com:nicolai-electronics/esp32-component-gui-menu.git
+issues: https://github.com/nicolai-electronics/esp32-component-gui-menu/issues
+dependencies:
+  idf: ">=5.3"
+  robotman2412/pax-gfx: ^1.1.2
+license: "MIT"

@@ -1,0 +1,56 @@
+BasedOnStyle: Google
+CommentPragmas: '(@copydoc)'
+
+# Pointers
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+# Indents
+IndentWidth: 4
+TabWidth: 4
+UseTab: "Never"
+NamespaceIndentation: All
+IndentGotoLabels: true
+
+# Alignments
+AlignConsecutiveAssignments:
+  # The column at which the = starts is constant among a block of definitions.
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+  AlignCompound: true
+  PadOperators: true
+AlignConsecutiveBitFields:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+AlignConsecutiveDeclarations:
+  # The column at which the name starts is constant among a block of declarations / definitions.
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+AlignConsecutiveMacros:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+
+# Line breaks
+AlwaysBreakTemplateDeclarations: No
+AllowShortFunctionsOnASingleLine: None
+AllowShortEnumsOnASingleLine: false
+KeepEmptyLinesAtTheStartOfBlocks: true
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+ColumnLimit: 120
+
+# Includes
+IncludeBlocks: Merge

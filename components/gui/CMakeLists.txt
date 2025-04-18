@@ -1,0 +1,10 @@
+idf_component_register(
+	SRCS
+		gui_menu.c
+		gui_menu_render.c
+		gui_footer.c
+	INCLUDE_DIRS
+		"include"
+	REQUIRES
+		pax-gfx
+)

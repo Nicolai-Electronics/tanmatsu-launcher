@@ -1,0 +1,121 @@
+#include <stdio.h>
+#include "appfs.h"
+#include "bsp/device.h"
+#include "bsp/display.h"
+#include "bsp/input.h"
+#include "bsp/power.h"
+#include "chakrapetchmedium.h"
+#include "common/display.h"
+#include "coprocessor_management.h"
+#include "driver/gpio.h"
+#include "esp_lcd_panel_ops.h"
+#include "esp_lcd_types.h"
+#include "esp_log.h"
+#include "gui_footer.h"
+#include "gui_menu.h"
+#include "gui_style.h"
+#include "hal/lcd_types.h"
+#include "menu/home.h"
+#include "nvs_flash.h"
+#include "pax_fonts.h"
+#include "pax_gfx.h"
+#include "pax_text.h"
+#include "portmacro.h"
+#include "wifi_connection.h"
+#include "wifi_remote.h"
+
+// Constants
+static char const TAG[] = "main";
+
+// Global variables
+static QueueHandle_t input_event_queue = NULL;
+
+gui_theme_t theme = {
+    .palette =
+        {
+            .color_foreground          = 0xFF340132,  // #340132
+            .color_background          = 0xFFEEEAEE,  // #EEEAEE
+            .color_active_foreground   = 0xFF340132,  // #340132
+            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
+            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
+            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
+            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
+        },
+    .footer =
+        {
+            .height             = 32,
+            .vertical_margin    = 7,
+            .horizontal_margin  = 20,
+            .text_height        = 16,
+            .vertical_padding   = 20,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+        },
+    .header =
+        {
+            .height             = 32,
+            .vertical_margin    = 7,
+            .horizontal_margin  = 20,
+            .text_height        = 16,
+            .vertical_padding   = 20,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+        },
+    .menu =
+        {
+            .height             = 480 - 64,
+            .vertical_margin    = 20,
+            .horizontal_margin  = 30,
+            .text_height        = 16,
+            .vertical_padding   = 6,
+            .horizontal_padding = 6,
+            .text_font          = &chakrapetchmedium,
+        },
+};
+
+void app_main(void) {
+    // Initialize the Non Volatile Storage service
+    esp_err_t res = nvs_flash_init();
+    if (res == ESP_ERR_NVS_NO_FREE_PAGES || res == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        res = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(res);
+
+    // Initialize the Board Support Package
+    ESP_ERROR_CHECK(bsp_device_initialize());
+
+    ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
+
+    bsp_display_set_backlight_brightness(100);
+
+    display_init();
+
+    pax_buf_t* fb = display_get_buffer();
+    pax_background(fb, theme.palette.color_background);
+    gui_render_header(fb, &theme, "Starting...");
+    gui_render_footer(fb, &theme, "", "");
+    display_blit_buffer(fb);
+
+    coprocessor_flash();
+
+    if (wifi_remote_initialize() == ESP_OK) {
+        ESP_LOGI(TAG, "WiFi radio ready");
+        // screen_dialog_set_text("Initializing WiFi stack...");
+        wifi_connection_init_stack();
+        // xTaskCreate(wifi_connect_task, TAG, 1024 * 4, NULL, 10, NULL);
+    } else {
+        bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+        ESP_LOGE(TAG, "WiFi radio not responding, did you flash ESP-HOSTED firmware?");
+    }
+
+    res = appfsInit(APPFS_PART_TYPE, APPFS_PART_SUBTYPE);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize AppFS: %s", esp_err_to_name(res));
+        return;
+    }
+
+    pax_buf_t* buffer = display_get_buffer();
+
+    menu_home(buffer, &theme);
+}

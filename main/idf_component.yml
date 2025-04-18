@@ -1,0 +1,13 @@
+dependencies:
+  idf:
+    version: '>=5.3.0'
+  badgeteam/badge-bsp: ^0.1.1
+  robotman2412/pax-gfx: ^1.1.2
+  badgeteam/appfs:
+    version: ^1.0.0
+  nicolaielectronics/rvswd:
+    version: '>=0.2.0'
+    rules:
+    - if: target == esp32p4
+  badgeteam/custom-certificates: ^1.0.0
+  nicolaielectronics/wifi-manager: ^0.0.1
