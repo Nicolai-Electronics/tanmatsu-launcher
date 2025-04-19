@@ -7,10 +7,16 @@ idf_component_register(
 		"main.c"
 		"common/display.c"
 		"menu/home.c"
+		"menu/settings.c"
+		"menu/about.c"
+		"menu/wifi.c"
+		"menu/apps.c"
+		"menu/firmware_update.c"
 		"chakrapetchmedium.c"
 		"coprocessor_management.c"
 		"wifi_remote.c"
 		"wifi_ota.c"
+		"icons.c"
 	PRIV_REQUIRES
 		esp_lcd
 		fatfs
@@ -26,6 +32,8 @@ idf_component_register(
 		custom-certificates
 		wifi-manager
 		esp-tls
+		pax-gfx
+		pax-codecs
 	INCLUDE_DIRS
 		"."
 	EMBED_FILES

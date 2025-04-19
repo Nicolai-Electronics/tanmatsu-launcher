@@ -11,10 +11,13 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
 #include "esp_log.h"
+#include "esp_vfs_fat.h"
+#include "freertos/idf_additions.h"
 #include "gui_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "hal/lcd_types.h"
+#include "icons.h"
 #include "menu/home.h"
 #include "nvs_flash.h"
 #include "pax_fonts.h"
@@ -29,6 +32,7 @@ static char const TAG[] = "main";
 
 // Global variables
 static QueueHandle_t input_event_queue = NULL;
+static wl_handle_t   wl_handle         = WL_INVALID_HANDLE;
 
 gui_theme_t theme = {
     .palette =
@@ -63,15 +67,37 @@ gui_theme_t theme = {
         },
     .menu =
         {
-            .height             = 480 - 64,
-            .vertical_margin    = 20,
-            .horizontal_margin  = 30,
-            .text_height        = 16,
-            .vertical_padding   = 6,
-            .horizontal_padding = 6,
-            .text_font          = &chakrapetchmedium,
+            .height                = 480 - 64,
+            .vertical_margin       = 20,
+            .horizontal_margin     = 30,
+            .text_height           = 16,
+            .vertical_padding      = 6,
+            .horizontal_padding    = 6,
+            .text_font             = &chakrapetchmedium,
+            .list_entry_height     = 32,
+            .grid_horizontal_count = 4,
+            .grid_vertical_count   = 3,
         },
 };
+
+void startup_screen(const char* text) {
+    pax_buf_t* fb = display_get_buffer();
+    pax_background(fb, theme.palette.color_background);
+    gui_render_header(fb, &theme, text);
+    gui_render_footer(fb, &theme, "", "");
+    display_blit_buffer(fb);
+}
+
+static void wifi_task(void* pvParameters) {
+    if (wifi_remote_initialize() == ESP_OK) {
+        wifi_connection_init_stack();
+        wifi_connect_try_all();
+    } else {
+        bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+        ESP_LOGE(TAG, "WiFi radio not responding, did you flash ESP-HOSTED firmware?");
+    }
+    vTaskDelete(NULL);
+}
 
 void app_main(void) {
     // Initialize the Non Volatile Storage service
@@ -91,31 +117,37 @@ void app_main(void) {
 
     display_init();
 
-    pax_buf_t* fb = display_get_buffer();
-    pax_background(fb, theme.palette.color_background);
-    gui_render_header(fb, &theme, "Starting...");
-    gui_render_footer(fb, &theme, "", "");
-    display_blit_buffer(fb);
+    startup_screen("Mounting FAT filesystem...");
 
-    coprocessor_flash();
+    esp_vfs_fat_mount_config_t fat_mount_config = {
+        .format_if_mount_failed   = false,
+        .max_files                = 10,
+        .allocation_unit_size     = CONFIG_WL_SECTOR_SIZE,
+        .disk_status_check_enable = false,
+        .use_one_fat              = false,
+    };
 
-    if (wifi_remote_initialize() == ESP_OK) {
-        ESP_LOGI(TAG, "WiFi radio ready");
-        // screen_dialog_set_text("Initializing WiFi stack...");
-        wifi_connection_init_stack();
-        // xTaskCreate(wifi_connect_task, TAG, 1024 * 4, NULL, 10, NULL);
-    } else {
-        bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
-        ESP_LOGE(TAG, "WiFi radio not responding, did you flash ESP-HOSTED firmware?");
+    res = esp_vfs_fat_spiflash_mount_rw_wl("/int", "fat", &fat_mount_config, &wl_handle);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to mount FAT filesystem: %s", esp_err_to_name(res));
+        startup_screen("Error: Failed to mount FAT filesystem");
+        return;
     }
 
+    startup_screen("Initializing coprocessor...");
+    coprocessor_flash();
+
+    startup_screen("Mounting AppFS filesystem...");
     res = appfsInit(APPFS_PART_TYPE, APPFS_PART_SUBTYPE);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize AppFS: %s", esp_err_to_name(res));
         return;
     }
 
-    pax_buf_t* buffer = display_get_buffer();
+    xTaskCreate(wifi_task, TAG, 4096, NULL, 10, NULL);
 
+    load_icons();
+
+    pax_buf_t* buffer = display_get_buffer();
     menu_home(buffer, &theme);
 }

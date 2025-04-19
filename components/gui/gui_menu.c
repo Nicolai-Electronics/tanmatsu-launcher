@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "gui_style.h"
 
 void menu_initialize(menu_t* menu, char* title, pax_buf_t* icon) {
     menu->title             = title;
@@ -162,17 +163,17 @@ void menu_navigate_next(menu_t* menu) {
     menu->position          = (menu->position + 1) % menu->length;
 }
 
-void menu_navigate_previous_row(menu_t* menu, menu_style_t* style) {
+void menu_navigate_previous_row(menu_t* menu, gui_theme_t* theme) {
     int previous_position = menu->position;
-    for (size_t index = 0; index < style->grid_entry_count_x; index++) {
+    for (size_t index = 0; index < theme->menu.grid_horizontal_count; index++) {
         menu_navigate_previous(menu);
     }
     menu->previous_position = previous_position;
 }
 
-void menu_navigate_next_row(menu_t* menu, menu_style_t* style) {
+void menu_navigate_next_row(menu_t* menu, gui_theme_t* theme) {
     int previous_position = menu->position;
-    for (size_t index = 0; index < style->grid_entry_count_x; index++) {
+    for (size_t index = 0; index < theme->menu.grid_horizontal_count; index++) {
         menu_navigate_next(menu);
     }
     menu->previous_position = previous_position;

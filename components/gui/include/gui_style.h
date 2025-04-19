@@ -27,11 +27,24 @@ typedef struct {
     // Text properties
     int               text_height;
     const pax_font_t* text_font;
+
+    // List properties
+    int list_entry_height;
+
+    // Grid properties
+    int grid_horizontal_count;
+    int grid_vertical_count;
 } gui_element_style_t;
 
 typedef struct {
-    gui_palette_t       palette;  // Color palette
-    gui_element_style_t footer;
-    gui_element_style_t header;
-    gui_element_style_t menu;
+    bool visible;
+    int  width;
+} gui_scrollbar_style_t;
+
+typedef struct {
+    gui_palette_t         palette;  // Color palette
+    gui_element_style_t   footer;
+    gui_element_style_t   header;
+    gui_element_style_t   menu;
+    gui_scrollbar_style_t scrollbar;
 } gui_theme_t;

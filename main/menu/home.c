@@ -1,4 +1,5 @@
 #include "home.h"
+#include <string.h>
 #include "appfs.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
@@ -8,16 +9,19 @@
 #include "gui_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
+#include "icons.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
+#include "settings.h"
+// #include "shapes/pax_misc.h"
+#include "apps.h"
 #include "wifi_ota.h"
 
 typedef enum {
     ACTION_NONE,
     ACTION_APPS,
     ACTION_REPOSITORY,
-    ACTION_FIRMWARE_UPDATE,
     ACTION_SETTINGS,
     ACTION_LAST,
 } menu_home_action_t;
@@ -71,31 +75,13 @@ static bool populate_menu_from_appfs_entries(menu_t* menu) {
     return !empty;
 }
 
-static void firmware_update_callback(const char* status_text) {
-    printf("OTA status changed: %s\r\n", status_text);
-    pax_buf_t* fb = display_get_buffer();
-
-    pax_draw_rect(fb, 0xFFEEEAEE, 0, 65, fb->width, 32);
-    pax_draw_text(fb, 0xFF340132, &chakrapetchmedium, 16, 20, 70, status_text);
-    display_blit_buffer(fb);
-}
-
-static void start_firmware_update(gui_theme_t* theme) {
-    pax_buf_t* fb = display_get_buffer();
-    pax_background(fb, theme->palette.color_background);
-    gui_render_header(fb, theme, "Firmware update");
-    gui_render_footer(fb, theme, "", "");
-    display_blit_buffer(fb);
-    ota_update("https://ota.tanmatsu.cloud/latest.bin", firmware_update_callback);
-}
-
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
     switch (action) {
-        case ACTION_SETTINGS:
-            // menu_settings(fb);
+        case ACTION_APPS:
+            menu_apps(fb, theme);
             break;
-        case ACTION_FIRMWARE_UPDATE:
-            start_firmware_update(theme);
+        case ACTION_SETTINGS:
+            menu_settings(fb, theme);
             break;
         default:
             break;
@@ -111,17 +97,19 @@ static void execute_app(launcher_app_t* app) {
     }
 }
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, menu_style_t* menu_style, pax_vec2_t position,
-                   bool partial) {
+static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial) {
     if (!partial) {
         pax_background(buffer, theme->palette.color_background);
-        gui_render_header(buffer, theme, "Home");
+        // gui_render_header(buffer, theme, "Home");
+        gui_render_header_adv(buffer, theme, &((gui_icontext_t){get_icon(ICON_HOME), "Home"}), 1);
         // gui_render_footer(buffer, theme, "↑ / ↓ / ← / → Navigate   🅰 Start");
-        gui_render_footer(buffer, theme, "▵ Keyboard backlight ▫ Display backlight ◇ USB mode",
-                          "↑ / ↓ / ← / → Navigate ⏎ Select");
+        // gui_render_footer(buffer, theme, "    Settings    USB mode", "↑ / ↓ / ← / → Navigate ⏎ Select");
+        gui_render_footer_adv(buffer, theme,
+                              ((gui_icontext_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2,
+                              "↑ / ↓ / ← / → Navigate ⏎ Select");
         // ❌▵▫○𑗘◇
     }
-    menu_render_grid(buffer, menu, position, menu_style, theme, partial);
+    menu_render_grid(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
 }
 
@@ -157,12 +145,11 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
 
     menu_t menu = {0};
     menu_initialize(&menu, "Home", NULL);
-    menu_insert_item(&menu, "Apps", NULL, (void*)ACTION_APPS, -1);
-    menu_insert_item(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1);
-    menu_insert_item(&menu, "Firmware update", NULL, (void*)ACTION_FIRMWARE_UPDATE, -1);
-    menu_insert_item(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1);
-
-    populate_menu_from_appfs_entries(&menu);
+    // populate_menu_from_appfs_entries(&menu);
+    menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
+    // menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_TAG));
+    // menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
+    // menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
@@ -174,24 +161,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
         .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
     };
 
-    menu_style_t menu_style = {
-        .entry_height       = 32,
-        .text_height        = 18,
-        .fgColor            = 0xFF000000,
-        .bgColor            = 0xFFFFFF00,
-        .bgTextColor        = 0xFF000000,
-        .selectedItemColor  = 0xFFfec859,
-        .borderColor        = 0xFF491d88,
-        .scrollbarBgColor   = 0xFFCCCCCC,
-        .scrollbarFgColor   = 0xFF555555,
-        .scrollbar          = false,
-        .font               = pax_font_saira_regular,
-        .grid_entry_count_x = 4,
-        .grid_entry_count_y = 3,
-    };
-    memcpy(&menu_style.palette, &theme->palette, sizeof(gui_palette_t));
-
-    render(buffer, theme, &menu, &menu_style, position, false);
+    render(buffer, theme, &menu, position, false);
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, portMAX_DELAY) == pdTRUE) {
@@ -199,30 +169,39 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                 case INPUT_EVENT_TYPE_NAVIGATION: {
                     if (event.args_navigation.state) {
                         switch (event.args_navigation.key) {
-                            case BSP_INPUT_NAVIGATION_KEY_F2:
-                                keyboard_backlight();
+                            case BSP_INPUT_NAVIGATION_KEY_F4:
+                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
+                                    keyboard_backlight();
+                                } else {
+                                    toggle_usb_mode();
+                                }
                                 break;
-                            case BSP_INPUT_NAVIGATION_KEY_F3:
-                                display_backlight();
+                            case BSP_INPUT_NAVIGATION_KEY_F5:
+                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
+                                    display_backlight();
+                                } else {
+                                    menu_settings(buffer, theme);
+                                    render(buffer, theme, &menu, position, false);
+                                }
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F6:
                                 toggle_usb_mode();
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_LEFT:
                                 menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, &menu_style, position, true);
+                                render(buffer, theme, &menu, position, true);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RIGHT:
                                 menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, &menu_style, position, true);
+                                render(buffer, theme, &menu, position, true);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
-                                menu_navigate_previous_row(&menu, &menu_style);
-                                render(buffer, theme, &menu, &menu_style, position, true);
+                                menu_navigate_previous_row(&menu, theme);
+                                render(buffer, theme, &menu, position, true);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_DOWN:
-                                menu_navigate_next_row(&menu, &menu_style);
-                                render(buffer, theme, &menu, &menu_style, position, true);
+                                menu_navigate_next_row(&menu, theme);
+                                render(buffer, theme, &menu, position, true);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
@@ -231,7 +210,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 } else {
                                     execute_action(buffer, (menu_home_action_t)arg, theme);
                                 }
-                                render(buffer, theme, &menu, &menu_style, position, false);
+                                render(buffer, theme, &menu, position, false);
                                 break;
                             }
                             default:
