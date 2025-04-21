@@ -25,16 +25,14 @@ typedef struct _menu_item {
 } menu_item_t;
 
 typedef struct menu {
-    // Header
-    char*        title;
-    pax_buf_t*   icon;
     menu_item_t* firstItem;
     size_t       length;
+    size_t       navigation_position;
     size_t       position;
     size_t       previous_position;
 } menu_t;
 
-void         menu_initialize(menu_t* menu, char* title, pax_buf_t* icon);
+void         menu_initialize(menu_t* menu);
 void         menu_free(menu_t* menu);
 menu_item_t* menu_find_item(menu_t* menu, size_t position);
 menu_item_t* menu_find_last_item(menu_t* menu);

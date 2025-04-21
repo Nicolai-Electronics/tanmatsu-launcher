@@ -1,22 +1,27 @@
 #include "home.h"
 #include <string.h>
+#include <time.h>
 #include "appfs.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
-#include "chakrapetchmedium.h"
 #include "common/display.h"
 #include "freertos/idf_additions.h"
+#include "freertos/projdefs.h"
 #include "gui_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "menu/message_dialog.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
 #include "settings.h"
 // #include "shapes/pax_misc.h"
 #include "apps.h"
-#include "wifi_ota.h"
+#include "charging_mode.h"
+#include "icons.h"
+#include "sdcard.h"
+#include "usb_device.h"
 
 typedef enum {
     ACTION_NONE,
@@ -97,17 +102,14 @@ static void execute_app(launcher_app_t* app) {
     }
 }
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial) {
-    if (!partial) {
-        pax_background(buffer, theme->palette.color_background);
-        // gui_render_header(buffer, theme, "Home");
-        gui_render_header_adv(buffer, theme, &((gui_icontext_t){get_icon(ICON_HOME), "Home"}), 1);
-        // gui_render_footer(buffer, theme, "↑ / ↓ / ← / → Navigate   🅰 Start");
-        // gui_render_footer(buffer, theme, "    Settings    USB mode", "↑ / ↓ / ← / → Navigate ⏎ Select");
-        gui_render_footer_adv(buffer, theme,
-                              ((gui_icontext_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2,
-                              "↑ / ↓ / ← / → Navigate ⏎ Select");
-        // ❌▵▫○𑗘◇
+// ❌▵▫○𑗘◇
+static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
+    if (!partial || icons) {
+        render_base_screen_statusbar(
+            buffer, theme, !partial, !partial || icons, !partial,
+            ((gui_header_field_t[]){{get_icon(ICON_HOME), "Home"}}), 1,
+            ((gui_header_field_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2,
+            ((gui_header_field_t[]){{NULL, "↑ / ↓ / ← / → Navigate ⏎ Select"}}), 1);
     }
     menu_render_grid(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
@@ -136,7 +138,11 @@ static void display_backlight(void) {
 }
 
 static void toggle_usb_mode(void) {
-    // ...
+    if (usb_mode_get() == USB_DEVICE) {
+        usb_mode_set(USB_DEBUG);
+    } else {
+        usb_mode_set(USB_DEVICE);
+    }
 }
 
 void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
@@ -144,7 +150,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
     menu_t menu = {0};
-    menu_initialize(&menu, "Home", NULL);
+    menu_initialize(&menu);
     // populate_menu_from_appfs_entries(&menu);
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
     // menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_TAG));
@@ -161,10 +167,12 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
         .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
     };
 
-    render(buffer, theme, &menu, position, false);
+    bool power_button_latch = false;
+
+    render(buffer, theme, &menu, position, false, true);
     while (1) {
         bsp_input_event_t event;
-        if (xQueueReceive(input_event_queue, &event, portMAX_DELAY) == pdTRUE) {
+        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
             switch (event.type) {
                 case INPUT_EVENT_TYPE_NAVIGATION: {
                     if (event.args_navigation.state) {
@@ -181,7 +189,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                     display_backlight();
                                 } else {
                                     menu_settings(buffer, theme);
-                                    render(buffer, theme, &menu, position, false);
+                                    render(buffer, theme, &menu, position, false, true);
                                 }
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F6:
@@ -189,19 +197,19 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_LEFT:
                                 menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, position, true);
+                                render(buffer, theme, &menu, position, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RIGHT:
                                 menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, position, true);
+                                render(buffer, theme, &menu, position, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous_row(&menu, theme);
-                                render(buffer, theme, &menu, position, true);
+                                render(buffer, theme, &menu, position, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_DOWN:
                                 menu_navigate_next_row(&menu, theme);
-                                render(buffer, theme, &menu, position, true);
+                                render(buffer, theme, &menu, position, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
@@ -210,18 +218,44 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 } else {
                                     execute_action(buffer, (menu_home_action_t)arg, theme);
                                 }
-                                render(buffer, theme, &menu, position, false);
+                                render(buffer, theme, &menu, position, false, true);
                                 break;
                             }
+                            case BSP_INPUT_NAVIGATION_KEY_F2:
+                                test_sd();
+                                break;
                             default:
                                 break;
                         }
                     }
                     break;
                 }
+                case INPUT_EVENT_TYPE_ACTION:
+                    switch (event.args_action.type) {
+                        case BSP_INPUT_ACTION_TYPE_POWER_BUTTON:
+                            printf("Power button event! %u\r\n", event.args_action.state);
+                            if (event.args_action.state) {
+                                power_button_latch = true;
+                            } else if (power_button_latch) {
+                                power_button_latch = false;
+                                charging_mode(buffer, theme);
+                                render(buffer, theme, &menu, position, false, true);
+                            }
+                        case BSP_INPUT_ACTION_TYPE_SD_CARD:
+                            printf("SD card event! %u\r\n", event.args_action.state);
+                            break;
+                        case BSP_INPUT_ACTION_TYPE_AUDIO_JACK:
+                            printf("Audio jack event! %u\r\n", event.args_action.state);
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
                 default:
                     break;
             }
+        } else {
+            render(buffer, theme, &menu, position, true, true);
         }
     }
 }

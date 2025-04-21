@@ -1,0 +1,7 @@
+description: Timezone management
+url: https://github.com/nicolai-electronics/esp32-component-timezone
+repository: git://git@github.com:nicolai-electronics/esp32-component-timezone.git
+issues: https://github.com/nicolai-electronics/esp32-component-timezone/issues
+dependencies:
+  idf: ">=5.3"
+license: "MIT"

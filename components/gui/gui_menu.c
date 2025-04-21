@@ -4,9 +4,7 @@
 #include <string.h>
 #include "gui_style.h"
 
-void menu_initialize(menu_t* menu, char* title, pax_buf_t* icon) {
-    menu->title             = title;
-    menu->icon              = icon;
+void menu_initialize(menu_t* menu) {
     menu->firstItem         = NULL;
     menu->length            = 0;
     menu->position          = 0;

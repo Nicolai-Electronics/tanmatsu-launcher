@@ -28,8 +28,9 @@ static void firmware_update_callback(const char* status_text) {
 void menu_firmware_update(pax_buf_t* buffer, gui_theme_t* theme) {
     pax_background(buffer, theme->palette.color_background);
     // gui_render_header(buffer, theme, "Firmware update");
-    gui_render_header_adv(buffer, theme, &((gui_icontext_t){get_icon(ICON_SYSTEM_UPDATE), "Firmware update"}), 1);
-    gui_render_footer(buffer, theme, "", "");
+    gui_render_header_adv(buffer, theme, ((gui_header_field_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Firmware update"}}), 1,
+                          NULL, 0);
+    gui_render_footer_adv(buffer, theme, NULL, 0, NULL, 0);
     display_blit_buffer(buffer);
     ota_update("https://ota.tanmatsu.cloud/latest.bin", firmware_update_callback);
 }

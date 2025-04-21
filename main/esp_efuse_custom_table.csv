@@ -1,0 +1,11 @@
+# Custom efuse table for manufacturing information
+# After editing this file, run the command manually "make efuse_common_table" or "idf.py efuse-common-table"
+# this will generate new source files, next rebuild all the sources.
+
+USER_DATA.HARDWARE_NAME,              EFUSE_BLK3, 0, 128,
+USER_DATA.HARDWARE_VENDOR,            EFUSE_BLK3, 128, 80,
+USER_DATA.HARDWARE_RESERVED0,         EFUSE_BLK3, 208, 8,
+USER_DATA.HARDWARE_REVISION,          EFUSE_BLK3, 216, 8,
+USER_DATA.HARDWARE_VARIANT_RADIO,     EFUSE_BLK3, 224, 8,
+USER_DATA.HARDWARE_RESERVED1,         EFUSE_BLK3, 232, 8,
+USER_DATA.HARDWARE_REGION,            EFUSE_BLK3, 240, 16,

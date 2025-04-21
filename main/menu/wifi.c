@@ -6,34 +6,71 @@
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "message_dialog.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
+#include "projdefs.h"
+#include "wifi_connection.h"
+#include "wifi_edit.h"
+#include "wifi_settings.h"
 // #include "shapes/pax_misc.h"
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial) {
-    if (!partial) {
-        pax_background(buffer, theme->palette.color_background);
-        // gui_render_header(buffer, theme, "WiFi networks");
-        // gui_render_footer(buffer, theme, "ESC / ❌ Back", "↑ / ↓ Navigate ⏎ Select");
-        gui_render_header_adv(buffer, theme, &((gui_icontext_t){get_icon(ICON_WIFI), "WiFi networks"}), 1);
-        gui_render_footer_adv(buffer, theme,
-                              ((gui_icontext_t[]){{get_icon(ICON_ESC), "/"},
-                                                  {get_icon(ICON_F1), "Back"},
-                                                  {get_icon(ICON_F2), "Scan"},
-                                                  {get_icon(ICON_F3), "Add manually"}}),
-                              4, "↑ / ↓ Navigate ⏎ Select");
+extern bool wifi_stack_get_initialized(void);
+
+static bool populate_menu_from_wifi_entries(menu_t* menu) {
+    bool empty = true;
+    for (uint32_t index = 0; index < WIFI_SETTINGS_MAX; index++) {
+        wifi_settings_t settings;
+        esp_err_t       res = wifi_settings_get(index, &settings);
+        if (res == ESP_OK) {
+            menu_insert_item(menu, (char*)settings.ssid, NULL, (void*)index, -1);
+            empty = false;
+        }
+    }
+    return !empty;
+}
+
+static void wifi_scan_done_handler(void* handler_arg, esp_event_base_t base, int32_t id, void* event_data) {
+}
+
+static void scan_for_networks(pax_buf_t* buffer, gui_theme_t* theme) {
+    if (wifi_stack_get_initialized()) {
+        esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_SCAN_DONE, wifi_scan_done_handler, NULL);
+        esp_wifi_scan_start(NULL, true);
+    } else {
+        message_dialog(buffer, theme, "WiFi stack not initialized",
+                       "The WiFi stack is not initialized. Please try again later.", "OK");
+    }
+}
+
+static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons,
+                   bool loading) {
+    if (!partial || icons) {
+        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
+                                     ((gui_header_field_t[]){{get_icon(ICON_WIFI), "WiFi networks"}}), 1,
+                                     ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"},
+                                                             {get_icon(ICON_F1), "Back"},
+                                                             {get_icon(ICON_F2), "Scan"},
+                                                             {get_icon(ICON_F3), "Add manually"}}),
+                                     3, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Edit"}}), 1);
     }
     menu_render(buffer, menu, position, theme, partial);
+    if (menu_find_item(menu, 0) == NULL) {
+        if (loading) {
+            pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, 16, position.x0,
+                          position.y0 + 18 * 0, "Loading list of stored WiFi networks...");
+        } else {
+            pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, 16, position.x0,
+                          position.y0 + 18 * 0, "No WiFi networks stored");
+        }
+    }
     display_blit_buffer(buffer);
 }
 
 void menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
-
-    menu_t menu = {0};
-    menu_initialize(&menu, "WiFi networks", NULL);
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
@@ -45,28 +82,39 @@ void menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
         .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
     };
 
-    render(buffer, theme, &menu, position, false);
+    menu_t menu = {0};
+    menu_initialize(&menu);
+    render(buffer, theme, &menu, position, false, true, true);
+    populate_menu_from_wifi_entries(&menu);
+    render(buffer, theme, &menu, position, false, true, false);
     while (1) {
         bsp_input_event_t event;
-        if (xQueueReceive(input_event_queue, &event, portMAX_DELAY) == pdTRUE) {
+        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
             switch (event.type) {
                 case INPUT_EVENT_TYPE_NAVIGATION: {
                     if (event.args_navigation.state) {
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
+                            case BSP_INPUT_NAVIGATION_KEY_F1:
                                 menu_free(&menu);
                                 return;
+                            case BSP_INPUT_NAVIGATION_KEY_F2:
+                                scan_for_networks(buffer, theme);
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, position, true);
+                                render(buffer, theme, &menu, position, true, false, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_DOWN:
                                 menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, position, true);
+                                render(buffer, theme, &menu, position, true, false, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN: {
-                                void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                render(buffer, theme, &menu, position, false);
+                                if (menu_find_item(&menu, 0) != NULL) {
+                                    void*   arg   = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                    uint8_t index = (uint32_t)arg;
+                                    menu_wifi_edit(buffer, theme, index);
+                                    render(buffer, theme, &menu, position, false, false, false);
+                                }
                                 break;
                             }
                             default:
@@ -78,6 +126,8 @@ void menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
                 default:
                     break;
             }
+        } else {
+            render(buffer, theme, &menu, position, true, true, false);
         }
     }
 }

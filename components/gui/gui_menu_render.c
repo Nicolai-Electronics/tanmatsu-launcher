@@ -4,6 +4,7 @@
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "pax_gfx.h"
+#include "pax_matrix.h"
 // #include "shapes/pax_rects.h"
 
 void menu_render_item(pax_buf_t* pax_buffer, menu_item_t* item, gui_theme_t* theme, pax_vec2_t position,
@@ -50,22 +51,45 @@ void menu_render(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, gui_t
     float  remaining_height = position.y1 - position.y0;
     size_t max_items        = remaining_height / theme->menu.list_entry_height;
 
-    size_t item_offset = 0;
+    /*size_t item_offset = 0;
     if (menu->position >= max_items) {
         item_offset = menu->position - max_items + 1;
+    }*/
+
+    size_t previous_navigation_position = menu->navigation_position;
+
+    size_t first_visible_item = menu->navigation_position;
+    size_t last_visible_item  = menu->navigation_position + max_items - 1;
+
+    /*printf("Position: %zu, Navigation Position: %zu, First Visible Item: %zu, Last Visible Item: %zu\n",
+       menu->position, menu->navigation_position, first_visible_item, last_visible_item);*/
+
+    if (menu->position < first_visible_item) {
+        menu->navigation_position = menu->position;
+    }
+    if (menu->position > menu->navigation_position + max_items - 1) {
+        menu->navigation_position = menu->position - max_items + 1;
+    }
+
+    size_t item_offset = menu->navigation_position;
+
+    pax_vec2_t position_item = position;
+    if (menu->length > max_items) {
+        position_item.x1 -= 8;
     }
 
     for (size_t index = item_offset; (index < item_offset + max_items) && (index < menu->length); index++) {
-        if (partial && index != menu->previous_position && index != menu->position) {
+        if (partial && index != menu->previous_position && index != menu->position &&
+            previous_navigation_position == menu->navigation_position && menu->length <= max_items) {
             continue;
         }
-        float        current_position_y = position.y0 + theme->menu.list_entry_height * index;
+        float        current_position_y = position_item.y0 + theme->menu.list_entry_height * (index - item_offset);
         menu_item_t* item               = menu_find_item(menu, index);
         if (item == NULL) continue;
-        menu_render_item(pax_buffer, item, theme, position, current_position_y, index == menu->position);
+        menu_render_item(pax_buffer, item, theme, position_item, current_position_y, index == menu->position);
     }
 
-    /*if (style->scrollbar) {
+    if (menu->length > max_items) {
         // pax_clip(pax_buffer, position.x0 + (position.x1 - position.x0) - 5, position.y0 +
         // theme->menu.height, 4, style->height - 1 - theme->menu.height);
         float fractionStart = item_offset / (menu->length * 1.0);
@@ -74,11 +98,12 @@ void menu_render(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, gui_t
         float scrollbarHeight = (position.y1 - position.y0) - 2;
         float scrollbarStart  = scrollbarHeight * fractionStart;
         float scrollbarEnd    = scrollbarHeight * fractionEnd;
-        pax_simple_rect(pax_buffer, style->scrollbarBgColor, position.x1 - 5, position.y0 + 1, 4, scrollbarHeight);
-        pax_simple_rect(pax_buffer, style->scrollbarFgColor, position.x1 - 5, position.y0 + 1 + scrollbarStart, 4,
-                        scrollbarEnd - scrollbarStart);
+        pax_simple_rect(pax_buffer, theme->palette.color_active_background, position.x1 - 5, position.y0 + 1, 4,
+                        scrollbarHeight);
+        pax_simple_rect(pax_buffer, theme->palette.color_highlight_primary, position.x1 - 5,
+                        position.y0 + 1 + scrollbarStart, 4, scrollbarEnd - scrollbarStart);
         // pax_noclip(pax_buffer);
-    }*/
+    }
 }
 
 void menu_render_grid(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, gui_theme_t* theme, bool partial) {

@@ -16,13 +16,12 @@ extern "C" {
 typedef struct {
     pax_buf_t* icon;
     char*      text;
-} gui_icontext_t;
+} gui_header_field_t;
 
-void gui_render_header(pax_buf_t* pax_buffer, gui_theme_t* theme, const char* text);
-void gui_render_header_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_icontext_t* icontext, size_t icontext_count);
-void gui_render_footer(pax_buf_t* pax_buffer, gui_theme_t* theme, const char* left_text, const char* right_text);
-void gui_render_footer_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_icontext_t* icontext, size_t icontext_count,
-                           char* right_text);
+void gui_render_header_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_header_field_t* left, size_t left_count,
+                           gui_header_field_t* right, size_t right_count);
+void gui_render_footer_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_header_field_t* left, size_t left_count,
+                           gui_header_field_t* right, size_t right_count);
 
 #ifdef __cplusplus
 }

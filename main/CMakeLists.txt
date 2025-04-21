@@ -10,13 +10,33 @@ idf_component_register(
 		"menu/settings.c"
 		"menu/about.c"
 		"menu/wifi.c"
+		"menu/wifi_edit.c"
 		"menu/apps.c"
 		"menu/firmware_update.c"
+		"menu/message_dialog.c"
+		"menu/device_information.c"
+		"menu/settings_clock.c"
+		"menu/settings_clock_timezone.c"
+		"menu/charging_mode.c"
 		"chakrapetchmedium.c"
 		"coprocessor_management.c"
 		"wifi_remote.c"
 		"wifi_ota.c"
 		"icons.c"
+		"usb_device.c"
+		"badgelink/nanopb/pb_common.c"
+		"badgelink/nanopb/pb_decode.c"
+		"badgelink/nanopb/pb_encode.c"
+		"badgelink/badgelink_appfs.c"
+		"badgelink/badgelink_fs.c"
+		"badgelink/badgelink_nvs.c"
+		"badgelink/badgelink_startapp.c"
+		"badgelink/badgelink.c"
+		"badgelink/badgelink.pb.c"
+		"badgelink/cobs.c"
+		"esp_efuse_custom_table.c"
+		"sdcard.c"
+		"app_metadata_parser.c"
 	PRIV_REQUIRES
 		esp_lcd
 		fatfs
@@ -34,8 +54,13 @@ idf_component_register(
 		esp-tls
 		pax-gfx
 		pax-codecs
+		efuse
+		timezone
+		json
 	INCLUDE_DIRS
 		"."
+		"include"
+		"badgelink/nanopb"
 	EMBED_FILES
 		${files}
 )

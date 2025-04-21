@@ -9,17 +9,23 @@
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/about.h"
+#include "menu/message_dialog.h"
 #include "menu/wifi.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
 // #include "shapes/pax_misc.h"
+#include "device_information.h"
 #include "firmware_update.h"
+#include "projdefs.h"
+#include "settings_clock.h"
 
 typedef enum {
     ACTION_NONE,
     ACTION_WIFI,
+    ACTION_CLOCK,
     ACTION_FIRMWARE_UPDATE,
+    ACTION_DEVICE_INFO,
     ACTION_ABOUT,
     ACTION_LAST,
 } menu_home_action_t;
@@ -29,8 +35,14 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
         case ACTION_WIFI:
             menu_wifi(fb, theme);
             break;
+        case ACTION_CLOCK:
+            menu_settings_clock(fb, theme);
+            break;
         case ACTION_FIRMWARE_UPDATE:
             menu_firmware_update(fb, theme);
+            break;
+        case ACTION_DEVICE_INFO:
+            menu_device_information(fb, theme);
             break;
         case ACTION_ABOUT:
             menu_about(fb, theme);
@@ -40,15 +52,12 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
     }
 }
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial) {
-    if (!partial) {
-        pax_background(buffer, theme->palette.color_background);
-        // gui_render_header(buffer, theme, "Settings");
-        // gui_render_footer(buffer, theme, "ESC / ❌ Back", "↑ / ↓ Navigate ⏎ Select");
-        gui_render_header_adv(buffer, theme, &((gui_icontext_t){get_icon(ICON_SETTINGS), "Settings"}), 1);
-        gui_render_footer_adv(buffer, theme,
-                              ((gui_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
-                              "↑ / ↓ Navigate ⏎ Select");
+static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
+    if (!partial || icons) {
+        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
+                                     ((gui_header_field_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
+                                     ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}),
+                                     2, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
@@ -59,10 +68,12 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
     menu_t menu = {0};
-    menu_initialize(&menu, "Settings", get_icon(ICON_SETTINGS));
+    menu_initialize(&menu);
     menu_insert_item_icon(&menu, "WiFi configuration", NULL, (void*)ACTION_WIFI, -1, get_icon(ICON_WIFI));
+    menu_insert_item_icon(&menu, "Date and time configuration", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
     menu_insert_item_icon(&menu, "Firmware update", NULL, (void*)ACTION_FIRMWARE_UPDATE, -1,
                           get_icon(ICON_SYSTEM_UPDATE));
+    menu_insert_item_icon(&menu, "Device information", NULL, (void*)ACTION_DEVICE_INFO, -1, get_icon(ICON_DEVICE_INFO));
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
@@ -75,29 +86,30 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
         .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
     };
 
-    render(buffer, theme, &menu, position, false);
+    render(buffer, theme, &menu, position, false, true);
     while (1) {
         bsp_input_event_t event;
-        if (xQueueReceive(input_event_queue, &event, portMAX_DELAY) == pdTRUE) {
+        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
             switch (event.type) {
                 case INPUT_EVENT_TYPE_NAVIGATION: {
                     if (event.args_navigation.state) {
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
+                            case BSP_INPUT_NAVIGATION_KEY_F1:
                                 menu_free(&menu);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, position, true);
+                                render(buffer, theme, &menu, position, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_DOWN:
                                 menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, position, true);
+                                render(buffer, theme, &menu, position, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                 execute_action(buffer, (menu_home_action_t)arg, theme);
-                                render(buffer, theme, &menu, position, false);
+                                render(buffer, theme, &menu, position, false, true);
                                 break;
                             }
                             default:
@@ -109,6 +121,8 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
                 default:
                     break;
             }
+        } else {
+            render(buffer, theme, &menu, position, true, true);
         }
     }
 }

@@ -6,7 +6,16 @@
 #include "pax_matrix.h"
 #include "pax_text.h"
 
-static float render_icon_text(pax_buf_t* pax_buffer, gui_theme_t* theme, int x, int y, gui_icontext_t* content,
+static float get_icon_text_width(gui_theme_t* theme, int x, int y, gui_header_field_t* content, float padding) {
+    float icon_width = 0;
+    if (content->icon) {
+        icon_width = pax_buf_get_width(content->icon);
+    }
+    pax_vec2f text_size = pax_text_size(theme->footer.text_font, theme->footer.text_height, content->text);
+    return icon_width + padding + text_size.x;
+}
+
+static float render_icon_text(pax_buf_t* pax_buffer, gui_theme_t* theme, int x, int y, gui_header_field_t* content,
                               float padding) {
     float icon_width = 0;
     if (content->icon) {
@@ -20,19 +29,8 @@ static float render_icon_text(pax_buf_t* pax_buffer, gui_theme_t* theme, int x, 
     return icon_width + padding + text_size.x;
 }
 
-void gui_render_header(pax_buf_t* pax_buffer, gui_theme_t* theme, const char* text) {
-    gui_element_style_t* style = &theme->header;
-
-    int buffer_width = pax_buf_get_width(pax_buffer);
-    int box_height   = style->height + (style->vertical_margin * 2);
-
-    pax_draw_line(pax_buffer, theme->palette.color_foreground, style->horizontal_margin, box_height,
-                  buffer_width - style->horizontal_margin, box_height);
-    pax_draw_text(pax_buffer, theme->palette.color_foreground, style->text_font, style->text_height,
-                  style->horizontal_margin + style->horizontal_padding, (box_height - style->text_height) / 2, text);
-}
-
-void gui_render_header_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_icontext_t* icontext, size_t icontext_count) {
+void gui_render_header_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_header_field_t* left, size_t left_count,
+                           gui_header_field_t* right, size_t right_count) {
     gui_element_style_t* style = &theme->header;
 
     int buffer_width = pax_buf_get_width(pax_buffer);
@@ -42,33 +40,20 @@ void gui_render_header_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_iconte
                   buffer_width - style->horizontal_margin, box_height);
 
     int x = style->horizontal_margin + style->horizontal_padding;
-    for (size_t i = 0; i < icontext_count; i++) {
-        x += render_icon_text(pax_buffer, theme, x, style->vertical_margin, &icontext[i], style->horizontal_padding);
+    for (size_t i = 0; i < left_count; i++) {
+        x += render_icon_text(pax_buffer, theme, x, style->vertical_margin, &left[i], style->horizontal_padding);
+    }
+
+    x = buffer_width - style->horizontal_margin;
+    for (size_t i = 0; i < right_count; i++) {
+        x -= get_icon_text_width(theme, buffer_width, style->vertical_margin, &right[i], style->horizontal_padding);
+        render_icon_text(pax_buffer, theme, x - style->horizontal_padding, style->vertical_margin, &right[i],
+                         style->horizontal_padding);
     }
 }
 
-void gui_render_footer(pax_buf_t* pax_buffer, gui_theme_t* theme, const char* left_text, const char* right_text) {
-    gui_element_style_t* style         = &theme->footer;
-    int                  buffer_width  = pax_buf_get_width(pax_buffer);
-    int                  buffer_height = pax_buf_get_height(pax_buffer);
-
-    int box_height = style->height + (style->vertical_margin * 2);
-    pax_draw_line(pax_buffer, theme->palette.color_foreground, style->horizontal_margin, buffer_height - box_height,
-                  buffer_width - style->horizontal_margin, buffer_height - box_height);
-    pax_draw_text(pax_buffer, theme->palette.color_foreground, style->text_font, style->text_height,
-                  style->horizontal_margin + style->vertical_padding,
-                  buffer_height - box_height + (box_height - style->text_height) / 2, left_text);
-    /*pax_right_text(pax_buffer, theme->palette.color_foreground, style->text_font, style->text_height,
-                   buffer_width - style->horizontal_margin - style->vertical_padding,
-                   buffer_height - box_height + (box_height - style->text_height) / 2, right_text);*/
-    pax_vec2f text_width = pax_text_size(style->text_font, style->text_height, right_text);
-    pax_draw_text(pax_buffer, theme->palette.color_foreground, style->text_font, style->text_height,
-                  buffer_width - style->horizontal_margin - style->vertical_padding - text_width.x,
-                  buffer_height - box_height + (box_height - style->text_height) / 2, right_text);
-}
-
-void gui_render_footer_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_icontext_t* icontext, size_t icontext_count,
-                           char* right_text) {
+void gui_render_footer_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_header_field_t* left, size_t left_count,
+                           gui_header_field_t* right, size_t right_count) {
     gui_element_style_t* style         = &theme->footer;
     int                  buffer_width  = pax_buf_get_width(pax_buffer);
     int                  buffer_height = pax_buf_get_height(pax_buffer);
@@ -78,13 +63,20 @@ void gui_render_footer_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_iconte
                   buffer_width - style->horizontal_margin, buffer_height - box_height);
 
     int x = style->horizontal_margin + style->horizontal_padding;
-    for (size_t i = 0; i < icontext_count; i++) {
-        x += render_icon_text(pax_buffer, theme, x, buffer_height - style->height - style->vertical_margin,
-                              &icontext[i], style->horizontal_padding);
+    for (size_t i = 0; i < left_count; i++) {
+        x += render_icon_text(pax_buffer, theme, x, buffer_height - style->height - style->vertical_margin, &left[i],
+                              style->horizontal_padding);
     }
 
-    pax_vec2f text_width = pax_text_size(style->text_font, style->text_height, right_text);
+    x = buffer_width - style->horizontal_margin;
+    for (size_t i = 0; i < right_count; i++) {
+        x -= get_icon_text_width(theme, buffer_width, buffer_height, &right[i], style->horizontal_padding);
+        render_icon_text(pax_buffer, theme, x - style->horizontal_padding,
+                         buffer_height - style->height - style->vertical_margin, &right[i], style->horizontal_padding);
+    }
+
+    /*pax_vec2f text_width = pax_text_size(style->text_font, style->text_height, right_text);
     pax_draw_text(pax_buffer, theme->palette.color_foreground, style->text_font, style->text_height,
                   buffer_width - style->horizontal_margin - style->vertical_padding - text_width.x,
-                  buffer_height - box_height + (box_height - style->text_height) / 2, right_text);
+                  buffer_height - box_height + (box_height - style->text_height) / 2, right_text);*/
 }

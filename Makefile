@@ -41,8 +41,8 @@ sdk:
 	if test -d "$(IDF_PATH)"; then echo -e "ESP-IDF target folder exists!\r\nPlease remove the folder or un-set the environment variable."; exit 1; fi
 	if test -d "$(IDF_TOOLS_PATH)"; then echo -e "ESP-IDF tools target folder exists!\r\nPlease remove the folder or un-set the environment variable."; exit 1; fi
 	git clone --recursive --branch "$(IDF_BRANCH)" https://github.com/espressif/esp-idf.git "$(IDF_PATH)" --depth=1 --shallow-submodules
-	cd "$(IDF_PATH)"; git fetch origin "$(IDF_COMMIT)" --recurse-submodules || true
-	cd "$(IDF_PATH)"; git checkout "$(IDF_COMMIT)"
+	#cd "$(IDF_PATH)"; git fetch origin "$(IDF_COMMIT)" --recurse-submodules || true
+	#cd "$(IDF_PATH)"; git checkout "$(IDF_COMMIT)"
 	cd "$(IDF_PATH)"; git submodule update --init --recursive
 	cd "$(IDF_PATH)"; bash install.sh all
 
@@ -78,15 +78,15 @@ checkbuildenv:
 	if [ -z "$(IDF_PATH)" ]; then echo "IDF_PATH is not set!"; exit 1; fi
 	if [ -z "$(IDF_TOOLS_PATH)" ]; then echo "IDF_TOOLS_PATH is not set!"; exit 1; fi
 	# Check if the IDF commit id the one we need
-	if [ -d "$(IDF_PATH)" ]; then \
-		if [ "$(IDF_COMMIT)" != "$(shell cd $(IDF_PATH); git rev-parse HEAD)" ]; then \
-			echo "ESP-IDF commit id does not match! Expected '$(IDF_COMMIT)' got '$(shell git rev-parse HEAD)'"; \
-			echo "Run $ make refreshsdk"; \
-			echo "To update the ESP-IDF to the correct commit id"; \
-			echo "Or set the IDF_COMMIT variable in the Makefile to the correct commit id"; \
-			exit 1; \
-		fi; \
-	fi
+	#if [ -d "$(IDF_PATH)" ]; then \
+	#	if [ "$(IDF_COMMIT)" != "$(shell cd $(IDF_PATH); git rev-parse HEAD)" ]; then \
+	#		echo "ESP-IDF commit id does not match! Expected '$(IDF_COMMIT)' got '$(shell git rev-parse HEAD)'"; \
+	#		echo "Run $ make refreshsdk"; \
+	#		echo "To update the ESP-IDF to the correct commit id"; \
+	#		echo "Or set the IDF_COMMIT variable in the Makefile to the correct commit id"; \
+	#		exit 1; \
+	#	fi; \
+	#fi
 
 # Building
 
@@ -150,6 +150,10 @@ size-components:
 .PHONY: size-files
 size-files:
 	source "$(IDF_PATH)/export.sh" && idf.py size-files
+
+.PHONY: efuse
+efuse:
+	$(IDF_PATH)/components/efuse/efuse_table_gen.py --idf_target esp32p4 $(IDF_PATH)/components/efuse/esp32p4/esp_efuse_table.csv main/esp_efuse_custom_table.csv
 
 # Formatting
 
