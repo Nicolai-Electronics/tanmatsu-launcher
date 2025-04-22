@@ -6,10 +6,10 @@
 #include "sd_pwr_ctrl_by_on_chip_ldo.h"
 #include "sdmmc_cmd.h"
 
-static char const TAG[] = "sdcard";
-
 sd_status_t status = SD_STATUS_NOT_PRESENT;
 
+#ifdef CONFIG_BSP_TARGET_TANMATSU
+static char const    TAG[] = "sdcard";
 sd_pwr_ctrl_handle_t initialize_sd_ldo(void) {
     sd_pwr_ctrl_ldo_config_t ldo_config = {
         .ldo_chan_id = 4,
@@ -136,6 +136,7 @@ void test_sd(void) {
     }
     closedir(dir);
 }
+#endif
 
 sd_status_t sd_status(void) {
     return status;

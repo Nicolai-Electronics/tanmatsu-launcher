@@ -6964,10 +6964,26 @@ const pax_bmpv_t chakrapetchmedium_r87_dims[] = {
     },
 };
 const uint8_t chakrapetchmedium_r88[] = {
-    170, 106, 255, 191, 255, 191, 255, 191, 255, 191, 255, 191, 255, 191, 255, 191,
+    0,   248, 47,  0,   128, 255, 255, 2,  240, 255, 255, 11,  248, 255, 7,   45,  252, 255, 227, 60, 254, 255,
+    243, 188, 255, 246, 243, 252, 191, 80, 241, 252, 47,  171, 250, 252, 79,  255, 255, 252, 62,  1,  0,   188,
+    252, 244, 255, 63,  248, 247, 255, 47, 224, 255, 255, 11,  128, 255, 255, 2,   0,   248, 47,  0,
 };
 const size_t     chakrapetchmedium_r88_len    = sizeof(chakrapetchmedium_r88) / sizeof(uint8_t);
 const pax_bmpv_t chakrapetchmedium_r88_dims[] = {
+    {
+        .draw_x         = 0,
+        .draw_y         = 0,
+        .draw_w         = 16,
+        .draw_h         = 16,
+        .measured_width = 16,
+        .index          = 0,
+    },
+};
+const uint8_t chakrapetchmedium_r89[] = {
+    170, 106, 255, 191, 255, 191, 255, 191, 255, 191, 255, 191, 255, 191, 255, 191,
+};
+const size_t     chakrapetchmedium_r89_len    = sizeof(chakrapetchmedium_r89) / sizeof(uint8_t);
+const pax_bmpv_t chakrapetchmedium_r89_dims[] = {
     {
         .draw_x         = 1,
         .draw_y         = 2,
@@ -6977,59 +6993,59 @@ const pax_bmpv_t chakrapetchmedium_r88_dims[] = {
         .index          = 0,
     },
 };
-const uint8_t chakrapetchmedium_r89[] = {
+const uint8_t chakrapetchmedium_r90[] = {
     0, 3, 0, 64, 7, 0, 192, 15, 0, 208, 31, 0, 240, 63, 0, 244, 127, 0, 252, 255, 0, 253, 255, 1, 255, 255, 3,
     0, 3, 0, 64, 7, 0, 192, 13, 0, 144, 24, 0, 112, 52, 0, 36,  112, 0, 28,  208, 0, 13,  192, 1, 255, 255, 3,
-};
-const size_t     chakrapetchmedium_r89_len    = sizeof(chakrapetchmedium_r89) / sizeof(uint8_t);
-const pax_bmpv_t chakrapetchmedium_r89_dims[] = {
-    {
-        .draw_x         = 1,
-        .draw_y         = 3,
-        .draw_w         = 9,
-        .draw_h         = 9,
-        .measured_width = 11,
-        .index          = 0,
-    },
-    {
-        .draw_x         = 1,
-        .draw_y         = 3,
-        .draw_w         = 9,
-        .draw_h         = 9,
-        .measured_width = 11,
-        .index          = 27,
-    },
-};
-const uint8_t chakrapetchmedium_r90[] = {
-    45, 0, 0, 253, 2, 0, 253, 47, 0, 253, 255, 2, 253, 255, 11, 253, 191, 0, 253, 11, 0, 189, 1, 0, 25, 0, 0,
-    45, 0, 0, 237, 2, 0, 77,  46, 0, 13,  224, 2, 13,  128, 11, 13,  184, 0, 141, 11, 0, 189, 0, 0, 25, 0, 0,
 };
 const size_t     chakrapetchmedium_r90_len    = sizeof(chakrapetchmedium_r90) / sizeof(uint8_t);
 const pax_bmpv_t chakrapetchmedium_r90_dims[] = {
     {
-        .draw_x         = 0,
+        .draw_x         = 1,
         .draw_y         = 3,
-        .draw_w         = 10,
+        .draw_w         = 9,
         .draw_h         = 9,
         .measured_width = 11,
         .index          = 0,
     },
     {
-        .draw_x         = 0,
+        .draw_x         = 1,
         .draw_y         = 3,
-        .draw_w         = 10,
+        .draw_w         = 9,
         .draw_h         = 9,
         .measured_width = 11,
         .index          = 27,
     },
 };
 const uint8_t chakrapetchmedium_r91[] = {
+    45, 0, 0, 253, 2, 0, 253, 47, 0, 253, 255, 2, 253, 255, 11, 253, 191, 0, 253, 11, 0, 189, 1, 0, 25, 0, 0,
+    45, 0, 0, 237, 2, 0, 77,  46, 0, 13,  224, 2, 13,  128, 11, 13,  184, 0, 141, 11, 0, 189, 0, 0, 25, 0, 0,
+};
+const size_t     chakrapetchmedium_r91_len    = sizeof(chakrapetchmedium_r91) / sizeof(uint8_t);
+const pax_bmpv_t chakrapetchmedium_r91_dims[] = {
+    {
+        .draw_x         = 0,
+        .draw_y         = 3,
+        .draw_w         = 10,
+        .draw_h         = 9,
+        .measured_width = 11,
+        .index          = 0,
+    },
+    {
+        .draw_x         = 0,
+        .draw_y         = 3,
+        .draw_w         = 10,
+        .draw_h         = 9,
+        .measured_width = 11,
+        .index          = 27,
+    },
+};
+const uint8_t chakrapetchmedium_r92[] = {
     85,  85,  1,  254, 255, 2,   253, 255, 1,   248, 191, 0,   244, 127, 0,   224, 47, 0,   208, 31,
     0,   128, 11, 0,   64,  7,   0,   0,   2,   0,   85,  85,  1,   255, 255, 2,   13, 192, 1,   28,
     144, 0,   52, 112, 0,   112, 36,  0,   144, 28,  0,   192, 10,  0,   64,  7,   0,  0,   2,   0,
 };
-const size_t     chakrapetchmedium_r91_len    = sizeof(chakrapetchmedium_r91) / sizeof(uint8_t);
-const pax_bmpv_t chakrapetchmedium_r91_dims[] = {
+const size_t     chakrapetchmedium_r92_len    = sizeof(chakrapetchmedium_r92) / sizeof(uint8_t);
+const pax_bmpv_t chakrapetchmedium_r92_dims[] = {
     {
         .draw_x         = 1,
         .draw_y         = 2,
@@ -7047,12 +7063,12 @@ const pax_bmpv_t chakrapetchmedium_r91_dims[] = {
         .index          = 30,
     },
 };
-const uint8_t chakrapetchmedium_r92[] = {
+const uint8_t chakrapetchmedium_r93[] = {
     0, 128, 3, 0, 248, 3, 128, 255, 3, 248, 255, 3, 254, 255, 3, 228, 255, 3, 64, 254, 3, 0, 228, 3, 0, 64, 2,
     0, 128, 7, 0, 184, 7, 128, 27,  7, 184, 0,   7, 46,  0,   7, 228, 2,   7, 64, 46,  7, 0, 228, 7, 0, 64, 2,
 };
-const size_t     chakrapetchmedium_r92_len    = sizeof(chakrapetchmedium_r92) / sizeof(uint8_t);
-const pax_bmpv_t chakrapetchmedium_r92_dims[] = {
+const size_t     chakrapetchmedium_r93_len    = sizeof(chakrapetchmedium_r93) / sizeof(uint8_t);
+const pax_bmpv_t chakrapetchmedium_r93_dims[] = {
     {
         .draw_x         = 1,
         .draw_y         = 3,
@@ -7070,11 +7086,11 @@ const pax_bmpv_t chakrapetchmedium_r92_dims[] = {
         .index          = 27,
     },
 };
-const uint8_t chakrapetchmedium_r93[] = {
+const uint8_t chakrapetchmedium_r94[] = {
     64, 1, 192, 7, 240, 31, 252, 127, 255, 255, 253, 127, 244, 47, 208, 11, 64, 2,
 };
-const size_t     chakrapetchmedium_r93_len    = sizeof(chakrapetchmedium_r93) / sizeof(uint8_t);
-const pax_bmpv_t chakrapetchmedium_r93_dims[] = {
+const size_t     chakrapetchmedium_r94_len    = sizeof(chakrapetchmedium_r94) / sizeof(uint8_t);
+const pax_bmpv_t chakrapetchmedium_r94_dims[] = {
     {
         .draw_x         = 1,
         .draw_y         = 2,
@@ -7084,11 +7100,11 @@ const pax_bmpv_t chakrapetchmedium_r93_dims[] = {
         .index          = 0,
     },
 };
-const uint8_t chakrapetchmedium_r94[] = {
+const uint8_t chakrapetchmedium_r95[] = {
     224, 1, 176, 3, 56, 11, 29, 13, 14, 44, 7, 56, 14, 44, 29, 13, 56, 11, 180, 3, 224, 2,
 };
-const size_t     chakrapetchmedium_r94_len    = sizeof(chakrapetchmedium_r94) / sizeof(uint8_t);
-const pax_bmpv_t chakrapetchmedium_r94_dims[] = {
+const size_t     chakrapetchmedium_r95_len    = sizeof(chakrapetchmedium_r95) / sizeof(uint8_t);
+const pax_bmpv_t chakrapetchmedium_r95_dims[] = {
     {
         .draw_x         = 1,
         .draw_y         = 1,
@@ -7098,13 +7114,13 @@ const pax_bmpv_t chakrapetchmedium_r94_dims[] = {
         .index          = 0,
     },
 };
-const uint8_t chakrapetchmedium_r95[] = {
+const uint8_t chakrapetchmedium_r96[] = {
     0,   248, 47,  0,  128, 255, 255, 2,  240, 255, 255, 11, 248, 255, 255, 47, 252, 111, 249, 63, 254, 7,
     208, 191, 255, 2,  128, 255, 255, 1,  64,  255, 255, 1,  64,  255, 255, 2,  128, 255, 254, 7,  208, 191,
     252, 111, 249, 63, 248, 255, 255, 47, 224, 255, 255, 11, 128, 255, 255, 2,  0,   248, 47,  0,
 };
-const size_t     chakrapetchmedium_r95_len    = sizeof(chakrapetchmedium_r95) / sizeof(uint8_t);
-const pax_bmpv_t chakrapetchmedium_r95_dims[] = {
+const size_t     chakrapetchmedium_r96_len    = sizeof(chakrapetchmedium_r96) / sizeof(uint8_t);
+const pax_bmpv_t chakrapetchmedium_r96_dims[] = {
     {
         .draw_x         = 0,
         .draw_y         = -2,
@@ -7114,11 +7130,11 @@ const pax_bmpv_t chakrapetchmedium_r95_dims[] = {
         .index          = 0,
     },
 };
-const uint8_t chakrapetchmedium_r96[] = {
+const uint8_t chakrapetchmedium_r97[] = {
     128, 1, 144, 0, 16, 0, 73, 2, 142, 3, 24, 0, 52, 0, 16, 0, 73, 2, 142, 3,
 };
-const size_t     chakrapetchmedium_r96_len    = sizeof(chakrapetchmedium_r96) / sizeof(uint8_t);
-const pax_bmpv_t chakrapetchmedium_r96_dims[] = {
+const size_t     chakrapetchmedium_r97_len    = sizeof(chakrapetchmedium_r97) / sizeof(uint8_t);
+const pax_bmpv_t chakrapetchmedium_r97_dims[] = {
     {
         .draw_x         = -3,
         .draw_y         = -2,
@@ -7136,11 +7152,11 @@ const pax_bmpv_t chakrapetchmedium_r96_dims[] = {
         .index          = 10,
     },
 };
-const uint8_t chakrapetchmedium_r97[] = {
+const uint8_t chakrapetchmedium_r98[] = {
     85, 21, 171, 58, 3, 48, 3, 48, 3, 48, 3, 48, 3, 48, 3, 48, 3, 48, 3, 48, 3, 48, 255, 63,
 };
-const size_t     chakrapetchmedium_r97_len    = sizeof(chakrapetchmedium_r97) / sizeof(uint8_t);
-const pax_bmpv_t chakrapetchmedium_r97_dims[] = {
+const size_t     chakrapetchmedium_r98_len    = sizeof(chakrapetchmedium_r98) / sizeof(uint8_t);
+const pax_bmpv_t chakrapetchmedium_r98_dims[] = {
     {
         .draw_x         = 1,
         .draw_y         = 0,
@@ -7150,13 +7166,13 @@ const pax_bmpv_t chakrapetchmedium_r97_dims[] = {
         .index          = 0,
     },
 };
-const uint8_t chakrapetchmedium_r98[] = {
+const uint8_t chakrapetchmedium_r99[] = {
     208, 15,  0,   176, 5,   0,   112, 0,   0,   254, 255, 1,   181, 213, 1,   112, 192, 1,   112, 192, 1,   112,
     192, 1,   112, 192, 1,   112, 192, 1,   112, 192, 1,   208, 255, 2,   176, 149, 2,   112, 128, 2,   254, 139,
     2,   181, 133, 2,   112, 128, 2,   112, 128, 2,   112, 128, 2,   112, 128, 2,   112, 128, 2,   112, 128, 2,
 };
-const size_t     chakrapetchmedium_r98_len    = sizeof(chakrapetchmedium_r98) / sizeof(uint8_t);
-const pax_bmpv_t chakrapetchmedium_r98_dims[] = {
+const size_t     chakrapetchmedium_r99_len    = sizeof(chakrapetchmedium_r99) / sizeof(uint8_t);
+const pax_bmpv_t chakrapetchmedium_r99_dims[] = {
     {
         .draw_x         = 0,
         .draw_y         = 1,
@@ -7174,7 +7190,7 @@ const pax_bmpv_t chakrapetchmedium_r98_dims[] = {
         .index          = 33,
     },
 };
-const uint8_t chakrapetchmedium_r99[] = {
+const uint8_t chakrapetchmedium_r100[] = {
     0,   248, 47,  0,   128, 255, 255, 2,   240, 255, 255, 11,  248, 63,  252, 47,  252, 47,  248, 63,  254, 31,
     244, 191, 255, 143, 242, 255, 255, 203, 227, 255, 255, 211, 199, 255, 255, 67,  193, 255, 254, 81,  69,  191,
     252, 240, 15,  63,  184, 248, 47,  46,  224, 255, 255, 11,  128, 255, 255, 2,   0,   248, 47,  0,   0,   248,
@@ -7182,8 +7198,8 @@ const uint8_t chakrapetchmedium_r99[] = {
     255, 244, 79,  255, 255, 80,  129, 255, 255, 80,  69,  255, 255, 244, 31,  255, 254, 244, 31,  191, 252, 164,
     10,  63,  248, 0,   192, 47,  224, 255, 255, 11,  128, 255, 255, 2,   0,   248, 47,  0,
 };
-const size_t     chakrapetchmedium_r99_len    = sizeof(chakrapetchmedium_r99) / sizeof(uint8_t);
-const pax_bmpv_t chakrapetchmedium_r99_dims[] = {
+const size_t     chakrapetchmedium_r100_len    = sizeof(chakrapetchmedium_r100) / sizeof(uint8_t);
+const pax_bmpv_t chakrapetchmedium_r100_dims[] = {
     {
         .draw_x         = 0,
         .draw_y         = -2,
@@ -7203,10 +7219,10 @@ const pax_bmpv_t chakrapetchmedium_r99_dims[] = {
 };
 // Combined ranges.
 const pax_font_range_t
-    chakrapetchmedium_ranges[100] =
+    chakrapetchmedium_ranges[101] =
         {
             {
-                // Range 1 / 100.
+                // Range 1 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0xd,
                 .end   = 0xd,
@@ -7219,7 +7235,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 2 / 100.
+                // Range 2 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x20,
                 .end   = 0x7e,
@@ -7232,7 +7248,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 3 / 100.
+                // Range 3 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0xa0,
                 .end   = 0xb4,
@@ -7245,7 +7261,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 4 / 100.
+                // Range 4 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0xb6,
                 .end   = 0x17e,
@@ -7258,7 +7274,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 5 / 100.
+                // Range 5 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x18f,
                 .end   = 0x18f,
@@ -7271,7 +7287,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 6 / 100.
+                // Range 6 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x192,
                 .end   = 0x192,
@@ -7284,7 +7300,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 7 / 100.
+                // Range 7 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1a0,
                 .end   = 0x1a1,
@@ -7297,7 +7313,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 8 / 100.
+                // Range 8 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1af,
                 .end   = 0x1b0,
@@ -7310,7 +7326,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 9 / 100.
+                // Range 9 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1cd,
                 .end   = 0x1dc,
@@ -7323,7 +7339,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 10 / 100.
+                // Range 10 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e6,
                 .end   = 0x1e7,
@@ -7336,7 +7352,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 11 / 100.
+                // Range 11 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1fa,
                 .end   = 0x1ff,
@@ -7349,7 +7365,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 12 / 100.
+                // Range 12 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x218,
                 .end   = 0x21b,
@@ -7362,7 +7378,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 13 / 100.
+                // Range 13 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x237,
                 .end   = 0x237,
@@ -7375,7 +7391,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 14 / 100.
+                // Range 14 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x251,
                 .end   = 0x251,
@@ -7388,7 +7404,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 15 / 100.
+                // Range 15 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x259,
                 .end   = 0x259,
@@ -7401,7 +7417,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 16 / 100.
+                // Range 16 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2bb,
                 .end   = 0x2bc,
@@ -7414,7 +7430,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 17 / 100.
+                // Range 17 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2be,
                 .end   = 0x2bf,
@@ -7427,7 +7443,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 18 / 100.
+                // Range 18 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2c6,
                 .end   = 0x2cc,
@@ -7440,7 +7456,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 19 / 100.
+                // Range 19 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2d8,
                 .end   = 0x2dd,
@@ -7453,7 +7469,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 20 / 100.
+                // Range 20 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x300,
                 .end   = 0x304,
@@ -7466,7 +7482,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 21 / 100.
+                // Range 21 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x306,
                 .end   = 0x30c,
@@ -7479,7 +7495,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 22 / 100.
+                // Range 22 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x31b,
                 .end   = 0x31b,
@@ -7492,7 +7508,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 23 / 100.
+                // Range 23 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x323,
                 .end   = 0x324,
@@ -7505,7 +7521,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 24 / 100.
+                // Range 24 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x326,
                 .end   = 0x328,
@@ -7518,7 +7534,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 25 / 100.
+                // Range 25 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x32e,
                 .end   = 0x32e,
@@ -7531,7 +7547,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 26 / 100.
+                // Range 26 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x331,
                 .end   = 0x331,
@@ -7544,7 +7560,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 27 / 100.
+                // Range 27 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x394,
                 .end   = 0x394,
@@ -7557,7 +7573,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 28 / 100.
+                // Range 28 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x3a9,
                 .end   = 0x3a9,
@@ -7570,7 +7586,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 29 / 100.
+                // Range 29 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x3bc,
                 .end   = 0x3bc,
@@ -7583,7 +7599,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 30 / 100.
+                // Range 30 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x3c0,
                 .end   = 0x3c0,
@@ -7596,7 +7612,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 31 / 100.
+                // Range 31 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0xe01,
                 .end   = 0xe3a,
@@ -7609,7 +7625,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 32 / 100.
+                // Range 32 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0xe3f,
                 .end   = 0xe5b,
@@ -7622,7 +7638,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 33 / 100.
+                // Range 33 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e0c,
                 .end   = 0x1e0f,
@@ -7635,7 +7651,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 34 / 100.
+                // Range 34 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e20,
                 .end   = 0x1e21,
@@ -7648,7 +7664,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 35 / 100.
+                // Range 35 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e24,
                 .end   = 0x1e25,
@@ -7661,7 +7677,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 36 / 100.
+                // Range 36 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e2a,
                 .end   = 0x1e2b,
@@ -7674,7 +7690,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 37 / 100.
+                // Range 37 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e36,
                 .end   = 0x1e3b,
@@ -7687,7 +7703,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 38 / 100.
+                // Range 38 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e42,
                 .end   = 0x1e49,
@@ -7700,7 +7716,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 39 / 100.
+                // Range 39 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e5a,
                 .end   = 0x1e63,
@@ -7713,7 +7729,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 40 / 100.
+                // Range 40 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e6c,
                 .end   = 0x1e6f,
@@ -7726,7 +7742,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 41 / 100.
+                // Range 41 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e80,
                 .end   = 0x1e85,
@@ -7739,7 +7755,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 42 / 100.
+                // Range 42 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e8e,
                 .end   = 0x1e8f,
@@ -7752,7 +7768,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 43 / 100.
+                // Range 43 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e92,
                 .end   = 0x1e93,
@@ -7765,7 +7781,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 44 / 100.
+                // Range 44 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e97,
                 .end   = 0x1e97,
@@ -7778,7 +7794,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 45 / 100.
+                // Range 45 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1e9e,
                 .end   = 0x1e9e,
@@ -7791,7 +7807,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 46 / 100.
+                // Range 46 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x1ea0,
                 .end   = 0x1ef9,
@@ -7804,7 +7820,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 47 / 100.
+                // Range 47 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2007,
                 .end   = 0x2007,
@@ -7817,7 +7833,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 48 / 100.
+                // Range 48 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2010,
                 .end   = 0x2010,
@@ -7830,7 +7846,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 49 / 100.
+                // Range 49 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2012,
                 .end   = 0x2015,
@@ -7843,7 +7859,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 50 / 100.
+                // Range 50 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2018,
                 .end   = 0x201a,
@@ -7856,7 +7872,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 51 / 100.
+                // Range 51 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x201c,
                 .end   = 0x201e,
@@ -7869,7 +7885,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 52 / 100.
+                // Range 52 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2020,
                 .end   = 0x2022,
@@ -7882,7 +7898,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 53 / 100.
+                // Range 53 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2026,
                 .end   = 0x2026,
@@ -7895,7 +7911,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 54 / 100.
+                // Range 54 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2030,
                 .end   = 0x2030,
@@ -7908,7 +7924,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 55 / 100.
+                // Range 55 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2032,
                 .end   = 0x2033,
@@ -7921,7 +7937,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 56 / 100.
+                // Range 56 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2039,
                 .end   = 0x203a,
@@ -7934,7 +7950,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 57 / 100.
+                // Range 57 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2044,
                 .end   = 0x2044,
@@ -7947,7 +7963,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 58 / 100.
+                // Range 58 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2070,
                 .end   = 0x2070,
@@ -7960,7 +7976,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 59 / 100.
+                // Range 59 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2074,
                 .end   = 0x2079,
@@ -7973,7 +7989,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 60 / 100.
+                // Range 60 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x207d,
                 .end   = 0x2089,
@@ -7986,7 +8002,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 61 / 100.
+                // Range 61 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x208d,
                 .end   = 0x208e,
@@ -7999,7 +8015,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 62 / 100.
+                // Range 62 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x20a1,
                 .end   = 0x20a1,
@@ -8012,7 +8028,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 63 / 100.
+                // Range 63 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x20a4,
                 .end   = 0x20a4,
@@ -8025,7 +8041,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 64 / 100.
+                // Range 64 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x20a6,
                 .end   = 0x20a7,
@@ -8038,7 +8054,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 65 / 100.
+                // Range 65 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x20ab,
                 .end   = 0x20ac,
@@ -8051,7 +8067,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 66 / 100.
+                // Range 66 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x20b1,
                 .end   = 0x20b2,
@@ -8064,7 +8080,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 67 / 100.
+                // Range 67 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x20b5,
                 .end   = 0x20b5,
@@ -8077,7 +8093,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 68 / 100.
+                // Range 68 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x20b9,
                 .end   = 0x20ba,
@@ -8090,7 +8106,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 69 / 100.
+                // Range 69 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x20bd,
                 .end   = 0x20bd,
@@ -8103,7 +8119,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 70 / 100.
+                // Range 70 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x210a,
                 .end   = 0x210a,
@@ -8116,7 +8132,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 71 / 100.
+                // Range 71 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2113,
                 .end   = 0x2113,
@@ -8129,7 +8145,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 72 / 100.
+                // Range 72 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2117,
                 .end   = 0x2117,
@@ -8142,7 +8158,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 73 / 100.
+                // Range 73 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2120,
                 .end   = 0x2120,
@@ -8155,7 +8171,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 74 / 100.
+                // Range 74 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2122,
                 .end   = 0x2122,
@@ -8168,7 +8184,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 75 / 100.
+                // Range 75 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x212e,
                 .end   = 0x212e,
@@ -8181,7 +8197,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 76 / 100.
+                // Range 76 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2153,
                 .end   = 0x2154,
@@ -8194,7 +8210,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 77 / 100.
+                // Range 77 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x215b,
                 .end   = 0x215e,
@@ -8207,7 +8223,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 78 / 100.
+                // Range 78 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2190,
                 .end   = 0x2193,
@@ -8220,7 +8236,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 79 / 100.
+                // Range 79 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2202,
                 .end   = 0x2202,
@@ -8233,7 +8249,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 80 / 100.
+                // Range 80 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x220f,
                 .end   = 0x220f,
@@ -8246,7 +8262,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 81 / 100.
+                // Range 81 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2211,
                 .end   = 0x2212,
@@ -8259,7 +8275,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 82 / 100.
+                // Range 82 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2215,
                 .end   = 0x2215,
@@ -8272,7 +8288,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 83 / 100.
+                // Range 83 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2219,
                 .end   = 0x221a,
@@ -8285,7 +8301,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 84 / 100.
+                // Range 84 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x221e,
                 .end   = 0x221e,
@@ -8298,7 +8314,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 85 / 100.
+                // Range 85 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x222b,
                 .end   = 0x222b,
@@ -8311,7 +8327,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 86 / 100.
+                // Range 86 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2248,
                 .end   = 0x2248,
@@ -8324,7 +8340,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 87 / 100.
+                // Range 87 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2260,
                 .end   = 0x2260,
@@ -8337,7 +8353,7 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 88 / 100.
+                // Range 88 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
                 .start = 0x2264,
                 .end   = 0x2265,
@@ -8350,10 +8366,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 89 / 100.
+                // Range 89 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25a0,
-                .end   = 0x25a0,
+                .start = 0x23ce,
+                .end   = 0x23ce,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r88,
@@ -8363,10 +8379,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 90 / 100.
+                // Range 90 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25b2,
-                .end   = 0x25b3,
+                .start = 0x25a0,
+                .end   = 0x25a0,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r89,
@@ -8376,10 +8392,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 91 / 100.
+                // Range 91 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25b6,
-                .end   = 0x25b7,
+                .start = 0x25b2,
+                .end   = 0x25b3,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r90,
@@ -8389,10 +8405,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 92 / 100.
+                // Range 92 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25bc,
-                .end   = 0x25bd,
+                .start = 0x25b6,
+                .end   = 0x25b7,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r91,
@@ -8402,10 +8418,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 93 / 100.
+                // Range 93 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25c0,
-                .end   = 0x25c1,
+                .start = 0x25bc,
+                .end   = 0x25bd,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r92,
@@ -8415,10 +8431,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 94 / 100.
+                // Range 94 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25c6,
-                .end   = 0x25c6,
+                .start = 0x25c0,
+                .end   = 0x25c1,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r93,
@@ -8428,10 +8444,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 95 / 100.
+                // Range 95 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25ca,
-                .end   = 0x25ca,
+                .start = 0x25c6,
+                .end   = 0x25c6,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r94,
@@ -8441,10 +8457,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 96 / 100.
+                // Range 96 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2913,
-                .end   = 0x2913,
+                .start = 0x25ca,
+                .end   = 0x25ca,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r95,
@@ -8454,10 +8470,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 97 / 100.
+                // Range 97 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0xf6d7,
-                .end   = 0xf6d8,
+                .start = 0x2913,
+                .end   = 0x2913,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r96,
@@ -8467,10 +8483,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 98 / 100.
+                // Range 98 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0xf8ff,
-                .end   = 0xf8ff,
+                .start = 0xf6d7,
+                .end   = 0xf6d8,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r97,
@@ -8480,10 +8496,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 99 / 100.
+                // Range 99 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0xfb01,
-                .end   = 0xfb02,
+                .start = 0xf8ff,
+                .end   = 0xf8ff,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r98,
@@ -8493,10 +8509,10 @@ const pax_font_range_t
                     },
             },
             {
-                // Range 100 / 100.
+                // Range 100 / 101.
                 .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1f170,
-                .end   = 0x1f171,
+                .start = 0xfb01,
+                .end   = 0xfb02,
                 .bitmap_var =
                     {
                         .glyphs = chakrapetchmedium_r99,
@@ -8505,12 +8521,25 @@ const pax_font_range_t
                         .bpp    = 2,
                     },
             },
+            {
+                // Range 101 / 101.
+                .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                .start = 0x1f170,
+                .end   = 0x1f171,
+                .bitmap_var =
+                    {
+                        .glyphs = chakrapetchmedium_r100,
+                        .dims   = chakrapetchmedium_r100_dims,
+                        .height = 16,
+                        .bpp    = 2,
+                    },
+            },
 };
-const size_t chakrapetchmedium_ranges_len = 100;
+const size_t chakrapetchmedium_ranges_len = 101;
 
 const pax_font_t chakrapetchmedium = {
     .name         = "chakrapetchmedium",
-    .n_ranges     = 100,
+    .n_ranges     = 101,
     .ranges       = chakrapetchmedium_ranges,
     .default_size = 16,
     .recommend_aa = true,

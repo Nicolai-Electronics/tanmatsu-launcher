@@ -2,7 +2,6 @@
 #include <time.h>
 #include "bsp/input.h"
 #include "bsp/power.h"
-#include "bsp/tanmatsu.h"
 #include "common/display.h"
 #include "esp_wifi.h"
 #include "esp_wifi_types_generic.h"
@@ -14,13 +13,14 @@
 #include "pax_matrix.h"
 #include "pax_text.h"
 #include "pax_types.h"
-#include "projdefs.h"
 #include "sdcard.h"
-#include "tanmatsu_coprocessor.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
 // #include "shapes/pax_misc.h"
+#ifdef CONFIG_BSP_TARGET_TANMATSU
 #include "bsp/tanmatsu.h"
+#include "tanmatsu_coprocessor.h"
+#endif
 
 static gui_header_field_t clock_indicator(void) {
     time_t     now      = time(NULL);
@@ -34,10 +34,12 @@ static gui_header_field_t battery_indicator(void) {
     bsp_power_battery_information_t information = {0};
     bsp_power_get_battery_information(&information);
 
+#ifdef CONFIG_BSP_TARGET_TANMATSU
     tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
     bsp_tanmatsu_coprocessor_get_handle(&coprocessor_handle);
     tanmatsu_coprocessor_pmic_faults_t faults = {0};
     tanmatsu_coprocessor_get_pmic_faults(coprocessor_handle, &faults);
+#endif
 
     if (!information.battery_available) {
         return (gui_header_field_t){get_icon(ICON_BATTERY_UNKNOWN), ""};
@@ -45,10 +47,13 @@ static gui_header_field_t battery_indicator(void) {
     if (information.battery_charging) {
         return (gui_header_field_t){get_icon(ICON_BATTERY_CHARGING), ""};
     }
+
+#ifdef CONFIG_BSP_TARGET_TANMATSU
     if (faults.watchdog || faults.chrg_input || faults.chrg_thermal || faults.chrg_safety || faults.batt_ovp ||
         faults.ntc_cold || faults.ntc_hot) {
         return (gui_header_field_t){get_icon(ICON_BATTERY_ERROR), ""};
     }
+#endif
 
     char percentage[5] = {0};
     // snprintf(percentage, sizeof(percentage), "%3u%%", (uint8_t)information.remaining_percentage);

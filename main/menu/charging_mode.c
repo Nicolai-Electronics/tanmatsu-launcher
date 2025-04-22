@@ -12,7 +12,7 @@
 #include "pax_matrix.h"
 #include "pax_text.h"
 #include "pax_types.h"
-#include "projdefs.h"
+
 // #include "shapes/pax_misc.h"
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, bsp_power_battery_information_t* information) {

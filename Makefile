@@ -11,6 +11,7 @@ MAKEFLAGS += --silent
 SHELL := /usr/bin/env bash
 
 DEVICE ?= tanmatsu # Default target device
+BUILD ?= build/$(DEVICE)
 
 export IDF_TOOLS_PATH
 export IDF_GITHUB_ASSETS
@@ -62,7 +63,7 @@ menuconfig:
 
 .PHONY: clean
 clean:
-	rm -rf build
+	rm -rf $(BUILD)
 	rm -f .submodules_update_done
 
 .PHONY: fullclean
@@ -92,19 +93,19 @@ checkbuildenv:
 
 .PHONY: build
 build: icons checkbuildenv submodules
-	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py build -DDEVICE=$(DEVICE)
+	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py -B $(BUILD) build -DDEVICE=$(DEVICE)
 
 # Hardware
 
 .PHONY: flash
 flash: build
 	source "$(IDF_PATH)/export.sh" && \
-	idf.py flash -p $(PORT)
+	idf.py -B $(BUILD) flash -p $(PORT)
 
 .PHONY: flashmonitor
 flashmonitor: build
 	source "$(IDF_PATH)/export.sh" && \
-	idf.py flash -p $(PORT) monitor
+	idf.py -B $(BUILD) flash -p $(PORT) monitor
 
 .PHONY: prepappfs
 prepappfs:
@@ -123,33 +124,33 @@ appfs:
 
 .PHONY: erase
 erase:
-	source "$(IDF_PATH)/export.sh" && idf.py erase-flash -p $(PORT)
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) erase-flash -p $(PORT)
 
 .PHONY: monitor
 monitor:
-	source "$(IDF_PATH)/export.sh" && idf.py monitor -p $(PORT)
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) monitor -p $(PORT)
 
 .PHONY: openocd
 openocd:
-	source "$(IDF_PATH)/export.sh" && idf.py openocd
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) openocd
 
 .PHONY: gdb
 gdb:
-	source "$(IDF_PATH)/export.sh" && idf.py gdb
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) gdb
 
 # Tools
 
 .PHONY: size
 size:
-	source "$(IDF_PATH)/export.sh" && idf.py size
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) size
 
 .PHONY: size-components
 size-components:
-	source "$(IDF_PATH)/export.sh" && idf.py size-components
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) size-components
 
 .PHONY: size-files
 size-files:
-	source "$(IDF_PATH)/export.sh" && idf.py size-files
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) size-files
 
 .PHONY: efuse
 efuse:
@@ -181,3 +182,14 @@ main/fat/icons/%.png: main/static/icons/%.svg
 	mkdir -p main/fat/icons
 	tools/convert.sh $< $@
 	
+# Build all targets
+.PHONY: all
+all:
+	$(MAKE) build DEVICE=tanmatsu
+	$(MAKE) build DEVICE=mch2022
+
+# Flash all: assumes Tanmatsu P4 is /dev/ttyACM0, C6 is /dev/ttyACM1 and MCH2022 badge is /dev/ttyACM2
+.PHONY: flashall
+flashall:
+	$(MAKE) flash DEVICE=tanmatsu PORT=/dev/ttyACM0
+	$(MAKE) flash DEVICE=mch2022 PORT=/dev/ttyACM2

@@ -155,7 +155,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
     // menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_TAG));
     // menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
-    // menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
+    menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
@@ -183,6 +183,10 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 } else {
                                     toggle_usb_mode();
                                 }
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_MENU:
+                                menu_settings(buffer, theme);
+                                render(buffer, theme, &menu, position, false, true);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F5:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
@@ -221,9 +225,6 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 render(buffer, theme, &menu, position, false, true);
                                 break;
                             }
-                            case BSP_INPUT_NAVIGATION_KEY_F2:
-                                test_sd();
-                                break;
                             default:
                                 break;
                         }

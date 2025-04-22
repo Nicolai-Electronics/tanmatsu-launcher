@@ -9,7 +9,6 @@
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
-#include "projdefs.h"
 #include "wifi.h"
 #include "wifi_connection.h"
 #include "wifi_settings.h"

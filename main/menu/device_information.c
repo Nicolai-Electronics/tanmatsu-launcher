@@ -17,7 +17,7 @@
 #include "pax_matrix.h"
 #include "pax_text.h"
 #include "pax_types.h"
-#include "projdefs.h"
+
 // #include "shapes/pax_misc.h"
 
 typedef enum {
@@ -89,7 +89,7 @@ esp_err_t read_device_identity(device_identity_t* out_identity) {
     if (res != ESP_OK) {
         return res;
     }
-
+#ifdef CONFIG_IDF_TARGET_ESP32P4
     res = esp_efuse_read_field_blob(ESP_EFUSE_OPTIONAL_UNIQUE_ID, &out_identity->uid, 16 * 8);
     if (res != ESP_OK) {
         return res;
@@ -104,6 +104,7 @@ esp_err_t read_device_identity(device_identity_t* out_identity) {
     if (res != ESP_OK) {
         return res;
     }
+#endif
 
     return res;
 }

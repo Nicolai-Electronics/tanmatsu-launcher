@@ -11,7 +11,6 @@
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
-#include "projdefs.h"
 #include "timezone.h"
 // #include "shapes/pax_misc.h"
 

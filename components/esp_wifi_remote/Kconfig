@@ -1,8 +1,8 @@
 menu "Wi-Fi Remote"
     config ESP_WIFI_REMOTE_ENABLED
         bool
-        default y if !ESP_HOST_WIFI_ENABLED
-        default n if ESP_HOST_WIFI_ENABLED
+        default y if !ESP_HOST_WIFI_ENABLED && !ESP_WIFI_ENABLED
+        default n if ESP_HOST_WIFI_ENABLED || ESP_WIFI_ENABLED
 
     if ESP_WIFI_REMOTE_ENABLED
         orsource "./idf_v$ESP_IDF_VERSION/Kconfig.slave_select.in"

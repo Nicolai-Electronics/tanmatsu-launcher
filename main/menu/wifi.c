@@ -10,9 +10,9 @@
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
-#include "projdefs.h"
 #include "wifi_connection.h"
 #include "wifi_edit.h"
+#include "wifi_scan.h"
 #include "wifi_settings.h"
 // #include "shapes/pax_misc.h"
 
@@ -31,19 +31,6 @@ static bool populate_menu_from_wifi_entries(menu_t* menu) {
     return !empty;
 }
 
-static void wifi_scan_done_handler(void* handler_arg, esp_event_base_t base, int32_t id, void* event_data) {
-}
-
-static void scan_for_networks(pax_buf_t* buffer, gui_theme_t* theme) {
-    if (wifi_stack_get_initialized()) {
-        esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_SCAN_DONE, wifi_scan_done_handler, NULL);
-        esp_wifi_scan_start(NULL, true);
-    } else {
-        message_dialog(buffer, theme, "WiFi stack not initialized",
-                       "The WiFi stack is not initialized. Please try again later.", "OK");
-    }
-}
-
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons,
                    bool loading) {
     if (!partial || icons) {
@@ -53,7 +40,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                                                              {get_icon(ICON_F1), "Back"},
                                                              {get_icon(ICON_F2), "Scan"},
                                                              {get_icon(ICON_F3), "Add manually"}}),
-                                     3, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Edit"}}), 1);
+                                     4, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Edit"}}), 1);
     }
     menu_render(buffer, menu, position, theme, partial);
     if (menu_find_item(menu, 0) == NULL) {
@@ -99,7 +86,7 @@ void menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
                                 menu_free(&menu);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_F2:
-                                scan_for_networks(buffer, theme);
+                                menu_wifi_scan(buffer, theme);
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
                                 render(buffer, theme, &menu, position, true, false, false);

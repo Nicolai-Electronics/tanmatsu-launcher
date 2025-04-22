@@ -17,7 +17,6 @@
 // #include "shapes/pax_misc.h"
 #include "device_information.h"
 #include "firmware_update.h"
-#include "projdefs.h"
 #include "settings_clock.h"
 
 typedef enum {

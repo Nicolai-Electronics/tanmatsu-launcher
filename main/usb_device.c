@@ -3,6 +3,7 @@
 // SPDX-FileContributor: 2022-2024 Espressif Systems (Shanghai) CO LTD
 // SPDX-FileContributor: 2025 Nicolai Electronics
 
+#include "usb_device.h"
 #include "sdkconfig.h"
 #ifdef CONFIG_IDF_TARGET_ESP32P4
 
@@ -17,7 +18,6 @@
 #include "freertos/task.h"
 #include "hal/usb_serial_jtag_ll.h"
 #include "tinyusb.h"
-#include "usb_device.h"
 
 static const char* TAG = "USB device";
 
@@ -371,6 +371,14 @@ void               usb_initialize(void) {
     ESP_LOGD(TAG, "USB initialization skipped, no USB peripheral");
 }
 
-void usb_send_data(void const* data, size_t len) {
+void usb_send_data(uint8_t const* data, size_t len) {
 }
+
+usb_mode_t usb_mode_get(void) {
+    return USB_DEVICE;
+}
+
+void usb_mode_set(usb_mode_t mode) {
+}
+
 #endif

@@ -11,6 +11,7 @@ idf_component_register(
 		"menu/about.c"
 		"menu/wifi.c"
 		"menu/wifi_edit.c"
+		"menu/wifi_scan.c"
 		"menu/apps.c"
 		"menu/firmware_update.c"
 		"menu/message_dialog.c"
@@ -43,7 +44,6 @@ idf_component_register(
 		nvs_flash
 		badge-bsp
 		gui
-		esp_wifi_remote
 		esp_hosted
 		wpa_supplicant
 		esp_https_ota
@@ -57,6 +57,7 @@ idf_component_register(
 		efuse
 		timezone
 		json
+		freertos
 	INCLUDE_DIRS
 		"."
 		"include"
