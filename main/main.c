@@ -33,7 +33,8 @@
 #include "wifi_connection.h"
 #include "wifi_remote.h"
 
-#ifdef CONFIG_BSP_TARGET_TANMATSU
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
 #include "bsp/tanmatsu.h"
 #include "tanmatsu_coprocessor.h"
 #endif
@@ -333,7 +334,8 @@ void app_main(void) {
 
     if (sdcard_inserted) {
         printf("SD card detected\r\n");
-#ifdef CONFIG_BSP_TARGET_TANMATSU
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
         sd_pwr_ctrl_handle_t sd_pwr_handle = initialize_sd_ldo();
         sd_mount_spi(sd_pwr_handle);
         test_sd();

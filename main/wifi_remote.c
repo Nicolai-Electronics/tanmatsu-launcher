@@ -10,7 +10,8 @@ bool wifi_remote_get_initialized(void) {
     return initialized;
 }
 
-#ifdef CONFIG_BSP_TARGET_TANMATSU
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
 /// Implementation for Tanmatsu
 
 #include <string.h>

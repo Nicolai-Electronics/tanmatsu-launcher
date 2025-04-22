@@ -102,7 +102,8 @@ static void execute_app(launcher_app_t* app) {
     }
 }
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
 #define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2
 #define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "↑ / ↓ / ← / → Navigate ⏎ Select"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022)

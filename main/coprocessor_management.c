@@ -7,7 +7,8 @@
 #include "esp_log.h"
 static const char* TAG = "Coprocessor management";
 
-#ifdef CONFIG_BSP_TARGET_TANMATSU
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
 
 #include "bsp/tanmatsu.h"
 #include "rvswd_ch32v20x.h"

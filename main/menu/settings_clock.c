@@ -22,7 +22,8 @@
 
 static const char* TAG = "clock";
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
 #define FOOTER_LEFT                                              \
     ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"},           \
                             {get_icon(ICON_F1), "Back"},         \

@@ -8,7 +8,8 @@
 
 sd_status_t status = SD_STATUS_NOT_PRESENT;
 
-#ifdef CONFIG_BSP_TARGET_TANMATSU
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
 static char const    TAG[] = "sdcard";
 sd_pwr_ctrl_handle_t initialize_sd_ldo(void) {
     sd_pwr_ctrl_ldo_config_t ldo_config = {
