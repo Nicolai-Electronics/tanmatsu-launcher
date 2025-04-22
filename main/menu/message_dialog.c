@@ -14,6 +14,7 @@
 #include "pax_text.h"
 #include "pax_types.h"
 #include "sdcard.h"
+#include "sdkconfig.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
 // #include "shapes/pax_misc.h"
@@ -22,13 +23,16 @@
 #include "tanmatsu_coprocessor.h"
 #endif
 
+static char clock_buffer[6] = {0};
+
 static gui_header_field_t clock_indicator(void) {
     time_t     now      = time(NULL);
     struct tm* timeinfo = localtime(&now);
-    char       buffer[6];
-    strftime(buffer, sizeof(buffer), "%H:%M", timeinfo);
-    return (gui_header_field_t){NULL, buffer};
+    strftime(clock_buffer, sizeof(clock_buffer), "%H:%M", timeinfo);
+    return (gui_header_field_t){NULL, clock_buffer};
 }
+
+static char percentage_buffer[5] = {0};
 
 static gui_header_field_t battery_indicator(void) {
     bsp_power_battery_information_t information = {0};
@@ -55,30 +59,29 @@ static gui_header_field_t battery_indicator(void) {
     }
 #endif
 
-    char percentage[5] = {0};
-    // snprintf(percentage, sizeof(percentage), "%3u%%", (uint8_t)information.remaining_percentage);
+    // snprintf(percentage_buffer, sizeof(percentage_buffer), "%3u%%", (uint8_t)information.remaining_percentage);
     if (information.remaining_percentage >= 98) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_7), percentage};
+        return (gui_header_field_t){get_icon(ICON_BATTERY_7), percentage_buffer};
     }
     if (information.remaining_percentage >= 84) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_6), percentage};
+        return (gui_header_field_t){get_icon(ICON_BATTERY_6), percentage_buffer};
     }
     if (information.remaining_percentage >= 70) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_5), percentage};
+        return (gui_header_field_t){get_icon(ICON_BATTERY_5), percentage_buffer};
     }
     if (information.remaining_percentage >= 56) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_4), percentage};
+        return (gui_header_field_t){get_icon(ICON_BATTERY_4), percentage_buffer};
     }
     if (information.remaining_percentage >= 42) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_3), percentage};
+        return (gui_header_field_t){get_icon(ICON_BATTERY_3), percentage_buffer};
     }
     if (information.remaining_percentage >= 28) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_2), percentage};
+        return (gui_header_field_t){get_icon(ICON_BATTERY_2), percentage_buffer};
     }
     if (information.remaining_percentage >= 14) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_1), percentage};
+        return (gui_header_field_t){get_icon(ICON_BATTERY_1), percentage_buffer};
     }
-    return (gui_header_field_t){get_icon(ICON_BATTERY_0), percentage};
+    return (gui_header_field_t){get_icon(ICON_BATTERY_0), percentage_buffer};
 }
 
 static gui_header_field_t usb_indicator(void) {
@@ -168,13 +171,23 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
                        header_right_count, footer_left, footer_left_count, footer_right, footer_right_count);
 }
 
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), (char*)action_text}}), 2
+#define FOOTER_RIGHT NULL, 0
+#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#define FOOTER_LEFT  ((gui_header_field_t[]){{NULL, "🅱"}, {NULL, (char*)action_text}}), 2
+#define FOOTER_RIGHT NULL, 0
+#else
+#define FOOTER_LEFT  NULL, 0
+#define FOOTER_RIGHT NULL, 0
+#endif
+
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, const char* title, const char* message,
                    const char* action_text, bool partial, bool icons) {
     if (!partial || icons) {
-        render_base_screen_statusbar(
-            buffer, theme, !partial, !partial || icons, !partial,
-            ((gui_header_field_t[]){{get_icon(ICON_ERROR), title}}), 1,
-            ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), action_text}}), 2, NULL, 0);
+        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
+                                     ((gui_header_field_t[]){{get_icon(ICON_ERROR), title}}), 1, FOOTER_LEFT,
+                                     FOOTER_RIGHT);
     }
     if (!partial) {
         pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, 16, position.x0,
@@ -208,6 +221,7 @@ void message_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* title, co
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 return;
                             default:
                                 break;

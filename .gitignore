@@ -16,4 +16,4 @@ managed_components
 shell.nix
 sdkconfig
 .submodules_update_done
-
+sdkconfig_*

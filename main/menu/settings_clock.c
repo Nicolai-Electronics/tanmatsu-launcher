@@ -15,23 +15,46 @@
 #include "pax_matrix.h"
 #include "pax_text.h"
 #include "pax_types.h"
+#include "sdkconfig.h"
 #include "settings_clock_timezone.h"
 #include "timezone.h"
 // #include "shapes/pax_misc.h"
 
 static const char* TAG = "clock";
 
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#define FOOTER_LEFT                                              \
+    ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"},           \
+                            {get_icon(ICON_F1), "Back"},         \
+                            {get_icon(ICON_F2), "Set timezone"}, \
+                            {get_icon(ICON_F3), "Toggle NTP"}}), \
+        4
+#define FOOTER_RIGHT   ((gui_header_field_t[]){{NULL, " ← / → Navigate ↑ / ↓ Modify value"}}), 1
+#define DATE_TEXT_SIZE 45
+#define TIME_TEXT_SIZE 90
+#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#define FOOTER_LEFT    ((gui_header_field_t[]){{NULL, "🅱Back"}}), 1
+#define FOOTER_RIGHT   ((gui_header_field_t[]){{NULL, "🆂Set timezone"}, {NULL, "🅴Toggle NTP"}}), 2
+#define DATE_TEXT_SIZE 32
+#define TIME_TEXT_SIZE 32
+#else
+#define FOOTER_LEFT    NULL, 0
+#define FOOTER_RIGHT   NULL, 0
+#define DATE_TEXT_SIZE 32
+#define TIME_TEXT_SIZE 32
+#endif
+
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, const timezone_t* zone, bool ntp,
                    bool partial, bool icons, uint8_t selection) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_CLOCK), "Date and time configuration"}}), 1,
-                                     ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"},
-                                                             {get_icon(ICON_F1), "Back"},
-                                                             {get_icon(ICON_F2), "Set timezone"},
-                                                             {get_icon(ICON_F3), "Toggle NTP"}}),
-                                     4, ((gui_header_field_t[]){{NULL, " ← / → Navigate ↑ / ↓ Modify value"}}), 1);
+                                     ((gui_header_field_t[]){{get_icon(ICON_CLOCK), "Clock configuration"}}), 1,
+                                     FOOTER_LEFT, FOOTER_RIGHT);
     }
+
+    float date_font_size = DATE_TEXT_SIZE;
+    float time_font_size = TIME_TEXT_SIZE;
+
     char text_buffer[80];
 
     time_t     now      = time(NULL);
@@ -40,7 +63,6 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, c
     float box_width = position.x1 - position.x0;
     // float box_height = position.y1 - position.y0;
 
-    float     date_font_size = 45;
     pax_vec2f date_selection_size =
         (selection < 3) ? pax_text_size(pax_font_sky_mono, date_font_size, selection < 2 ? "00" : "0000")
                         : ((pax_vec2f){0});
@@ -65,7 +87,6 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, c
     pax_draw_text(buffer, theme->palette.color_active_foreground, pax_font_sky_mono, date_font_size, date_box.x,
                   date_box.y, text_buffer);
 
-    float     time_font_size = 90;
     pax_vec2f time_selection_size =
         (selection >= 3) ? pax_text_size(pax_font_sky_mono, time_font_size, "00") : ((pax_vec2f){0});
     pax_vec2f time_selection_offset_element = pax_text_size(pax_font_sky_mono, time_font_size, "00:");
@@ -215,6 +236,7 @@ void menu_settings_clock(pax_buf_t* buffer, gui_theme_t* theme) {
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_LEFT:
                                 if (selection > 0) {
@@ -237,12 +259,14 @@ void menu_settings_clock(pax_buf_t* buffer, gui_theme_t* theme) {
                                 render(buffer, theme, position, zone, ntp, true, false, selection);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F2:
+                            case BSP_INPUT_NAVIGATION_KEY_MENU:
                                 // Set timezone
                                 menu_clock_timezone(buffer, theme);
                                 get_timezone(&zone);
                                 render(buffer, theme, position, zone, ntp, false, true, selection);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F3:
+                            case BSP_INPUT_NAVIGATION_KEY_SELECT:
                                 // Toggle NTP
                                 ntp = !ntp;
                                 set_ntp(ntp);

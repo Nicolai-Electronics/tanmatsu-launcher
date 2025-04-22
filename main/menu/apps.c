@@ -15,6 +15,7 @@
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
+#include "sdkconfig.h"
 // #include "shapes/pax_misc.h"
 
 #define MAX_NUM_APPS 128
@@ -50,12 +51,22 @@ static void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t positi
     }
 }
 
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
+#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Start app"}}), 1
+#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#define FOOTER_LEFT  NULL, 0
+#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "🅰 Start app"}}), 1
+#else
+#define FOOTER_LEFT  NULL, 0
+#define FOOTER_RIGHT NULL, 0
+#endif
+
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
-                                     ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}),
-                                     2, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Start app"}}), 1);
+                                     ((gui_header_field_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, FOOTER_LEFT,
+                                     FOOTER_RIGHT);
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
@@ -92,6 +103,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 menu_free(&menu);
                                 free_list_of_apps(apps, MAX_NUM_APPS);
                                 return;
@@ -103,7 +115,9 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                 menu_navigate_next(&menu);
                                 render(buffer, theme, &menu, position, true, false);
                                 break;
-                            case BSP_INPUT_NAVIGATION_KEY_RETURN: {
+                            case BSP_INPUT_NAVIGATION_KEY_RETURN:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                            case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                 app_t* app = (app_t*)arg;
                                 execute_app(buffer, theme, position, app);

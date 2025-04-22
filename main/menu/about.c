@@ -13,12 +13,22 @@
 
 // #include "shapes/pax_misc.h"
 
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
+#define FOOTER_RIGHT NULL, 0
+#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#define FOOTER_LEFT  NULL, 0
+#define FOOTER_RIGHT NULL, 0
+#else
+#define FOOTER_LEFT  NULL, 0
+#define FOOTER_RIGHT NULL, 0
+#endif
+
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_INFO), "About"}}), 1,
-                                     ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}),
-                                     2, NULL, 0);
+                                     ((gui_header_field_t[]){{get_icon(ICON_INFO), "About"}}), 1, FOOTER_LEFT,
+                                     FOOTER_RIGHT);
     }
     if (!partial) {
         pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, 16, position.x0,
@@ -61,6 +71,7 @@ void menu_about(pax_buf_t* buffer, gui_theme_t* theme) {
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 return;
                             default:
                                 break;

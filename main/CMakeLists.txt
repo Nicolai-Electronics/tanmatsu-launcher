@@ -66,4 +66,4 @@ idf_component_register(
 		${files}
 )
 
-fatfs_create_spiflash_image(fat fat FLASH_IN_PROJECT)
+fatfs_create_spiflash_image(fat ../fat/${DEVICE} FLASH_IN_PROJECT)

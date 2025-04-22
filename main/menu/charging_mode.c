@@ -50,6 +50,7 @@ void charging_mode(pax_buf_t* buffer, gui_theme_t* theme) {
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 bsp_display_set_backlight_brightness(100);
                                 return;
                             default:

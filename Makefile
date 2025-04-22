@@ -183,10 +183,14 @@ main/fat/icons/%.png: main/static/icons/%.svg
 	tools/convert.sh $< $@
 	
 # Build all targets
-.PHONY: all
-all:
+.PHONY: buildall
+buildall:
 	$(MAKE) build DEVICE=tanmatsu
+	$(MAKE) build DEVICE=konsool
+	$(MAKE) build DEVICE=hackerhotel-2026
+	$(MAKE) build DEVICE=esp32-p4-function-ev-board
 	$(MAKE) build DEVICE=mch2022
+	$(MAKE) build DEVICE=hackerhotel-2024
 
 # Flash all: assumes Tanmatsu P4 is /dev/ttyACM0, C6 is /dev/ttyACM1 and MCH2022 badge is /dev/ttyACM2
 .PHONY: flashall

@@ -42,6 +42,7 @@ void menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index) {
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 menu_free(&menu);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_F2:
@@ -54,7 +55,9 @@ void menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index) {
                                 menu_navigate_next(&menu);
                                 render(buffer, theme, &menu, true, false);
                                 break;
-                            case BSP_INPUT_NAVIGATION_KEY_RETURN: {
+                            case BSP_INPUT_NAVIGATION_KEY_RETURN:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                            case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                 render(buffer, theme, &menu, false, false);
                                 break;

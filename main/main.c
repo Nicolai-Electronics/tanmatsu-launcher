@@ -27,6 +27,7 @@
 #include "pax_text.h"
 #include "portmacro.h"
 #include "sdcard.h"
+#include "sdkconfig.h"
 #include "timezone.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
@@ -46,7 +47,8 @@ static wl_handle_t   wl_handle              = WL_INVALID_HANDLE;
 static bool          wifi_stack_initialized = false;
 static bool          wifi_stack_task_done   = false;
 
-#ifdef CONFIG_BSP_TARGET_TANMATSU
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
 gui_theme_t theme = {
     .palette =
         {
@@ -92,7 +94,53 @@ gui_theme_t theme = {
             .grid_vertical_count   = 3,
         },
 };
-#else
+#elif defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
+gui_theme_t theme = {
+    .palette =
+        {
+            .color_foreground          = 0xFF340132,  // #340132
+            .color_background          = 0xFFEEEAEE,  // #EEEAEE
+            .color_active_foreground   = 0xFF340132,  // #340132
+            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
+            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
+            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
+            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
+        },
+    .footer =
+        {
+            .height             = 32,
+            .vertical_margin    = 7,
+            .horizontal_margin  = 20,
+            .text_height        = 16,
+            .vertical_padding   = 20,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+        },
+    .header =
+        {
+            .height             = 32,
+            .vertical_margin    = 7,
+            .horizontal_margin  = 20,
+            .text_height        = 16,
+            .vertical_padding   = 20,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+        },
+    .menu =
+        {
+            .height                = 480 - 64,
+            .vertical_margin       = 20,
+            .horizontal_margin     = 30,
+            .text_height           = 16,
+            .vertical_padding      = 6,
+            .horizontal_padding    = 6,
+            .text_font             = &chakrapetchmedium,
+            .list_entry_height     = 32,
+            .grid_horizontal_count = 4,
+            .grid_vertical_count   = 3,
+        },
+};
+#elif defined(CONFIG_BSP_TARGET_MCH2022)
 gui_theme_t theme = {
     .palette =
         {
@@ -110,34 +158,82 @@ gui_theme_t theme = {
             .vertical_margin    = 0,
             .horizontal_margin  = 0,
             .text_height        = 16,
-            .vertical_padding   = 20,
+            .vertical_padding   = 5,
             .horizontal_padding = 0,
             .text_font          = &chakrapetchmedium,
         },
     .header =
         {
             .height             = 32,
-            .vertical_margin    = 7,
-            .horizontal_margin  = 20,
+            .vertical_margin    = 0,
+            .horizontal_margin  = 0,
             .text_height        = 16,
-            .vertical_padding   = 20,
+            .vertical_padding   = 0,
             .horizontal_padding = 0,
             .text_font          = &chakrapetchmedium,
         },
     .menu =
         {
-            .height                = 480 - 64,
-            .vertical_margin       = 20,
-            .horizontal_margin     = 30,
+            .height                = 240 - 32 - 16,
+            .vertical_margin       = 0,
+            .horizontal_margin     = 0,
             .text_height           = 16,
-            .vertical_padding      = 6,
-            .horizontal_padding    = 6,
+            .vertical_padding      = 3,
+            .horizontal_padding    = 3,
             .text_font             = &chakrapetchmedium,
             .list_entry_height     = 32,
-            .grid_horizontal_count = 4,
+            .grid_horizontal_count = 3,
             .grid_vertical_count   = 3,
         },
 };
+#elif defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
+gui_theme_t theme = {
+    .palette =
+        {
+            .color_foreground          = 0xFF340132,  // #340132
+            .color_background          = 0xFFEEEAEE,  // #EEEAEE
+            .color_active_foreground   = 0xFF340132,  // #340132
+            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
+            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
+            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
+            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
+        },
+    .footer =
+        {
+            .height             = 16,
+            .vertical_margin    = 0,
+            .horizontal_margin  = 0,
+            .text_height        = 16,
+            .vertical_padding   = 5,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+        },
+    .header =
+        {
+            .height             = 32,
+            .vertical_margin    = 0,
+            .horizontal_margin  = 0,
+            .text_height        = 16,
+            .vertical_padding   = 0,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+        },
+    .menu =
+        {
+            .height                = 240 - 32 - 16,
+            .vertical_margin       = 0,
+            .horizontal_margin     = 0,
+            .text_height           = 16,
+            .vertical_padding      = 3,
+            .horizontal_padding    = 3,
+            .text_font             = &chakrapetchmedium,
+            .list_entry_height     = 32,
+            .grid_horizontal_count = 3,
+            .grid_vertical_count   = 3,
+        },
+};
+#else
+#error "Unsupported target"
 #endif
 
 void startup_screen(const char* text) {
@@ -232,25 +328,17 @@ void app_main(void) {
         timezone_apply_timezone(zone);
     }
 
-#ifdef CONFIG_BSP_TARGET_TANMATSU
-    tanmatsu_coprocessor_handle_t handle = NULL;
-    if (bsp_tanmatsu_coprocessor_get_handle(&handle) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get coprocessor handle");
-        return;
-    }
-    tanmatsu_coprocessor_inputs_t inputs = {0};
-    if (tanmatsu_coprocessor_get_inputs(handle, &inputs) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get coprocessor inputs");
-        return;
-    }
+    bool sdcard_inserted = false;
+    bsp_input_read_action(BSP_INPUT_ACTION_TYPE_SD_CARD, &sdcard_inserted);
 
-    if (inputs.sd_card_detect) {
-        printf("SD card detected, mounting\r\n");
+    if (sdcard_inserted) {
+        printf("SD card detected\r\n");
+#ifdef CONFIG_BSP_TARGET_TANMATSU
         sd_pwr_ctrl_handle_t sd_pwr_handle = initialize_sd_ldo();
         sd_mount_spi(sd_pwr_handle);
         test_sd();
-    }
 #endif
+    }
 
     xTaskCreate(wifi_task, TAG, 4096, NULL, 10, NULL);
 

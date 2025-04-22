@@ -102,14 +102,22 @@ static void execute_app(launcher_app_t* app) {
     }
 }
 
-// ❌▵▫○𑗘◇
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2
+#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "↑ / ↓ / ← / → Navigate ⏎ Select"}}), 1
+#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#define FOOTER_LEFT  NULL, 0
+#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "🅰 Select"}}), 1
+#else
+#define FOOTER_LEFT  NULL, 0
+#define FOOTER_RIGHT NULL, 0
+#endif
+
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {
-        render_base_screen_statusbar(
-            buffer, theme, !partial, !partial || icons, !partial,
-            ((gui_header_field_t[]){{get_icon(ICON_HOME), "Home"}}), 1,
-            ((gui_header_field_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2,
-            ((gui_header_field_t[]){{NULL, "↑ / ↓ / ← / → Navigate ⏎ Select"}}), 1);
+        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
+                                     ((gui_header_field_t[]){{get_icon(ICON_HOME), "Home"}}), 1, FOOTER_LEFT,
+                                     FOOTER_RIGHT);
     }
     menu_render_grid(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
@@ -215,7 +223,9 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 menu_navigate_next_row(&menu, theme);
                                 render(buffer, theme, &menu, position, true, false);
                                 break;
-                            case BSP_INPUT_NAVIGATION_KEY_RETURN: {
+                            case BSP_INPUT_NAVIGATION_KEY_RETURN:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                            case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                 if (arg >= (void*)ACTION_LAST) {
                                     execute_app((launcher_app_t*)arg);

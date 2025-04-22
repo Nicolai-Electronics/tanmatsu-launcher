@@ -69,7 +69,7 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
     menu_t menu = {0};
     menu_initialize(&menu);
     menu_insert_item_icon(&menu, "WiFi configuration", NULL, (void*)ACTION_WIFI, -1, get_icon(ICON_WIFI));
-    menu_insert_item_icon(&menu, "Date and time configuration", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
+    menu_insert_item_icon(&menu, "Clock configuration", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
     menu_insert_item_icon(&menu, "Firmware update", NULL, (void*)ACTION_FIRMWARE_UPDATE, -1,
                           get_icon(ICON_SYSTEM_UPDATE));
     menu_insert_item_icon(&menu, "Device information", NULL, (void*)ACTION_DEVICE_INFO, -1, get_icon(ICON_DEVICE_INFO));
@@ -95,6 +95,7 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 menu_free(&menu);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
@@ -105,7 +106,9 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
                                 menu_navigate_next(&menu);
                                 render(buffer, theme, &menu, position, true, false);
                                 break;
-                            case BSP_INPUT_NAVIGATION_KEY_RETURN: {
+                            case BSP_INPUT_NAVIGATION_KEY_RETURN:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                            case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                 execute_action(buffer, (menu_home_action_t)arg, theme);
                                 render(buffer, theme, &menu, position, false, true);
