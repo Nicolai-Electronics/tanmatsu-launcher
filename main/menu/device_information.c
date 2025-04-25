@@ -36,12 +36,25 @@ typedef enum {
     DEVICE_VARIANT_RADIO_EBYTE_E220_900M_33S = 12,  // LLCC68 850-930 MHz PA
 } device_variant_radio_t;
 
+typedef enum {
+    DEVICE_VARIANT_COLOR_NONE      = 0,
+    DEVICE_VARIANT_COLOR_BLACK     = 1,
+    DEVICE_VARIANT_COLOR_CYBERDECK = 2,
+    DEVICE_VARIANT_COLOR_BLUE      = 3,
+    DEVICE_VARIANT_COLOR_RED       = 4,
+    DEVICE_VARIANT_COLOR_GREEN     = 5,
+    DEVICE_VARIANT_COLOR_PURPLE    = 6,
+    DEVICE_VARIANT_COLOR_YELLOW    = 7,
+    DEVICE_VARIANT_COLOR_WHITE     = 8,
+} device_variant_color_t;
+
 typedef struct {
     // User data
     char                   name[16 + sizeof('\0')];
     char                   vendor[10 + sizeof('\0')];
     uint8_t                revision;
     device_variant_radio_t radio;
+    device_variant_color_t color;
     char                   region[2 + sizeof('\0')];
     // MAC address
     uint8_t                mac[6];
@@ -79,6 +92,13 @@ esp_err_t read_device_identity(device_identity_t* out_identity) {
         return res;
     }
     out_identity->radio = (device_variant_radio_t)variant_radio;
+
+    uint8_t variant_color = 0;
+    res = esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA_HARDWARE_VARIANT_COLOR, &variant_color, sizeof(uint8_t) * 8);
+    if (res != ESP_OK) {
+        return res;
+    }
+    out_identity->color = (device_variant_radio_t)variant_color;
 
     res = esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA_HARDWARE_REGION, out_identity->region, 2 * 8);
     if (res != ESP_OK) {
@@ -137,6 +157,29 @@ const char* get_radio_name(uint8_t radio_id) {
             return "EBYTE E220-400M33S";
         case DEVICE_VARIANT_RADIO_EBYTE_E220_900M_33S:
             return "EBYTE E220-900M33S";
+        default:
+            return "Unknown";
+    }
+}
+
+const char* get_color_name(uint8_t color_id) {
+    switch (color_id) {
+        case DEVICE_VARIANT_COLOR_BLACK:
+            return "Black";
+        case DEVICE_VARIANT_COLOR_CYBERDECK:
+            return "Cyberdeck";
+        case DEVICE_VARIANT_COLOR_BLUE:
+            return "Blue";
+        case DEVICE_VARIANT_COLOR_RED:
+            return "Red";
+        case DEVICE_VARIANT_COLOR_GREEN:
+            return "Green";
+        case DEVICE_VARIANT_COLOR_PURPLE:
+            return "Purple";
+        case DEVICE_VARIANT_COLOR_YELLOW:
+            return "Yellow";
+        case DEVICE_VARIANT_COLOR_WHITE:
+            return "White";
         default:
             return "Unknown";
     }
@@ -212,6 +255,9 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
         snprintf(text_buffer, sizeof(text_buffer), "Radio:               %s", get_radio_name(identity.radio));
+        pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
+                      position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
+        snprintf(text_buffer, sizeof(text_buffer), "Color:               %s", get_color_name(identity.color));
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
         snprintf(text_buffer, sizeof(text_buffer), "Region:              %s", identity.region);
