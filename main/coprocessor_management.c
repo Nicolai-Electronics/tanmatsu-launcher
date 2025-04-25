@@ -4,7 +4,9 @@
 #include "coprocessor_management.h"
 #include "bsp/device.h"
 #include "bsp/i2c.h"
+#include "common/display.h"
 #include "esp_log.h"
+#include "pax_gfx.h"
 static const char* TAG = "Coprocessor management";
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
@@ -18,7 +20,14 @@ extern uint8_t const coprocessor_firmware_start[] asm("_binary_tanmatsu_coproces
 extern uint8_t const coprocessor_firmware_end[] asm("_binary_tanmatsu_coprocessor_bin_end");
 
 static void callback(char const* msg, uint8_t progress) {
-    printf("Coprocessor update: %s (%u%%)\r\n", msg, progress);
+    char text[128];
+    snprintf(text, sizeof(text), "%s (%u%%)", msg, progress);
+    printf("Coprocessor update: %s\r\n", text);
+    pax_buf_t* buffer = display_get_buffer();
+    pax_background(buffer, 0xFF0000FF);
+    pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 0, "Updating coprocessor firmware...");
+    pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18, text);
+    display_blit_buffer(buffer);
 }
 
 void coprocessor_flash(void) {

@@ -1,9 +1,9 @@
 #include "home.h"
 #include <string.h>
 #include <time.h>
-#include "appfs.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
+#include "bsp/power.h"
 #include "common/display.h"
 #include "freertos/idf_additions.h"
 #include "freertos/projdefs.h"
@@ -20,6 +20,7 @@
 #include "apps.h"
 #include "charging_mode.h"
 #include "icons.h"
+#include "menu/textedit.h"
 #include "sdcard.h"
 #include "usb_device.h"
 
@@ -31,55 +32,6 @@ typedef enum {
     ACTION_LAST,
 } menu_home_action_t;
 
-typedef struct {
-    char*          path;
-    char*          type;
-    char*          slug;
-    char*          title;
-    char*          description;
-    char*          category;
-    char*          author;
-    char*          license;
-    int            version;
-    pax_buf_t*     icon;
-    appfs_handle_t appfs_fd;
-} launcher_app_t;
-
-static bool populate_menu_from_appfs_entries(menu_t* menu) {
-    bool           empty    = true;
-    appfs_handle_t appfs_fd = appfsNextEntry(APPFS_INVALID_FD);
-    while (appfs_fd != APPFS_INVALID_FD) {
-        empty               = false;
-        const char* slug    = NULL;
-        const char* title   = NULL;
-        uint16_t    version = 0xFFFF;
-        appfsEntryInfoExt(appfs_fd, &slug, &title, &version, NULL);
-
-        // if (!find_menu_item_for_type_and_slug(menu, "esp32", slug)) {
-        //  AppFS entry has no metadata installed, create a simple menu entry anyway
-        launcher_app_t* app = malloc(sizeof(launcher_app_t));
-        if (app != NULL) {
-            memset(app, 0, sizeof(launcher_app_t));
-            app->appfs_fd = appfs_fd;
-            app->type     = strdup("esp32");
-            app->slug     = strdup(slug);
-            app->title    = strdup(title);
-            app->version  = version;
-            app->icon     = malloc(sizeof(pax_buf_t));
-            if (app->icon != NULL) {
-                // pax_decode_png_buf(app->icon, (void*)dev_png_start, dev_png_end - dev_png_start, PAX_BUF_32_8888ARGB,
-                // 0);
-            }
-            // menu_insert_item_icon(menu, (app->title != NULL) ? app->title : app->slug, NULL, (void*)app, -1,
-            // app->icon);
-            menu_insert_item(menu, (app->title != NULL) ? app->title : app->slug, NULL, (void*)app, -1);
-        }
-        //}
-        appfs_fd = appfsNextEntry(appfs_fd);
-    }
-    return !empty;
-}
-
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
     switch (action) {
         case ACTION_APPS:
@@ -90,15 +42,6 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             break;
         default:
             break;
-    }
-}
-
-static void execute_app(launcher_app_t* app) {
-    if (strcmp(app->type, "esp32") == 0) {
-        appfsBootSelect(app->appfs_fd, NULL);
-        esp_restart();
-    } else if (strcmp(app->type, "python") == 0) {
-        // TBD
     }
 }
 
@@ -160,7 +103,6 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
 
     menu_t menu = {0};
     menu_initialize(&menu);
-    // populate_menu_from_appfs_entries(&menu);
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
     // menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_TAG));
     // menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
@@ -179,6 +121,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
     bool power_button_latch = false;
 
     render(buffer, theme, &menu, position, false, true);
+
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -186,11 +129,35 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                 case INPUT_EVENT_TYPE_NAVIGATION: {
                     if (event.args_navigation.state) {
                         switch (event.args_navigation.key) {
+                            case BSP_INPUT_NAVIGATION_KEY_F1:
+                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
+                                    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+                                }
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_F2:
+                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
+                                    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_BOOTLOADER);
+                                }
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_F3:
+                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
+                                    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_APPLICATION);
+                                }
+                                break;
                             case BSP_INPUT_NAVIGATION_KEY_F4:
+                            case BSP_INPUT_NAVIGATION_KEY_START:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     keyboard_backlight();
                                 } else {
-                                    toggle_usb_mode();
+                                    char text[128] = {0};
+                                    bool accepted  = false;
+                                    menu_textedit(buffer, theme, "Put title here", text, sizeof(text), true, &accepted);
+                                    if (accepted) {
+                                        printf("Keyboard result: %s\r\n", text);
+                                    } else {
+                                        printf("Keyboard rejected\r\n");
+                                    }
+                                    render(buffer, theme, &menu, position, false, true);
                                 }
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_MENU:
@@ -228,11 +195,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                if (arg >= (void*)ACTION_LAST) {
-                                    execute_app((launcher_app_t*)arg);
-                                } else {
-                                    execute_action(buffer, (menu_home_action_t)arg, theme);
-                                }
+                                execute_action(buffer, (menu_home_action_t)arg, theme);
                                 render(buffer, theme, &menu, position, false, true);
                                 break;
                             }
@@ -253,6 +216,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 charging_mode(buffer, theme);
                                 render(buffer, theme, &menu, position, false, true);
                             }
+                            break;
                         case BSP_INPUT_ACTION_TYPE_SD_CARD:
                             printf("SD card event! %u\r\n", event.args_action.state);
                             break;

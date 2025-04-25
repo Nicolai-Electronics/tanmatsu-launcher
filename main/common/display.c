@@ -52,7 +52,20 @@ void display_init(void) {
     ESP_ERROR_CHECK(
         bsp_display_get_parameters(&display_h_res, &display_v_res, &display_color_format, &display_data_endian));
 
-    pax_buf_init(&fb, NULL, display_h_res, display_v_res, PAX_BUF_16_565RGB);
+    pax_buf_type_t format = PAX_BUF_24_888RGB;
+
+    switch (display_color_format) {
+        case LCD_COLOR_PIXEL_FORMAT_RGB565:
+            format = PAX_BUF_16_565RGB;
+            break;
+        case LCD_COLOR_PIXEL_FORMAT_RGB888:
+            format = PAX_BUF_24_888RGB;
+            break;
+        default:
+            break;
+    }
+
+    pax_buf_init(&fb, NULL, display_h_res, display_v_res, format);
     pax_buf_reversed(&fb, display_data_endian == LCD_RGB_DATA_ENDIAN_BIG);
 
     bsp_display_rotation_t display_rotation = bsp_display_get_default_rotation();

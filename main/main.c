@@ -276,13 +276,23 @@ void app_main(void) {
     ESP_ERROR_CHECK(res);
 
     // Initialize the Board Support Package
-    ESP_ERROR_CHECK(bsp_device_initialize());
+    esp_err_t bsp_init_result = bsp_device_initialize();
 
-    ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
-
-    bsp_display_set_backlight_brightness(100);
-
-    display_init();
+    if (bsp_init_result == ESP_OK) {
+        ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
+        bsp_display_set_backlight_brightness(100);
+        display_init();
+    } else if (bsp_device_get_initialized_without_coprocessor()) {
+        display_init();
+        pax_buf_t* buffer = display_get_buffer();
+        pax_background(buffer, 0xFFFFFF00);
+        pax_draw_text(buffer, 0xFF000000, pax_font_sky_mono, 16, 0, 0, "Device started without coprocessor!");
+        display_blit_buffer(buffer);
+        vTaskDelay(pdMS_TO_TICKS(2000));
+    } else {
+        ESP_LOGE(TAG, "Failed to initialize BSP, bailing out.");
+        return;
+    }
 
     startup_screen("Mounting FAT filesystem...");
 
@@ -294,20 +304,36 @@ void app_main(void) {
         .use_one_fat              = false,
     };
 
-    res = esp_vfs_fat_spiflash_mount_rw_wl("/int", "fat", &fat_mount_config, &wl_handle);
+    res = esp_vfs_fat_spiflash_mount_rw_wl("/int", "locfd", &fat_mount_config, &wl_handle);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to mount FAT filesystem: %s", esp_err_to_name(res));
         startup_screen("Error: Failed to mount FAT filesystem");
+        pax_buf_t* buffer = display_get_buffer();
+        pax_background(buffer, 0xFFFF0000);
+        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 0, "Failed to initialize FAT filesystem");
+        display_blit_buffer(buffer);
         return;
     }
 
     startup_screen("Initializing coprocessor...");
     coprocessor_flash();
 
+    if (bsp_init_result != ESP_OK || bsp_device_get_initialized_without_coprocessor()) {
+        pax_buf_t* buffer = display_get_buffer();
+        pax_background(buffer, 0xFFFF0000);
+        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 0, "Failed to initialize coprocessor");
+        display_blit_buffer(buffer);
+        return;
+    }
+
     startup_screen("Mounting AppFS filesystem...");
     res = appfsInit(APPFS_PART_TYPE, APPFS_PART_SUBTYPE);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize AppFS: %s", esp_err_to_name(res));
+        pax_buf_t* buffer = display_get_buffer();
+        pax_background(buffer, 0xFFFF0000);
+        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 0, "Failed to initialize app filesystem");
+        display_blit_buffer(buffer);
         return;
     }
 
@@ -317,14 +343,14 @@ void app_main(void) {
         const timezone_t* zone = NULL;
         res                    = timezone_get_name("Etc/UTC", &zone);
         if (res != ESP_OK) {
-            ESP_LOGE(TAG, "Timezone Etc/UTC not found");
-            return;
-        }
-        if (timezone_nvs_set("system", "timezone", zone->name) != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to save timezone to NVS");
-        }
-        if (timezone_nvs_set_tzstring("system", "tz", zone->tz) != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to save TZ string to NVS");
+            ESP_LOGE(TAG, "Timezone Etc/UTC not found");  // Should never happen
+        } else {
+            if (timezone_nvs_set("system", "timezone", zone->name) != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to save timezone to NVS");
+            }
+            if (timezone_nvs_set_tzstring("system", "tz", zone->tz) != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to save TZ string to NVS");
+            }
         }
         timezone_apply_timezone(zone);
     }

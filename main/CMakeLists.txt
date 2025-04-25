@@ -19,6 +19,7 @@ idf_component_register(
 		"menu/settings_clock.c"
 		"menu/settings_clock_timezone.c"
 		"menu/charging_mode.c"
+		"menu/textedit.c"
 		"chakrapetchmedium.c"
 		"coprocessor_management.c"
 		"wifi_remote.c"
@@ -66,4 +67,4 @@ idf_component_register(
 		${files}
 )
 
-fatfs_create_spiflash_image(fat ../fat/${DEVICE} FLASH_IN_PROJECT)
+fatfs_create_spiflash_image(locfd ../fat/${DEVICE} FLASH_IN_PROJECT)
