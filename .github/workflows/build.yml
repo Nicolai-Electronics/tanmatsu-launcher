@@ -2,7 +2,7 @@ name: Build
 run-name: Build
 on: [push]
 jobs:
-  Build-Tanmatsu:
+  Tanmatsu:
     runs-on: ubuntu-latest
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
@@ -13,7 +13,17 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=tanmatsu
-  Build-Konsool:
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tanmatsu
+          path: |
+            build/tanmatsu/*.bin
+            build/tanmatsu/tanmatsu-launcher.elf
+            build/tanmatsu/bootloader/bootloader.bin
+            build/tanmatsu/bootloader/bootloader.elf
+            build/tanmatsu/partition_table/partition-table.bin
+  Konsool:
     runs-on: ubuntu-latest
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
@@ -24,7 +34,17 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=konsool
-  Build-Hackerhotel-2026:
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: konsool
+          path: |
+            build/konsool/*.bin
+            build/konsool/konsool-launcher.elf
+            build/konsool/bootloader/bootloader.bin
+            build/konsool/bootloader/bootloader.elf
+            build/konsool/partition_table/partition-table.bin
+  Hackerhotel-2026:
     runs-on: ubuntu-latest
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
@@ -35,7 +55,17 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=hackerhotel-2026
-  Build-ESP32-P4-function-EV-board:
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hackerhotel-2026
+          path: |
+            build/hackerhotel-2026/*.bin
+            build/hackerhotel-2026/hackerhotel-2026-launcher.elf
+            build/hackerhotel-2026/bootloader/bootloader.bin
+            build/hackerhotel-2026/bootloader/bootloader.elf
+            build/hackerhotel-2026/partition_table/partition-table.bin
+  ESP32-P4-function-EV-board:
     runs-on: ubuntu-latest
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
@@ -46,7 +76,17 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=esp32-p4-function-ev-board
-  Build-MCH2022:
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-p4-function-ev-board
+          path: |
+            build/esp32-p4-function-ev-board/*.bin
+            build/esp32-p4-function-ev-board/esp32-p4-function-ev-board-launcher.elf
+            build/esp32-p4-function-ev-board/bootloader/bootloader.bin
+            build/esp32-p4-function-ev-board/bootloader/bootloader.elf
+            build/esp32-p4-function-ev-board/partition_table/partition-table.bin
+  MCH2022:
     runs-on: ubuntu-latest
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
@@ -57,7 +97,17 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=mch2022
-  Build-Hackerhotel-2024:
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mch2022
+          path: |
+            build/mch2022/*.bin
+            build/mch2022/mch2022-launcher.elf
+            build/mch2022/bootloader/bootloader.bin
+            build/mch2022/bootloader/bootloader.elf
+            build/mch2022/partition_table/partition-table.bin
+  Hackerhotel-2024:
     runs-on: ubuntu-latest
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
@@ -68,3 +118,13 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=hackerhotel-2024
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hackerhotel-2024
+          path: |
+            build/hackerhotel-2024/*.bin
+            build/hackerhotel-2024/hackerhotel-2024-launcher.elf
+            build/hackerhotel-2024/bootloader/bootloader.bin
+            build/hackerhotel-2024/bootloader/bootloader.elf
+            build/hackerhotel-2024/partition_table/partition-table.bin
