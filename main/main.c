@@ -369,7 +369,7 @@ void app_main(void) {
 #endif
     }
 
-    xTaskCreate(wifi_task, TAG, 4096, NULL, 10, NULL);
+    xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, 1);
 
     badgelink_init();
     usb_initialize();
