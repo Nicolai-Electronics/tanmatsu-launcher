@@ -26,6 +26,7 @@
 #include "pax_gfx.h"
 #include "pax_text.h"
 #include "portmacro.h"
+#include "python.h"
 #include "sdcard.h"
 #include "sdkconfig.h"
 #include "timezone.h"
@@ -375,6 +376,8 @@ void app_main(void) {
     badgelink_start();
 
     load_icons();
+
+    // python_initialize();
 
     pax_buf_t* buffer = display_get_buffer();
     menu_home(buffer, &theme);

@@ -13,6 +13,9 @@ void menu_initialize(menu_t* menu) {
 
 void _menu_free_item(menu_item_t* menu_item) {
     free(menu_item->label);
+    if (menu_item->value) {
+        free(menu_item->value);
+    }
     free(menu_item);
 }
 
@@ -50,18 +53,28 @@ menu_item_t* menu_find_last_item(menu_t* menu) {
     return lastItem;
 }
 
-bool menu_insert_item(menu_t* menu, const char* aLabel, menu_callback_t callback, void* callback_arguments,
-                      size_t position) {
+bool menu_insert_item_value(menu_t* menu, const char* label, const char* value, menu_callback_t callback,
+                            void* callback_arguments, size_t position) {
     if (menu == NULL) return false;
-    menu_item_t* newItem = malloc(sizeof(menu_item_t));
+    menu_item_t* newItem = calloc(1, sizeof(menu_item_t));
     if (newItem == NULL) return false;
-    size_t labelSize = strlen(aLabel) + 1;
-    newItem->label   = malloc(labelSize);
+    size_t label_size = strlen(label) + 1;
+    newItem->label    = malloc(label_size);
     if (newItem->label == NULL) {
         free(newItem);
         return false;
     }
-    memcpy(newItem->label, aLabel, labelSize);
+    memcpy(newItem->label, label, label_size);
+    if (value != NULL) {
+        size_t value_size = strlen(value) + 1;
+        newItem->value    = calloc(1, value_size);
+        if (newItem->value == NULL) {
+            free(newItem->label);
+            free(newItem);
+            return false;
+        }
+        memcpy(newItem->value, value, value_size);
+    }
     newItem->callback           = callback;
     newItem->callback_arguments = callback_arguments;
     newItem->icon               = NULL;
@@ -87,9 +100,14 @@ bool menu_insert_item(menu_t* menu, const char* aLabel, menu_callback_t callback
     return true;
 }
 
-bool menu_insert_item_icon(menu_t* menu, const char* aLabel, menu_callback_t callback, void* callback_arguments,
+bool menu_insert_item(menu_t* menu, const char* label, menu_callback_t callback, void* callback_arguments,
+                      size_t position) {
+    return menu_insert_item_value(menu, label, NULL, callback, callback_arguments, position);
+}
+
+bool menu_insert_item_icon(menu_t* menu, const char* label, menu_callback_t callback, void* callback_arguments,
                            size_t position, pax_buf_t* icon) {
-    if (!menu_insert_item(menu, aLabel, callback, callback_arguments, position)) {
+    if (!menu_insert_item(menu, label, callback, callback_arguments, position)) {
         return false;
     }
     menu_item_t* item;
@@ -124,6 +142,9 @@ bool menu_remove_item(menu_t* menu, size_t position) {
         if (item->nextItem != NULL) item->nextItem->previousItem = item->previousItem;
     }
     free(item->label);
+    if (item->value) {
+        free(item->value);
+    }
     free(item);
     menu->length--;
     if (menu->length < 1) {
@@ -205,4 +226,28 @@ pax_buf_t* menu_get_icon(menu_t* menu, size_t position) {
     menu_item_t* item = menu_find_item(menu, position);
     if (item == NULL) return NULL;
     return item->icon;
+}
+
+const char* menu_get_value(menu_t* menu, size_t position) {
+    menu_item_t* item = menu_find_item(menu, position);
+    if (item == NULL) return NULL;
+    return item->value;
+}
+
+void menu_set_value(menu_t* menu, size_t position, const char* value) {
+    menu_item_t* item = menu_find_item(menu, position);
+    if (item == NULL) {
+        return;
+    }
+    if (item->value) {
+        free(item->value);
+        item->value = NULL;
+    }
+    if (value) {
+        size_t value_size = strlen(value) + 1;
+        item->value       = calloc(1, value_size);
+        if (item->value != NULL) {
+            memcpy(item->value, value, value_size);
+        }
+    }
 }

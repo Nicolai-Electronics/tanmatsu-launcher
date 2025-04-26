@@ -39,6 +39,7 @@ idf_component_register(
 		"esp_efuse_custom_table.c"
 		"sdcard.c"
 		"app_metadata_parser.c"
+		"python.c"
 	PRIV_REQUIRES
 		esp_lcd
 		fatfs

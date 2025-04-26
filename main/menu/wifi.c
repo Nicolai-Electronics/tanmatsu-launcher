@@ -39,8 +39,9 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                                      ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"},
                                                              {get_icon(ICON_F1), "Back"},
                                                              {get_icon(ICON_F2), "Scan"},
-                                                             {get_icon(ICON_F3), "Add manually"}}),
-                                     4, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Edit"}}), 1);
+                                                             {get_icon(ICON_F3), "Add manually"},
+                                                             {get_icon(ICON_F5), "Remove"}}),
+                                     5, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Edit"}}), 1);
     }
     menu_render(buffer, menu, position, theme, partial);
     if (menu_find_item(menu, 0) == NULL) {
@@ -55,7 +56,15 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
     display_blit_buffer(buffer);
 }
 
-void menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
+static void add_manually(pax_buf_t* buffer, gui_theme_t* theme) {
+    int index = wifi_settings_find_empty_slot();
+    if (index == -1) {
+        message_dialog(buffer, theme, "Error", "No empty slot, can not add another network", "Go back");
+    }
+    menu_wifi_edit(buffer, theme, index, true, "", 0);
+}
+
+static bool _menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
@@ -85,9 +94,20 @@ void menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 menu_free(&menu);
-                                return;
+                                return false;
                             case BSP_INPUT_NAVIGATION_KEY_F2:
                                 menu_wifi_scan(buffer, theme);
+                                return true;
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_F3:
+                                add_manually(buffer, theme);
+                                return true;
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_F5: {
+                                uint8_t index = (uint32_t)menu_get_callback_args(&menu, menu_get_position(&menu));
+                                wifi_settings_erase(index);
+                                return true;
+                            }
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
                                 render(buffer, theme, &menu, position, true, false, false);
@@ -100,9 +120,8 @@ void menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 if (menu_find_item(&menu, 0) != NULL) {
-                                    void*   arg   = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                    uint8_t index = (uint32_t)arg;
-                                    menu_wifi_edit(buffer, theme, index);
+                                    uint8_t index = (uint32_t)menu_get_callback_args(&menu, menu_get_position(&menu));
+                                    menu_wifi_edit(buffer, theme, index, false, NULL, 0);
                                     render(buffer, theme, &menu, position, false, false, false);
                                 }
                                 break;
@@ -120,4 +139,8 @@ void menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
             render(buffer, theme, &menu, position, true, true, false);
         }
     }
+}
+
+void menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
+    while (_menu_wifi(buffer, theme));
 }

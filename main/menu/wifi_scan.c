@@ -1,6 +1,7 @@
 #include <string.h>
 #include "bsp/input.h"
 #include "common/display.h"
+#include "esp_check.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/idf_additions.h"
@@ -63,9 +64,11 @@ static esp_err_t scan_for_networks(pax_buf_t* buffer, gui_theme_t* theme, wifi_a
     if (wifi_stack_get_initialized()) {
         esp_err_t res;
 
-        res = esp_wifi_stop();
-        res = esp_wifi_set_mode(WIFI_MODE_STA);
-        res = esp_wifi_start();
+        wifi_config_t wifi_config = {0};
+        ESP_RETURN_ON_ERROR(esp_wifi_stop(), TAG, "Failed to stop WiFi");
+        ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG, "Failed to set WiFi mode");
+        ESP_RETURN_ON_ERROR(esp_wifi_set_config(WIFI_IF_STA, &wifi_config), TAG, "Failed to set WiFi configuration");
+        ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG, "Failed to start WiFi");
 
         esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_SCAN_DONE, wifi_scan_done_handler, NULL);
         wifi_scan_config_t cfg = {
@@ -179,7 +182,7 @@ void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
     for (uint16_t i = 0; i < num_aps; i++) {
         wifi_ap_record_t* ap = &aps[i];
         char              label_buffer[128];
-        char              type[5];
+        char              type[5] = "other";
         char              bssid_str[18];
         if (ap->phy_11a) snprintf(type, sizeof(type), "11a");
         if (ap->phy_11ac) snprintf(type, sizeof(type), "11ac");
@@ -221,9 +224,20 @@ void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 if (menu_find_item(&menu, 0) != NULL) {
-                                    void*   arg   = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                    uint8_t index = (uint32_t)arg;
-                                    // menu_wifi_edit(buffer, theme, index);
+                                    int index = wifi_settings_find_empty_slot();
+                                    if (index >= 0) {
+                                        wifi_ap_record_t* ap =
+                                            (wifi_ap_record_t*)menu_get_callback_args(&menu, menu_get_position(&menu));
+                                        bool stored =
+                                            menu_wifi_edit(buffer, theme, index, true, (char*)ap->ssid, ap->authmode);
+                                        if (stored) {
+                                            menu_free(&menu);
+                                            return;
+                                        }
+                                    } else {
+                                        message_dialog(buffer, theme, "Error",
+                                                       "No empty slot, can not add another network", "Go back");
+                                    }
                                     render(buffer, theme, &menu, position, false, false, false);
                                 }
                                 break;
