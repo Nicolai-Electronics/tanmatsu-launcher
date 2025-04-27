@@ -9,6 +9,7 @@
 #include "chakrapetchmedium.h"
 #include "common/display.h"
 #include "coprocessor_management.h"
+#include "custom_certificates.h"
 #include "driver/gpio.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
@@ -368,6 +369,8 @@ void app_main(void) {
         test_sd();
 #endif
     }
+
+    ESP_ERROR_CHECK(initialize_custom_ca_store());
 
     xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, 1);
 
