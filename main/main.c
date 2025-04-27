@@ -372,6 +372,14 @@ void app_main(void) {
 
     ESP_ERROR_CHECK(initialize_custom_ca_store());
 
+#if CONFIG_IDF_TARGET_ESP32P4
+// Only integrate Python into the launcher on ESP32-P4 targets
+#if 0
+    // Enabling Python currently causes crashes
+    python_initialize();
+#endif
+#endif
+
     xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, 1);
 
     badgelink_init();
@@ -379,8 +387,6 @@ void app_main(void) {
     badgelink_start();
 
     load_icons();
-
-    // python_initialize();
 
     pax_buf_t* buffer = display_get_buffer();
     menu_home(buffer, &theme);
