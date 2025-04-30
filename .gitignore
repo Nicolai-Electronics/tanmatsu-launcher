@@ -4,7 +4,6 @@ main/kbelf_lib.c
 sdkconfig.old
 *.bak
 *.old
-.vscode
 tools/__pycache__
 .cache
 esp-idf
