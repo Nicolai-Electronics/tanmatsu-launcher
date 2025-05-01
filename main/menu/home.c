@@ -20,7 +20,7 @@
 #include "apps.h"
 #include "charging_mode.h"
 #include "icons.h"
-#include "menu/textedit.h"
+#include "menu/textbox.h"
 #include "sdcard.h"
 #include "usb_device.h"
 
@@ -151,7 +151,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 } else {
                                     char text[128] = {0};
                                     bool accepted  = false;
-                                    menu_textedit(buffer, theme, "Put title here", text, sizeof(text), true, &accepted);
+                                    menu_textbox(buffer, theme, "Put title here", text, sizeof(text), true, &accepted);
                                     if (accepted) {
                                         printf("Keyboard result: %s\r\n", text);
                                     } else {

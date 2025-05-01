@@ -34,7 +34,7 @@ void render(pax_buf_t* buffer, gui_theme_t* theme, bool partial, bool icons, cha
                                  FOOTER_RIGHT);
 }
 
-void menu_textedit(pax_buf_t* buffer, gui_theme_t* theme, const char* title, char* text, size_t size, bool multiline,
+void menu_textbox(pax_buf_t* buffer, gui_theme_t* theme, const char* title, char* text, size_t size, bool multiline,
                    bool* out_accepted) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
