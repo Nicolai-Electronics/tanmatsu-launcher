@@ -149,7 +149,13 @@ void adjust_date_time(uint8_t selection, int8_t delta) {
         default:
             break;
     }
-    time_t         new_time    = mktime(timeinfo);
+    time_t new_time = mktime(timeinfo);
+
+    if (delta < 0 && new_time > now) {
+        // Overflow (moved to a date/time before 1-1-1970)
+        return;  // Do not adjust time
+    }
+
     struct timeval rtc_timeval = {
         .tv_sec  = new_time,
         .tv_usec = 0,
