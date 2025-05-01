@@ -154,7 +154,6 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
     esp_https_ota_handle_t https_ota_handle = NULL;
     esp_err_t              err              = esp_https_ota_begin(&ota_config, &https_ota_handle);
     if (err != ESP_OK) {
-        wifi_connection_disconnect();
         ESP_LOGE(TAG, "ESP HTTPS OTA Begin failed");
         status_cb("Failed to start download");
         vTaskDelay(5000 / portTICK_PERIOD_MS);
@@ -166,7 +165,6 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "esp_https_ota_read_img_desc failed");
         esp_https_ota_abort(https_ota_handle);
-        wifi_connection_disconnect();
         status_cb("Failed to read image desc");
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         return;
@@ -174,7 +172,6 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
     err = validate_image_header(&app_desc);
     if (err != ESP_OK) {
         esp_https_ota_abort(https_ota_handle);
-        wifi_connection_disconnect();
         status_cb("Already up-to-date!");
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         return;
