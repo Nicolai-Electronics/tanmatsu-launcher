@@ -97,28 +97,43 @@ const char* phase2_to_string(esp_eap_ttls_phase2_types phase2) {
 }
 
 static void menu_populate(menu_t* menu, wifi_settings_t* settings) {
+    size_t previous_position = menu_get_position(menu);
+    while (menu_get_length(menu) > 0) {
+        menu_remove_item(menu, 0);
+    }
+
     char temp[129] = {0};
     memcpy(temp, settings->ssid, sizeof(settings->ssid));
     menu_insert_item_value(menu, "SSID", temp, NULL, (void*)ACTION_SSID, -1);
 
     menu_insert_item_value(menu, "Security", authmode_to_string(settings->authmode), NULL, (void*)ACTION_AUTHMODE, -1);
 
-    memset(temp, 0, sizeof(temp));
-    memcpy(temp, settings->password, sizeof(settings->password));
-    menu_insert_item_value(menu, "Password", temp, NULL, (void*)ACTION_PASSWORD, -1);
+    if (settings->authmode != WIFI_AUTH_OPEN) {
+        memset(temp, 0, sizeof(temp));
+        memcpy(temp, settings->password, sizeof(settings->password));
+        menu_insert_item_value(menu, "Password", temp, NULL, (void*)ACTION_PASSWORD, -1);
+    }
 
-    memset(temp, 0, sizeof(temp));
-    memcpy(temp, settings->identity, sizeof(settings->identity));
-    menu_insert_item_value(menu, "Identity", temp, NULL, (void*)ACTION_IDENTITY, -1);
+    if (settings->authmode == WIFI_AUTH_ENTERPRISE || settings->authmode == WIFI_AUTH_WPA3_ENTERPRISE ||
+        settings->authmode == WIFI_AUTH_WPA2_WPA3_ENTERPRISE) {
+        memset(temp, 0, sizeof(temp));
+        memcpy(temp, settings->identity, sizeof(settings->identity));
+        menu_insert_item_value(menu, "Identity", temp, NULL, (void*)ACTION_IDENTITY, -1);
 
-    memset(temp, 0, sizeof(temp));
-    memcpy(temp, settings->username, sizeof(settings->username));
-    menu_insert_item_value(menu, "Username", temp, NULL, (void*)ACTION_USERNAME, -1);
+        memset(temp, 0, sizeof(temp));
+        memcpy(temp, settings->username, sizeof(settings->username));
+        menu_insert_item_value(menu, "Username", temp, NULL, (void*)ACTION_USERNAME, -1);
 
-    menu_insert_item_value(menu, "Phase 2", phase2_to_string(settings->phase2), NULL, (void*)ACTION_PHASE2, -1);
+        menu_insert_item_value(menu, "Phase 2", phase2_to_string(settings->phase2), NULL, (void*)ACTION_PHASE2, -1);
+    }
+
+    if (previous_position >= menu_get_length(menu)) {
+        previous_position = menu_get_length(menu) - 1;
+    }
+    menu_set_position(menu, previous_position);
 }
 
-static void menu_update(menu_t* menu, wifi_settings_t* settings) {
+/*static void menu_update(menu_t* menu, wifi_settings_t* settings) {
     char temp[129] = {0};
     memset(temp, 0, sizeof(temp));
     memcpy(temp, settings->ssid, sizeof(settings->ssid));
@@ -139,7 +154,7 @@ static void menu_update(menu_t* menu, wifi_settings_t* settings) {
     menu_set_value(menu, 4, temp);
 
     menu_set_value(menu, 5, phase2_to_string(settings->phase2));
-}
+}*/
 
 static void edit_ssid(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, wifi_settings_t* settings) {
     char temp[129] = {0};
@@ -150,6 +165,63 @@ static void edit_ssid(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, wifi_
     if (accepted) {
         memcpy(settings->ssid, temp, sizeof(settings->ssid));
         menu_set_value(menu, 0, temp);
+    }
+}
+
+static void edit_authmode(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, menu_t* menu_authmode,
+                          pax_vec2_t position, wifi_settings_t* settings, QueueHandle_t input_event_queue) {
+    menu_set_position(menu_authmode, 0);
+    for (size_t i = 0; i < menu_get_length(menu_authmode); i++) {
+        if ((wifi_auth_mode_t)menu_get_callback_args(menu_authmode, i) == settings->authmode) {
+            menu_set_position(menu_authmode, i);
+            break;
+        }
+    }
+
+    bool partial = false;
+    while (1) {
+        render_base_screen_statusbar(
+            buffer, theme, !partial, true, !partial, ((gui_header_field_t[]){{get_icon(ICON_WIFI), "Security"}}), 1,
+            ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Go back"}}), 2,
+            ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
+        menu_render(buffer, menu_authmode, position, theme, partial);
+        display_blit_buffer(buffer);
+        partial = true;
+        bsp_input_event_t event;
+        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            switch (event.type) {
+                case INPUT_EVENT_TYPE_NAVIGATION: {
+                    if (event.args_navigation.state) {
+                        switch (event.args_navigation.key) {
+                            case BSP_INPUT_NAVIGATION_KEY_ESC:
+                            case BSP_INPUT_NAVIGATION_KEY_F1:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                                return;
+                            case BSP_INPUT_NAVIGATION_KEY_UP:
+                                menu_navigate_previous(menu_authmode);
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_DOWN:
+                                menu_navigate_next(menu_authmode);
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_RETURN:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                            case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
+                                wifi_auth_mode_t authmode = (wifi_auth_mode_t)menu_get_callback_args(
+                                    menu_authmode, menu_get_position(menu_authmode));
+                                settings->authmode = authmode;
+                                menu_set_value(menu, 1, authmode_to_string(authmode));
+                                return;
+                            }
+                            default:
+                                break;
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
     }
 }
 
@@ -189,6 +261,63 @@ static void edit_username(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, w
     }
 }
 
+static void edit_phase2(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, menu_t* menu_phase2, pax_vec2_t position,
+                        wifi_settings_t* settings, QueueHandle_t input_event_queue) {
+    menu_set_position(menu_phase2, 0);
+    for (size_t i = 0; i < menu_get_length(menu_phase2); i++) {
+        if ((esp_eap_ttls_phase2_types)menu_get_callback_args(menu_phase2, i) == settings->phase2) {
+            menu_set_position(menu_phase2, i);
+            break;
+        }
+    }
+
+    bool partial = false;
+    while (1) {
+        render_base_screen_statusbar(
+            buffer, theme, !partial, true, !partial, ((gui_header_field_t[]){{get_icon(ICON_WIFI), "Phase 2"}}), 1,
+            ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Go back"}}), 2,
+            ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
+        menu_render(buffer, menu_phase2, position, theme, partial);
+        display_blit_buffer(buffer);
+        partial = true;
+        bsp_input_event_t event;
+        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            switch (event.type) {
+                case INPUT_EVENT_TYPE_NAVIGATION: {
+                    if (event.args_navigation.state) {
+                        switch (event.args_navigation.key) {
+                            case BSP_INPUT_NAVIGATION_KEY_ESC:
+                            case BSP_INPUT_NAVIGATION_KEY_F1:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                                return;
+                            case BSP_INPUT_NAVIGATION_KEY_UP:
+                                menu_navigate_previous(menu_phase2);
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_DOWN:
+                                menu_navigate_next(menu_phase2);
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_RETURN:
+                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                            case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
+                                esp_eap_ttls_phase2_types phase2 = (esp_eap_ttls_phase2_types)menu_get_callback_args(
+                                    menu_phase2, menu_get_position(menu_phase2));
+                                settings->phase2 = phase2;
+                                menu_set_value(menu, 5, phase2_to_string(phase2));
+                                return;
+                            }
+                            default:
+                                break;
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
+}
+
 bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool new_entry, char* new_ssid,
                     wifi_auth_mode_t authmode) {
     QueueHandle_t input_event_queue = NULL;
@@ -210,9 +339,33 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
         }
     }
 
+    // Menus for enum selection
+    menu_t menu_authmode = {0};
+    menu_insert_item(&menu_authmode, "Open", NULL, (void*)WIFI_AUTH_OPEN, -1);
+    menu_insert_item(&menu_authmode, "WEP", NULL, (void*)WIFI_AUTH_WEP, -1);
+    menu_insert_item(&menu_authmode, "WPA (PSK)", NULL, (void*)WIFI_AUTH_WPA_PSK, -1);
+    menu_insert_item(&menu_authmode, "WPA2 (PSK)", NULL, (void*)WIFI_AUTH_WPA2_PSK, -1);
+    menu_insert_item(&menu_authmode, "WPA/WPA2 (PSK)", NULL, (void*)WIFI_AUTH_WPA_WPA2_PSK, -1);
+    menu_insert_item(&menu_authmode, "WPA2 (enterprise)", NULL, (void*)WIFI_AUTH_ENTERPRISE, -1);
+    menu_insert_item(&menu_authmode, "WPA3 (PSK)", NULL, (void*)WIFI_AUTH_WPA3_PSK, -1);
+    menu_insert_item(&menu_authmode, "WPA2/WPA3 (PSK)", NULL, (void*)WIFI_AUTH_WPA2_WPA3_PSK, -1);
+    menu_insert_item(&menu_authmode, "WAPI (PSK)", NULL, (void*)WIFI_AUTH_WAPI_PSK, -1);
+    menu_insert_item(&menu_authmode, "OWE", NULL, (void*)WIFI_AUTH_OWE, -1);
+    menu_insert_item(&menu_authmode, "WPA3 (ENT-192)", NULL, (void*)WIFI_AUTH_WPA3_ENT_192, -1);
+    menu_insert_item(&menu_authmode, "DPP", NULL, (void*)WIFI_AUTH_DPP, -1);
+    menu_insert_item(&menu_authmode, "WPA3 (enterprise)", NULL, (void*)WIFI_AUTH_WPA3_ENTERPRISE, -1);
+    menu_insert_item(&menu_authmode, "WPA2/WPA3 (enterprise)", NULL, (void*)WIFI_AUTH_WPA2_WPA3_ENTERPRISE, -1);
+
+    menu_t menu_phase2 = {0};
+    menu_insert_item(&menu_phase2, "EAP", NULL, (void*)ESP_EAP_TTLS_PHASE2_EAP, -1);
+    menu_insert_item(&menu_phase2, "MSCHAPV2", NULL, (void*)ESP_EAP_TTLS_PHASE2_MSCHAPV2, -1);
+    menu_insert_item(&menu_phase2, "MSCHAP", NULL, (void*)ESP_EAP_TTLS_PHASE2_MSCHAP, -1);
+    menu_insert_item(&menu_phase2, "PAP", NULL, (void*)ESP_EAP_TTLS_PHASE2_PAP, -1);
+    menu_insert_item(&menu_phase2, "CHAP", NULL, (void*)ESP_EAP_TTLS_PHASE2_CHAP, -1);
+
+    // Menu for parameters
     menu_t menu = {0};
     menu_initialize(&menu);
-
     menu_populate(&menu, &settings);
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
@@ -237,6 +390,8 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 menu_free(&menu);
+                                menu_free(&menu_authmode);
+                                menu_free(&menu_phase2);
                                 return false;
                             case BSP_INPUT_NAVIGATION_KEY_F4: {
                                 esp_err_t res = wifi_settings_set(index, &settings);
@@ -263,6 +418,13 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
                                     case ACTION_SSID:
                                         edit_ssid(buffer, theme, &menu, &settings);
                                         break;
+                                    case ACTION_AUTHMODE:
+                                        edit_authmode(buffer, theme, &menu, &menu_authmode, position, &settings,
+                                                      input_event_queue);
+                                        menu_populate(
+                                            &menu,
+                                            &settings);  // Repopulate menu to show or hide enterprise WiFi options
+                                        break;
                                     case ACTION_PASSWORD:
                                         edit_password(buffer, theme, &menu, &settings);
                                         break;
@@ -271,6 +433,10 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
                                         break;
                                     case ACTION_USERNAME:
                                         edit_username(buffer, theme, &menu, &settings);
+                                        break;
+                                    case ACTION_PHASE2:
+                                        edit_phase2(buffer, theme, &menu, &menu_phase2, position, &settings,
+                                                    input_event_queue);
                                         break;
                                     default:
                                         break;
