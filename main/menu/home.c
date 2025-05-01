@@ -21,7 +21,7 @@
 #include "charging_mode.h"
 #include "icons.h"
 #include "menu/nametag.h"
-#include "menu/textedit.h"
+#include "menu/textbox.h"
 #include "sdcard.h"
 #include "terminal.h"
 #include "unistd.h"
