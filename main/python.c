@@ -1,15 +1,17 @@
 #include <stdio.h>
 #include <string.h>
-#include "driver/usb_serial_jtag.h"
 #include "esp_check.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "hal/usb_serial_jtag_ll.h"
 #include "pocketpy.h"
 #include "portmacro.h"
-#include "projdefs.h"
 #include "sdkconfig.h"
+
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+#include "driver/usb_serial_jtag.h"
+#include "hal/usb_serial_jtag_ll.h"
+#include "projdefs.h"
 
 static const char* TAG = "python";
 
@@ -149,3 +151,4 @@ if (!py_exec(noodle, "fakefilename.py", EXEC_MODE, NULL)) {
     py_printexc();
 }
 */
+#endif
