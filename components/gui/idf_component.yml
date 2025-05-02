@@ -4,5 +4,5 @@ repository: git://git@github.com:nicolai-electronics/esp32-component-gui-menu.gi
 issues: https://github.com/nicolai-electronics/esp32-component-gui-menu/issues
 dependencies:
   idf: ">=5.3"
-  robotman2412/pax-gfx: ^1.1.2
+  robotman2412/pax-gfx: ^2.0.0
 license: "MIT"
