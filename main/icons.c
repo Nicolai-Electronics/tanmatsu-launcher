@@ -32,6 +32,7 @@ const char* icon_paths[] = {
     [ICON_EXTENSION]           = "/int/icons/menu/extension.png",
     [ICON_HOME]                = "/int/icons/menu/home.png",
     [ICON_APPS]                = "/int/icons/menu/apps.png",
+    [ICON_TEXTEDITOR]          = "/int/icons/menu/texteditor.png",
     [ICON_REPOSITORY]          = "/int/icons/menu/repository.png",
     [ICON_TAG]                 = "/int/icons/menu/tag.png",
     [ICON_DEV]                 = "/int/icons/menu/dev.png",
