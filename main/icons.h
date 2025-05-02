@@ -14,6 +14,7 @@ typedef enum {
     ICON_EXTENSION,
     ICON_HOME,
     ICON_APPS,
+    ICON_TEXTEDITOR,
     ICON_REPOSITORY,
     ICON_TAG,
     ICON_DEV,
