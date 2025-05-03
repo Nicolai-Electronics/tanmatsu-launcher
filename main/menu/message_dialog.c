@@ -97,10 +97,11 @@ static gui_header_field_t usb_indicator(void) {
 
 extern bool wifi_stack_get_initialized(void);
 
+static wifi_ap_record_t connected_ap = {0};
+
 static gui_header_field_t wifi_indicator(void) {
     bool radio_initialized = wifi_stack_get_initialized();
     if (radio_initialized) {
-        wifi_ap_record_t connected_ap;
         if (wifi_connection_is_connected() && esp_wifi_sta_get_ap_info(&connected_ap) == ESP_OK) {
             pax_buf_t* icon = get_icon(ICON_WIFI_0);
             if (connected_ap.rssi > -50) {
