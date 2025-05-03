@@ -2,132 +2,27 @@ name: Build
 run-name: Build
 on: [push]
 jobs:
-  Tanmatsu:
+  Build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        device: ["tanmatsu", "konsool", "mch2022", "hackerhotel-2024", "hackerhotel-2026", "esp32-p4-function-ev-board"]
     steps:
-      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
       - run: sudo apt-get install git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
-      - name: Check out repository code
+      - name: Check out repository
         uses: actions/checkout@v4
       - run: make prepare
-      - run: make build DEVICE=tanmatsu
-      - run: mv build/tanmatsu/bootloader/*.bin build/tanmatsu/
-      - run: mv build/tanmatsu/bootloader/*.elf build/tanmatsu/
-      - run: mv build/tanmatsu/partition_table/*.bin build/tanmatsu/
+      - run: make build DEVICE=${{ matrix.device }}
+      - run: mv build/${{ matrix.device }}/bootloader/*.bin build/${{ matrix.device }}/
+      - run: mv build/${{ matrix.device }}/bootloader/*.elf build/${{ matrix.device }}/
+      - run: mv build/${{ matrix.device }}/partition_table/*.bin build/${{ matrix.device }}/
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tanmatsu
+          name: ${{ matrix.device }}
           path: |
-            build/tanmatsu/*.bin
-            build/tanmatsu/tanmatsu-launcher.elf
-            build/tanmatsu/bootloader.bin
-            build/tanmatsu/bootloader.elf
-            build/tanmatsu/partition-table.bin
-  Konsool:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - run: sudo apt-get install git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: make prepare
-      - run: make build DEVICE=konsool
-      - run: mv build/konsool/bootloader/*.bin build/konsool/
-      - run: mv build/konsool/bootloader/*.elf build/konsool/
-      - run: mv build/konsool/partition_table/*.bin build/konsool/
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: konsool
-          path: |
-            build/konsool/*.bin
-            build/konsool/.elf
-  Hackerhotel-2026:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - run: sudo apt-get install git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: make prepare
-      - run: make build DEVICE=hackerhotel-2026
-      - run: mv build/hackerhotel-2026/bootloader/*.bin build/hackerhotel-2026/
-      - run: mv build/hackerhotel-2026/bootloader/*.elf build/hackerhotel-2026/
-      - run: mv build/hackerhotel-2026/partition_table/*.bin build/hackerhotel-2026/
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: hackerhotel-2026
-          path: |
-            build/hackerhotel-2026/*.bin
-            build/hackerhotel-2026/*.elf
-  ESP32-P4-function-EV-board:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - run: sudo apt-get install git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: make prepare
-      - run: make build DEVICE=esp32-p4-function-ev-board
-      - run: mv build/esp32-p4-function-ev-board/bootloader/*.bin build/esp32-p4-function-ev-board/
-      - run: mv build/esp32-p4-function-ev-board/bootloader/*.elf build/esp32-p4-function-ev-board/
-      - run: mv build/esp32-p4-function-ev-board/partition_table/*.bin build/esp32-p4-function-ev-board/
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: esp32-p4-function-ev-board
-          path: |
-            build/esp32-p4-function-ev-board/*.bin
-            build/esp32-p4-function-ev-board/*.elf
-  MCH2022:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - run: sudo apt-get install git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: make prepare
-      - run: make build DEVICE=mch2022
-      - run: mv build/mch2022/bootloader/*.bin build/mch2022/
-      - run: mv build/mch2022/bootloader/*.elf build/mch2022/
-      - run: mv build/mch2022/partition_table/*.bin build/mch2022/
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: mch2022
-          path: |
-            build/mch2022/*.bin
-            build/mch2022/*.elf
-  Hackerhotel-2024:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - run: sudo apt-get install git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: make prepare
-      - run: make build DEVICE=hackerhotel-2024
-      - run: mv build/hackerhotel-2024/bootloader/*.bin build/hackerhotel-2024/
-      - run: mv build/hackerhotel-2024/bootloader/*.elf build/hackerhotel-2024/
-      - run: mv build/hackerhotel-2024/partition_table/*.bin build/hackerhotel-2024/
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: hackerhotel-2024
-          path: |
-            build/hackerhotel-2024/*.bin
-            build/hackerhotel-2024/*.elf
+            build/${{ matrix.device }}/*.bin
+            build/${{ matrix.device }}/${{ matrix.device }}-launcher.elf
+            build/${{ matrix.device }}/bootloader.bin
+            build/${{ matrix.device }}/bootloader.elf
+            build/${{ matrix.device }}/partition-table.bin
