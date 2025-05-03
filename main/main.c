@@ -388,6 +388,8 @@ void app_main(void) {
 
     load_icons();
 
+    bsp_power_set_usb_host_boost_enabled(true);
+
     pax_buf_t* buffer = display_get_buffer();
     menu_home(buffer, &theme);
 }

@@ -1,0 +1,36 @@
+name: Release
+run-name: Release
+
+on:
+  workflow_run:
+    branches: ['v*.*.*']
+    workflows: [Build]
+    types:
+      - completed
+
+jobs:
+  Release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install zip
+        run: sudo apt-get install zip
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Zip all artifacts
+        run: for i in *; do [ -d "$i" ] && zip -r "$i.zip" "$i"; done
+      - name: Display artifact files
+        run: ls
+      - name: Release
+        tag_name: github.ref_name
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            tanmatsu.zip
+            konsool.zip
+            hackerhotel-2026.zip
+            esp32-p4-function-ev-board.zip
+            mch2022.zip
+            hackerhotel-2024.zip

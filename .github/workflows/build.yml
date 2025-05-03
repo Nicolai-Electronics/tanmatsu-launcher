@@ -13,6 +13,9 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=tanmatsu
+      - run: mv build/tanmatsu/bootloader/*.bin build/tanmatsu/
+      - run: mv build/tanmatsu/bootloader/*.elf build/tanmatsu/
+      - run: mv build/tanmatsu/partition_table/*.bin build/tanmatsu/
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -20,9 +23,9 @@ jobs:
           path: |
             build/tanmatsu/*.bin
             build/tanmatsu/tanmatsu-launcher.elf
-            build/tanmatsu/bootloader/bootloader.bin
-            build/tanmatsu/bootloader/bootloader.elf
-            build/tanmatsu/partition_table/partition-table.bin
+            build/tanmatsu/bootloader.bin
+            build/tanmatsu/bootloader.elf
+            build/tanmatsu/partition-table.bin
   Konsool:
     runs-on: ubuntu-latest
     steps:
@@ -34,16 +37,16 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=konsool
+      - run: mv build/konsool/bootloader/*.bin build/konsool/
+      - run: mv build/konsool/bootloader/*.elf build/konsool/
+      - run: mv build/konsool/partition_table/*.bin build/konsool/
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: konsool
           path: |
             build/konsool/*.bin
-            build/konsool/konsool-launcher.elf
-            build/konsool/bootloader/bootloader.bin
-            build/konsool/bootloader/bootloader.elf
-            build/konsool/partition_table/partition-table.bin
+            build/konsool/.elf
   Hackerhotel-2026:
     runs-on: ubuntu-latest
     steps:
@@ -55,16 +58,16 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=hackerhotel-2026
+      - run: mv build/hackerhotel-2026/bootloader/*.bin build/hackerhotel-2026/
+      - run: mv build/hackerhotel-2026/bootloader/*.elf build/hackerhotel-2026/
+      - run: mv build/hackerhotel-2026/partition_table/*.bin build/hackerhotel-2026/
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: hackerhotel-2026
           path: |
             build/hackerhotel-2026/*.bin
-            build/hackerhotel-2026/hackerhotel-2026-launcher.elf
-            build/hackerhotel-2026/bootloader/bootloader.bin
-            build/hackerhotel-2026/bootloader/bootloader.elf
-            build/hackerhotel-2026/partition_table/partition-table.bin
+            build/hackerhotel-2026/*.elf
   ESP32-P4-function-EV-board:
     runs-on: ubuntu-latest
     steps:
@@ -76,16 +79,16 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=esp32-p4-function-ev-board
+      - run: mv build/esp32-p4-function-ev-board/bootloader/*.bin build/esp32-p4-function-ev-board/
+      - run: mv build/esp32-p4-function-ev-board/bootloader/*.elf build/esp32-p4-function-ev-board/
+      - run: mv build/esp32-p4-function-ev-board/partition_table/*.bin build/esp32-p4-function-ev-board/
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: esp32-p4-function-ev-board
           path: |
             build/esp32-p4-function-ev-board/*.bin
-            build/esp32-p4-function-ev-board/esp32-p4-function-ev-board-launcher.elf
-            build/esp32-p4-function-ev-board/bootloader/bootloader.bin
-            build/esp32-p4-function-ev-board/bootloader/bootloader.elf
-            build/esp32-p4-function-ev-board/partition_table/partition-table.bin
+            build/esp32-p4-function-ev-board/*.elf
   MCH2022:
     runs-on: ubuntu-latest
     steps:
@@ -97,16 +100,16 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=mch2022
+      - run: mv build/mch2022/bootloader/*.bin build/mch2022/
+      - run: mv build/mch2022/bootloader/*.elf build/mch2022/
+      - run: mv build/mch2022/partition_table/*.bin build/mch2022/
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mch2022
           path: |
             build/mch2022/*.bin
-            build/mch2022/mch2022-launcher.elf
-            build/mch2022/bootloader/bootloader.bin
-            build/mch2022/bootloader/bootloader.elf
-            build/mch2022/partition_table/partition-table.bin
+            build/mch2022/*.elf
   Hackerhotel-2024:
     runs-on: ubuntu-latest
     steps:
@@ -118,13 +121,13 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=hackerhotel-2024
+      - run: mv build/hackerhotel-2024/bootloader/*.bin build/hackerhotel-2024/
+      - run: mv build/hackerhotel-2024/bootloader/*.elf build/hackerhotel-2024/
+      - run: mv build/hackerhotel-2024/partition_table/*.bin build/hackerhotel-2024/
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: hackerhotel-2024
           path: |
             build/hackerhotel-2024/*.bin
-            build/hackerhotel-2024/hackerhotel-2024-launcher.elf
-            build/hackerhotel-2024/bootloader/bootloader.bin
-            build/hackerhotel-2024/bootloader/bootloader.elf
-            build/hackerhotel-2024/partition_table/partition-table.bin
+            build/hackerhotel-2024/*.elf
