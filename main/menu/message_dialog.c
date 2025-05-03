@@ -100,25 +100,32 @@ extern bool wifi_stack_get_initialized(void);
 static wifi_ap_record_t connected_ap = {0};
 
 static gui_header_field_t wifi_indicator(void) {
-    bool radio_initialized = wifi_stack_get_initialized();
-    if (radio_initialized) {
-        if (wifi_connection_is_connected() && esp_wifi_sta_get_ap_info(&connected_ap) == ESP_OK) {
-            pax_buf_t* icon = get_icon(ICON_WIFI_0);
-            if (connected_ap.rssi > -50) {
-                icon = get_icon(ICON_WIFI_4);
-            } else if (connected_ap.rssi > -60) {
-                icon = get_icon(ICON_WIFI_3);
-            } else if (connected_ap.rssi > -70) {
-                icon = get_icon(ICON_WIFI_2);
-            } else if (connected_ap.rssi > -80) {
-                icon = get_icon(ICON_WIFI_1);
+    bool        radio_initialized = wifi_stack_get_initialized();
+    wifi_mode_t mode              = WIFI_MODE_NULL;
+    if (radio_initialized && esp_wifi_get_mode(&mode) == ESP_OK) {
+        if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
+            if (wifi_connection_is_connected() && esp_wifi_sta_get_ap_info(&connected_ap) == ESP_OK) {
+                pax_buf_t* icon = get_icon(ICON_WIFI_0);
+                if (connected_ap.rssi > -50) {
+                    icon = get_icon(ICON_WIFI_4);
+                } else if (connected_ap.rssi > -60) {
+                    icon = get_icon(ICON_WIFI_3);
+                } else if (connected_ap.rssi > -70) {
+                    icon = get_icon(ICON_WIFI_2);
+                } else if (connected_ap.rssi > -80) {
+                    icon = get_icon(ICON_WIFI_1);
+                }
+                return (gui_header_field_t){icon, (char*)connected_ap.ssid};
+            } else {
+                return (gui_header_field_t){get_icon(ICON_WIFI_OFF), "Disconnected"};
             }
-            return (gui_header_field_t){icon, (char*)connected_ap.ssid};
+        } else if (mode == WIFI_MODE_AP) {
+            return (gui_header_field_t){get_icon(ICON_WIFI_UNKNOWN), "AP"};
         } else {
-            return (gui_header_field_t){get_icon(ICON_WIFI_ERROR), ""};
+            return (gui_header_field_t){get_icon(ICON_WIFI_UNKNOWN), "Other"};
         }
     } else {
-        return (gui_header_field_t){get_icon(ICON_WIFI_UNKNOWN), ""};
+        return (gui_header_field_t){get_icon(ICON_WIFI_ERROR), ""};
     }
 }
 
