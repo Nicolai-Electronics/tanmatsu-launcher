@@ -3,6 +3,7 @@
 #include <sys/unistd.h>
 #include <time.h>
 #include "apps.h"
+#include "badge_elf.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
 #include "bsp/power.h"
@@ -154,6 +155,8 @@ void menu_home(void) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+                                } else {
+                                    badge_elf_start("/int/test.elf");
                                 }
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F2:

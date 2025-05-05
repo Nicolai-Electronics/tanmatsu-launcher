@@ -61,6 +61,7 @@ idf_component_register(
 		fatfs
 		nvs_flash
 		badge-bsp
+		badge-elf
 		gui
 		wpa_supplicant
 		esp_https_ota

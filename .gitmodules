@@ -1,0 +1,3 @@
+[submodule "components/badge-elf"]
+	path = components/badge-elf
+	url = https://badgeteam@github.com/badgeteam/esp32-component-badge-elf
