@@ -45,6 +45,7 @@ idf_component_register(
 		fatfs
 		nvs_flash
 		badge-bsp
+		badge-elf
 		gui
 		esp_hosted
 		wpa_supplicant
