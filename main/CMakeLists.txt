@@ -19,6 +19,7 @@ idf_component_register(
 		"menu/settings_clock.c"
 		"menu/settings_clock_timezone.c"
 		"menu/charging_mode.c"
+		"menu/terminal.c"
 		"menu/textedit.c"
 		"chakrapetchmedium.c"
 		"coprocessor_management.c"
