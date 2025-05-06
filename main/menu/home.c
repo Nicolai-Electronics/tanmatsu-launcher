@@ -22,6 +22,7 @@
 #include "icons.h"
 #include "menu/textedit.h"
 #include "sdcard.h"
+#include "terminal.h"
 #include "usb_device.h"
 
 typedef enum {
@@ -149,14 +150,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     keyboard_backlight();
                                 } else {
-                                    char text[128] = {0};
-                                    bool accepted  = false;
-                                    menu_textedit(buffer, theme, "Put title here", text, sizeof(text), true, &accepted);
-                                    if (accepted) {
-                                        printf("Keyboard result: %s\r\n", text);
-                                    } else {
-                                        printf("Keyboard rejected\r\n");
-                                    }
+                                    menu_terminal(buffer, theme);
                                     render(buffer, theme, &menu, position, false, true);
                                 }
                                 break;
