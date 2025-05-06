@@ -245,7 +245,7 @@ int compose_rpc_req(Rpc *req, ctrl_cmd_t *app_req, int32_t *failure_status)
 			if (p_a_sta->transition_disable)
 				H_SET_BIT(STA_TRASITION_DISABLED_BIT, p_c_sta->bitmask);
 
-			WIFI_CONFIG_STA_SET_RESERVED_VAL(p_a_sta->reserved, p_c_sta->bitmask);
+			WIFI_CONFIG_STA_SET_RESERVED_VAL(p_a_sta->reserved1, p_c_sta->bitmask);
 
 			p_c_sta->sae_pwe_h2e = p_a_sta->sae_pwe_h2e;
 			p_c_sta->failure_retry_cnt = p_a_sta->failure_retry_cnt;
@@ -275,8 +275,6 @@ int compose_rpc_req(Rpc *req, ctrl_cmd_t *app_req, int32_t *failure_status)
 
 			if (p_a_sta->he_trig_cqi_feedback_disabled)
 				H_SET_BIT(WIFI_HE_STA_CONFIG_he_trig_cqi_feedback_disabled_BIT, p_c_sta->he_bitmask);
-
-			WIFI_HE_STA_SET_RESERVED_VAL(p_a_sta->he_reserved, p_c_sta->he_bitmask);
 
 			RPC_REQ_COPY_BYTES(p_c_sta->sae_h2e_identifier, p_a_sta->sae_h2e_identifier, SAE_H2E_IDENTIFIER_LEN);
 			break;
