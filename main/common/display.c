@@ -27,26 +27,7 @@ static lcd_color_rgb_pixel_format_t display_color_format = LCD_COLOR_PIXEL_FORMA
 static lcd_rgb_data_endian_t        display_data_endian  = LCD_RGB_DATA_ENDIAN_LITTLE;
 static pax_buf_t                    fb                   = {0};
 
-SemaphoreHandle_t display_semaphore = NULL;
-
-#ifdef DSI_PANEL
-IRAM_ATTR static bool notify_display_flush_ready(esp_lcd_panel_handle_t panel, esp_lcd_dpi_panel_event_data_t* edata,
-                                                 void* user_ctx) {
-    xSemaphoreGiveFromISR(display_semaphore, NULL);
-    return false;
-}
-#else
-IRAM_ATTR static bool notify_display_flush_ready(esp_lcd_panel_io_handle_t      panel_io,
-                                                 esp_lcd_panel_io_event_data_t* edata, void* user_ctx) {
-    xSemaphoreGiveFromISR(display_semaphore, NULL);
-    return false;
-}
-#endif
-
 void display_init(void) {
-    vSemaphoreCreateBinary(display_semaphore);
-    xSemaphoreGive(display_semaphore);
-
     ESP_ERROR_CHECK(bsp_display_get_panel(&display_lcd_panel));
     ESP_ERROR_CHECK(bsp_display_get_panel_io(&display_lcd_panel_io));
     ESP_ERROR_CHECK(
@@ -86,21 +67,6 @@ void display_init(void) {
             break;
     }
     pax_buf_set_orientation(&fb, orientation);
-
-#ifdef DSI_PANEL
-    esp_lcd_dpi_panel_event_callbacks_t cbs = {
-        .on_color_trans_done = notify_display_flush_ready,
-    };
-
-    ESP_ERROR_CHECK(esp_lcd_dpi_panel_register_event_callbacks(display_lcd_panel, &cbs, NULL));
-#else
-    if (display_lcd_panel_io) {
-        esp_lcd_panel_io_callbacks_t cbs = {
-            .on_color_trans_done = notify_display_flush_ready,
-        };
-        ESP_ERROR_CHECK(esp_lcd_panel_io_register_event_callbacks(display_lcd_panel_io, &cbs, NULL));
-    }
-#endif
 }
 
 pax_buf_t* display_get_buffer(void) {
@@ -108,11 +74,9 @@ pax_buf_t* display_get_buffer(void) {
 }
 
 void display_blit_buffer(pax_buf_t* fb) {
-    xSemaphoreTake(display_semaphore, portMAX_DELAY);
-    size_t display_h_res, display_v_res;
+    size_t display_h_res = 0, display_v_res = 0;
     ESP_ERROR_CHECK(bsp_display_get_parameters(&display_h_res, &display_v_res, NULL, NULL));
-    ESP_ERROR_CHECK(
-        esp_lcd_panel_draw_bitmap(display_lcd_panel, 0, 0, display_h_res, display_v_res, pax_buf_get_pixels(fb)));
+    ESP_ERROR_CHECK(bsp_display_blit(0, 0, display_h_res, display_v_res, pax_buf_get_pixels(fb)));
 }
 
 void display_blit(void) {
