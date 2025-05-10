@@ -97,7 +97,8 @@ gui_theme_t theme = {
             .grid_vertical_count   = 3,
         },
 };
-#elif defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
+#elif defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD) || \
+    defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD_LT8912B)
 gui_theme_t theme = {
     .palette =
         {
