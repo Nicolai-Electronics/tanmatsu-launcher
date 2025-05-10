@@ -17,6 +17,7 @@
 // #include "shapes/pax_misc.h"
 #include "device_information.h"
 #include "firmware_update.h"
+#include "radio_update.h"
 #include "settings_clock.h"
 
 typedef enum {
@@ -27,6 +28,7 @@ typedef enum {
     ACTION_DEVICE_INFO,
     ACTION_ABOUT,
     ACTION_LAST,
+    ACTION_RADIO_UPDATE,
 } menu_home_action_t;
 
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
@@ -45,6 +47,9 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             break;
         case ACTION_ABOUT:
             menu_about(fb, theme);
+            break;
+        case ACTION_RADIO_UPDATE:
+            menu_radio_update(fb, theme);
             break;
         default:
             break;
@@ -74,6 +79,7 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
                           get_icon(ICON_SYSTEM_UPDATE));
     menu_insert_item_icon(&menu, "Device information", NULL, (void*)ACTION_DEVICE_INFO, -1, get_icon(ICON_DEVICE_INFO));
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
+    menu_insert_item_icon(&menu, "Radio update", NULL, (void*)ACTION_RADIO_UPDATE, -1, get_icon(ICON_RELEASE_ALERT));
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);

@@ -21,6 +21,7 @@ idf_component_register(
 		"menu/charging_mode.c"
 		"menu/terminal.c"
 		"menu/textedit.c"
+		"menu/radio_update.c"
 		"chakrapetchmedium.c"
 		"coprocessor_management.c"
 		"wifi_remote.c"
