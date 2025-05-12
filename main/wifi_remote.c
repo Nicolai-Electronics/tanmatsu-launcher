@@ -17,9 +17,9 @@ bool wifi_remote_get_initialized(void) {
 #include <string.h>
 #include "bsp/power.h"
 #include "esp_err.h"
-#include "esp_hosted_custom.h"
+#include "esp_hosted.h"
 #include "esp_log.h"
-#include "host/port/sdio_wrapper.h"
+#include "sdio_wrapper.h"
 #include "sdkconfig.h"
 
 static const char* TAG = "WiFi remote";
@@ -63,7 +63,7 @@ esp_err_t wifi_remote_initialize(void) {
 /// Generic implementation for ESP32-P4 targets
 
 #include "esp_err.h"
-#include "esp_hosted_custom.h"
+#include "esp_hosted.h"
 
 esp_err_t wifi_remote_initialize(void) {
     if (initialized) {

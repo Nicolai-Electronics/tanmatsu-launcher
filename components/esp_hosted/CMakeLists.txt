@@ -73,6 +73,9 @@ if(CONFIG_ESP_HOSTED_ENABLED)
 		list(APPEND COMPONENT_SRCS "${host_dir}/port/esp/freertos/src/uart_wrapper.c")
 	endif()
 
+	# transport port include files
+	list(APPEND COMPONENT_ADD_PUBLIC_INCLUDEDIRS "${host_dir}/port/esp/freertos/include")
+
 endif()
 
 idf_component_register(SRCS ${COMPONENT_SRCS}
