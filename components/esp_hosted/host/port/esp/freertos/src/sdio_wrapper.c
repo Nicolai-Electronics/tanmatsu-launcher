@@ -48,6 +48,16 @@ DEFINE_LOG_TAG(sdio_wrapper);
 	if (x) g_h.funcs->_h_unlock_mutex(sdio_bus_lock); \
 } while (0);
 
+
+#define RETURN_ON_ERR(x, ...) \
+    do {                      \
+        esp_err_t err = (x);  \
+        if (err) {            \
+            __VA_ARGS__;      \
+            return err;       \
+        }                     \
+    } while (0)
+
 typedef struct  {
 	sdmmc_card_t *card;
 	struct esp_hosted_sdio_config config;
@@ -135,10 +145,10 @@ static esp_err_t hosted_sdio_set_blocksize(sdmmc_card_t *card, uint8_t fn, uint1
 	uint8_t *bs_read_u8 = (uint8_t *) &bs_read;
 
 	// Set and read back block size
-	ESP_ERROR_CHECK(sdmmc_io_write_byte(card, SDIO_FUNC_0, offset + SD_IO_CCCR_BLKSIZEL, bs_u8[0], NULL));
-	ESP_ERROR_CHECK(sdmmc_io_write_byte(card, SDIO_FUNC_0, offset + SD_IO_CCCR_BLKSIZEH, bs_u8[1], NULL));
-	ESP_ERROR_CHECK(sdmmc_io_read_byte(card, SDIO_FUNC_0, offset + SD_IO_CCCR_BLKSIZEL, &bs_read_u8[0]));
-	ESP_ERROR_CHECK(sdmmc_io_read_byte(card, SDIO_FUNC_0, offset + SD_IO_CCCR_BLKSIZEH, &bs_read_u8[1]));
+	RETURN_ON_ERR(sdmmc_io_write_byte(card, SDIO_FUNC_0, offset + SD_IO_CCCR_BLKSIZEL, bs_u8[0], NULL));
+	RETURN_ON_ERR(sdmmc_io_write_byte(card, SDIO_FUNC_0, offset + SD_IO_CCCR_BLKSIZEH, bs_u8[1], NULL));
+	RETURN_ON_ERR(sdmmc_io_read_byte(card, SDIO_FUNC_0, offset + SD_IO_CCCR_BLKSIZEL, &bs_read_u8[0]));
+	RETURN_ON_ERR(sdmmc_io_read_byte(card, SDIO_FUNC_0, offset + SD_IO_CCCR_BLKSIZEH, &bs_read_u8[1]));
 	ESP_LOGI(TAG, "Function %d Blocksize: %d", fn, (unsigned int) bs_read);
 
 	if (bs_read == value)
@@ -158,24 +168,24 @@ static esp_err_t hosted_sdio_card_fn_init(sdmmc_card_t *card)
 
 	SDIO_FAIL_IF_NULL(card);
 
-	ESP_ERROR_CHECK(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_FN_ENABLE, &ioe));
+	RETURN_ON_ERR(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_FN_ENABLE, &ioe));
 	ESP_LOGD(TAG, "IOE: 0x%02x", ioe);
 
-	ESP_ERROR_CHECK(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_FN_READY, &ior));
+	RETURN_ON_ERR(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_FN_READY, &ior));
 	ESP_LOGD(TAG, "IOR: 0x%02x", ior);
 
 	// enable function 1
 	ioe |= FUNC1_EN_MASK;
-	ESP_ERROR_CHECK(sdmmc_io_write_byte(card, SDIO_FUNC_0, SD_IO_CCCR_FN_ENABLE, ioe, &ioe));
+	RETURN_ON_ERR(sdmmc_io_write_byte(card, SDIO_FUNC_0, SD_IO_CCCR_FN_ENABLE, ioe, &ioe));
 	ESP_LOGD(TAG, "IOE: 0x%02x", ioe);
 
-	ESP_ERROR_CHECK(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_FN_ENABLE, &ioe));
+	RETURN_ON_ERR(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_FN_ENABLE, &ioe));
 	ESP_LOGD(TAG, "IOE: 0x%02x", ioe);
 
 	// wait for the card to become ready
 	ior = 0;
 	for (i = 0; i < SDIO_INIT_MAX_RETRY; i++) {
-		ESP_ERROR_CHECK(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_FN_READY, &ior));
+		RETURN_ON_ERR(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_FN_READY, &ior));
 		ESP_LOGD(TAG, "IOR: 0x%02x", ior);
 		if (ior & FUNC1_EN_MASK) {
 			break;
@@ -189,29 +199,29 @@ static esp_err_t hosted_sdio_card_fn_init(sdmmc_card_t *card)
 	}
 
 	// get interrupt status
-	ESP_ERROR_CHECK(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_INT_ENABLE, &ie));
+	RETURN_ON_ERR(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_INT_ENABLE, &ie));
 	ESP_LOGD(TAG, "IE: 0x%02x", ie);
 
 	// enable interrupts for function 1 and master enable
 	ie |= BIT(0) | FUNC1_EN_MASK;
-	ESP_ERROR_CHECK(sdmmc_io_write_byte(card, SDIO_FUNC_0, SD_IO_CCCR_INT_ENABLE, ie, NULL));
+	RETURN_ON_ERR(sdmmc_io_write_byte(card, SDIO_FUNC_0, SD_IO_CCCR_INT_ENABLE, ie, NULL));
 
-	ESP_ERROR_CHECK(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_INT_ENABLE, &ie));
+	RETURN_ON_ERR(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_INT_ENABLE, &ie));
 	ESP_LOGD(TAG, "IE: 0x%02x", ie);
 
 	// get bus width register
-	ESP_ERROR_CHECK(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_BUS_WIDTH, &bus_width));
+	RETURN_ON_ERR(sdmmc_io_read_byte(card, SDIO_FUNC_0, SD_IO_CCCR_BUS_WIDTH, &bus_width));
 	ESP_LOGD(TAG, "BUS_WIDTH: 0x%02x", bus_width);
 
 	// skip enable of continous SPI interrupts
 
 	// set FN0 block size to 512
 	bs = 512;
-	ESP_ERROR_CHECK(hosted_sdio_set_blocksize(card, SDIO_FUNC_0, bs));
+	RETURN_ON_ERR(hosted_sdio_set_blocksize(card, SDIO_FUNC_0, bs));
 
 	// set FN1 block size to 512
 	bs = 512;
-	ESP_ERROR_CHECK(hosted_sdio_set_blocksize(card, SDIO_FUNC_1, bs));
+	RETURN_ON_ERR(hosted_sdio_set_blocksize(card, SDIO_FUNC_1, bs));
 
 	return ESP_OK;
 }
