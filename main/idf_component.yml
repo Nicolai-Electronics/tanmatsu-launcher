@@ -1,6 +1,6 @@
 dependencies:
   idf:
-    version: '>=5.3.0'
+    version: '>=5.4.0'
   badgeteam/badge-bsp:
     version: '^0.2.1'
   robotman2412/pax-gfx:
@@ -8,7 +8,7 @@ dependencies:
   badgeteam/appfs:
     version: '^1.0.1'
   nicolaielectronics/rvswd:
-    version: '>=0.2.0'
+    version: ^0.2.0
     rules:
     - if: target == esp32p4
   badgeteam/custom-certificates:
@@ -20,7 +20,7 @@ dependencies:
     rules:
     - if: target == esp32p4
   badgeteam/esptool:
-    version: '^0.0.1'
+    version: '^0.0.2'
     rules:
     - if: target == esp32p4
   nicolaielectronics/pocketpy:
