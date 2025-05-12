@@ -12,7 +12,6 @@ menu "Example Configuration"
 
 		config ESP_HOST_DEV_BOARD_P4_FUNC_BOARD
 			bool "ESP32-P4-Function-EV-Board"
-			depends on IDF_TARGET_ESP32C6
 
 	endchoice
 
@@ -129,6 +128,7 @@ menu "Example Configuration"
 				depends on SPI_HSPI
 				int "Slave GPIO pin for Host CLK"
 				default 19 if ESP_HOST_DEV_BOARD_P4_FUNC_BOARD
+				default 3 if IDF_TARGET_ESP32C5
 				default 14 if IDF_TARGET_ESP32
 				default 12 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
 				default 6
@@ -196,6 +196,7 @@ menu "Example Configuration"
 			config ESP_SPI_GPIO_HANDSHAKE
 				int "Slave GPIO pin for handshake"
 				default 22 if ESP_HOST_DEV_BOARD_P4_FUNC_BOARD
+				default 4 if IDF_TARGET_ESP32C5
 				default 3 if IDF_TARGET_ESP32C2 || IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C6
 				default 17 if IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S2
 				default 26
@@ -205,6 +206,7 @@ menu "Example Configuration"
 			config ESP_SPI_GPIO_DATA_READY
 				int "Slave GPIO pin for data ready interrupt"
 				default 23 if ESP_HOST_DEV_BOARD_P4_FUNC_BOARD
+				default 0  if IDF_TARGET_ESP32C5
 				default 13 if IDF_TARGET_ESP32C5
 				default 4
 				help
@@ -216,6 +218,16 @@ menu "Example Configuration"
 				help
 					Host uses this pin to reset the slave ESP. To re-use ESP 'RST' or 'EN' GPIO, set value to -1
 		endmenu
+
+		config ESP_SPI_DEASSERT_HS_ON_CS
+			bool "Deassert Handshake when SPI CS is deasserted"
+			default y
+			help
+				Deassert Handshake and prepare a new SPI transaction only after
+				CS has been deasserted. This helps prevent data loss with MCUs
+				that delay deasserting CS after the end of a SPI transaction
+				by prematurely starting a new slave SPI transaction
+				since CS is detected by the slave as still asserted.
 
 		config ESP_SPI_TX_Q_SIZE
 			int "ESP to Host SPI queue size"
@@ -407,7 +419,6 @@ menu "Example Configuration"
 			config ESP_SPI_HD_GPIO_CS
 				int "Slave GPIO pin for Host CS"
 				default 18 if ESP_HOST_DEV_BOARD_P4_FUNC_BOARD
-				default 10 if IDF_TARGET_ESP32C5
 				default 10
 				help
 					SPI HD controller Host CS
@@ -415,24 +426,22 @@ menu "Example Configuration"
 			config ESP_SPI_HD_GPIO_CLK
 				int "Slave GPIO pin for Host CLK"
 				default 19 if ESP_HOST_DEV_BOARD_P4_FUNC_BOARD
-				default 6 if IDF_TARGET_ESP32C5
-				default 12
+				default 3 if IDF_TARGET_ESP32C5
+				default 6
 				help
 					SPI HD controller Host CS
 
 			config ESP_SPI_HD_GPIO_D0
 				int "Slave GPIO pin for Host D0"
 				default 20 if ESP_HOST_DEV_BOARD_P4_FUNC_BOARD
-				default 7 if IDF_TARGET_ESP32C5
-				default 11
+				default 7
 				help
 					SPI HD controller Host D0
 
 			config ESP_SPI_HD_GPIO_D1
 				int "Slave GPIO pin for Host D1"
 				default 21 if ESP_HOST_DEV_BOARD_P4_FUNC_BOARD
-				default 2 if IDF_TARGET_ESP32C5
-				default 13
+				default 2
 				help
 					SPI HD controller Host D1
 
@@ -440,8 +449,7 @@ menu "Example Configuration"
 				depends on ESP_SPI_HD_PRIV_INTERFACE_4_DATA_LINES
 				int "Slave GPIO pin for Host D2"
 				default 22 if ESP_HOST_DEV_BOARD_P4_FUNC_BOARD
-				default 5 if IDF_TARGET_ESP32C5
-				default 14
+				default 5
 				help
 					SPI HD controller Host D2
 
@@ -449,16 +457,15 @@ menu "Example Configuration"
 				depends on ESP_SPI_HD_PRIV_INTERFACE_4_DATA_LINES
 				int "Slave GPIO pin for Host D3"
 				default 23 if ESP_HOST_DEV_BOARD_P4_FUNC_BOARD
-				default 4 if IDF_TARGET_ESP32C5
-				default 9
+				default 4
 				help
 					SPI HD controller Host D3
 
 			config ESP_SPI_HD_GPIO_DATA_READY
 				int "Slave GPIO pin for Data Ready"
 				default 2 if ESP_HOST_DEV_BOARD_P4_FUNC_BOARD
-				default 13 if IDF_TARGET_ESP32C5
-				default 8
+				default 0 if IDF_TARGET_ESP32C5
+				default 11
 				help
 					Slave GPIO pin for indicating host that SPI slave has data to be read by host
 
@@ -594,13 +601,13 @@ menu "Example Configuration"
 			int "Tx Queue Size"
 			default 5
 			help
-				Very small RX queue will lower ESP -- UART --> Host data rate
+				UART rates are low, so large queue sizes are not required
 
 		config ESP_UART_RX_Q_SIZE
 			int "Rx Queue Size"
 			default 5
 			help
-				Very small RX queue will lower ESP <-- UART -- Host data rate
+				UART rates are low, so large queue sizes are not required
 
 		config ESP_UART_CHECKSUM
 			bool "UART checksum ENABLE/DISABLE"
@@ -616,14 +623,169 @@ menu "Example Configuration"
 		default ESP_SPI_HD_GPIO_RESET if ESP_SPI_HD_HOST_INTERFACE
 		default ESP_UART_GPIO_RESET if ESP_UART_HOST_INTERFACE
 
-	config EXAMPLE_HCI_UART_BAUDRATE
-		int "UART Baudrate for HCI: Only applicable for ESP32-C3/ESP32-S3"
-		range 115200 921600
-		depends on IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S3
-		depends on BT_CTRL_HCI_MODE_UART_H4
-		default 921600
-		help
-			UART Baudrate for HCI over ESP32C3/ESP32S3. Please use standard baudrate.
+	# HCI UART menu for ESP32-C3/S3
+	menu "HCI UART Settings"
+		depends on BT_CTRL_HCI_MODE_UART_H4 && (IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S3)
+
+		# only S3 has two UART ports to select from
+		config ESP_HOSTED_PRIV_BT_UART_PORT_ESP32_S3
+			int "HCI UART Port"
+			depends on IDF_TARGET_ESP32S3
+			default 1
+			range 1 2
+			help
+				UART Port for HCI
+
+		config ESP_HOSTED_BT_UART_PORT_ESP32_C3_S3
+			int
+			default ESP_HOSTED_PRIV_BT_UART_PORT_ESP32_S3 if IDF_TARGET_ESP32S3
+			default 1
+
+		config ESP_HOSTED_BT_UART_BAUDRATE_ESP32_C3_S3
+			int "HCI UART Baudrate"
+			range 115200 921600
+			default 921600
+			help
+				UART Baudrate for HCI. Please use standard baudrate.
+
+		config ESP_HOSTED_BT_UART_TX_PIN_ESP32_C3_S3
+			int "HCI UART Tx Pin"
+			default 5 if IDF_TARGET_ESP32C3
+			default 16
+			help
+				UART Tx Pin for HCI
+
+		config ESP_HOSTED_BT_UART_RX_PIN_ESP32_C3_S3
+			int "HCI UART Rx Pin"
+			default 18
+			help
+				UART Rx Pin for HCI
+
+		choice ESP_HOSTED_PRIV_BT_UART_FLOWCONTROL_ESP32_C3_S3
+			bool "HCI UART Flow Control"
+			default ESP_HOSTED_BT_UART_FLOWCONTROL_DISABLED
+
+			config ESP_HOSTED_BT_UART_FLOWCONTROL_DISABLED
+				bool "Disabled"
+
+			config ESP_HOSTED_BT_UART_FLOWCONTROL_ENABLED
+				bool "Enabled"
+		endchoice
+
+		config ESP_HOSTED_BT_UART_FLOWCONTROL_ESP32_C3_S3
+			int
+			default 3 if ESP_HOSTED_BT_UART_FLOWCONTROL_ENABLED
+			default 0
+
+		config ESP_HOSTED_BT_UART_RTS_PIN_ESP32_C3_S3
+			depends on ESP_HOSTED_BT_UART_FLOWCONTROL_ENABLED
+			int "HCI UART RTS Pin"
+			default 19
+			help
+				UART RTS Pin for HCI
+
+		config ESP_HOSTED_BT_UART_CTS_PIN_ESP32_C3_S3
+			depends on ESP_HOSTED_BT_UART_FLOWCONTROL_ENABLED
+			int "HCI UART CTS Pin"
+			default 1 if IDF_TARGET_ESP32C3
+			default 20
+			help
+				UART CTS Pin for HCI
+
+	endmenu
+
+	# HCI UART menu for ESP32
+	menu "HCI UART Settings"
+		depends on BTDM_CTRL_HCI_MODE_UART_H4 && IDF_TARGET_ESP32
+
+		config ESP_HOSTED_BT_UART_TX_PIN_ESP32
+			int "HCI UART Tx Pin"
+			default 5
+			help
+				UART Tx Pin for HCI
+
+		config ESP_HOSTED_BT_UART_RX_PIN_ESP32
+			int "HCI UART Rx Pin"
+			default 18
+			help
+				UART Rx Pin for HCI
+
+		config ESP_HOSTED_BT_UART_RTS_PIN_ESP32
+			depends on BTDM_CTRL_HCI_UART_FLOW_CTRL_EN
+			int "HCI UART RTS Pin"
+			default 19
+			help
+				UART RTS Pin for HCI
+
+		config ESP_HOSTED_BT_UART_CTS_PIN_ESP32
+			depends on BTDM_CTRL_HCI_UART_FLOW_CTRL_EN
+			int "HCI UART CTS Pin"
+			default 23
+			help
+				UART CTS Pin for HCI
+
+		comment "HCI UART Settings from Bluetooth Component"
+		comment "To change Port, Baud Rate, Flow Control, select Component config ---> Bluetooth ---> Controller Options ---> HCI Config"
+
+		config ESP_HOSTED_BT_UART_PORT_ESP32
+			int "HCI UART Port"
+			range BTDM_CTRL_HCI_UART_NO BTDM_CTRL_HCI_UART_NO
+			help
+				UART Port for HCI
+
+		config ESP_HOSTED_BT_UART_BAUDRATE_ESP32
+			int "HCI UART Baudrate"
+			range BTDM_CTRL_HCI_UART_BAUDRATE BTDM_CTRL_HCI_UART_BAUDRATE
+			help
+				UART Baudrate for HCI. Please use standard baudrate.
+
+	endmenu
+
+	# HCI UART menu for other ESP32 chips
+	menu "HCI UART Settings"
+		depends on BT_LE_HCI_INTERFACE_USE_UART && !IDF_TARGET_ESP32 && !IDF_TARGET_ESP32C3 && !IDF_TARGET_ESP32S3
+		comment "HCI UART Settings from Bluetooth Component"
+		comment "To change, select Component config ---> Bluetooth ---> Controller Options ---> HCI Config"
+
+		config ESP_HOSTED_BT_UART_PORT
+			int "HCI UART Port"
+			range BT_LE_HCI_UART_PORT BT_LE_HCI_UART_PORT # kconfig ignore: multiple-definition
+			help
+				UART Port for HCI
+
+		config ESP_HOSTED_BT_UART_TX_PIN
+			int "HCI UART Tx Pin"
+			range BT_LE_HCI_UART_TX_PIN BT_LE_HCI_UART_TX_PIN
+			help
+				UART Tx Pin for HCI
+
+		config ESP_HOSTED_BT_UART_RX_PIN
+			int "HCI UART Rx Pin"
+			range BT_LE_HCI_UART_RX_PIN BT_LE_HCI_UART_RX_PIN
+			help
+				UART Rx Pin for HCI
+
+		config ESP_HOSTED_BT_UART_RTS_PIN
+			depends on BT_LE_HCI_UART_FLOWCTRL
+			int "HCI UART RTS Pin"
+			range BT_LE_HCI_UART_RTS_PIN BT_LE_HCI_UART_RTS_PIN
+			help
+				UART RTS Pin for HCI
+
+		config ESP_HOSTED_BT_UART_CTS_PIN
+			depends on BT_LE_HCI_UART_FLOWCTRL
+			int "HCI UART CTS Pin"
+			range BT_LE_HCI_UART_CTS_PIN BT_LE_HCI_UART_CTS_PIN
+			help
+				UART CTS Pin for HCI
+
+		config ESP_HOSTED_BT_UART_BAUDRATE
+			int "HCI UART Baudrate"
+			range BT_LE_HCI_UART_BAUD BT_LE_HCI_UART_BAUD
+			help
+				UART Baudrate for HCI. Please use standard baudrate.
+
+	endmenu
 
 	config ESP_DEFAULT_TASK_STACK_SIZE
 		int "ESP-Hosted task stack size"

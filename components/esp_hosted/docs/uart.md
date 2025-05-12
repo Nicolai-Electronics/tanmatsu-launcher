@@ -42,7 +42,7 @@ UART is supported on all ESP devices, and many other MCUs and operating systems.
 However, UART is a low-speed bus, and not recommended for environments where high network throughput (more than 1 Mbits/s) is required.
 
 > [!NOTE]
-> UART here is used to transport both Wi-Fi and Bluetooth data (VHCI). Do not confuse this with the standard Bluetooth over UART implementation (HCI), which does not support Wi-Fi.
+> UART is used to transport both Wi-Fi and Bluetooth data (as Hosted HCI). Do not confuse this with standard HCI sent over UART, which does not support Wi-Fi.
 
 ## 3 Hardware Considerations
 
@@ -217,13 +217,13 @@ You can re-use your existing web server or create a new locally for testing. Bel
   - Open link `http://127.0.0.1:8080` in the browser and check if network_adapter.bin is available.
   - Right click and copy the complete URL of this network_adapter.bin and note somewhere.
 
-5. On the **host side**, use the `esp_hosted_ota` function to initiate the OTA update:
+5. On the **host side**, use the `esp_hosted_slave_ota` function to initiate the OTA update:
 
    ```c
-   #include "esp_hosted_api.h"
+   #include "esp_hosted.h"
 
    const char* image_url = "http://example.com/path/to/network_adapter.bin"; //web server full url
-   esp_err_t ret = esp_hosted_ota(image_url);
+   esp_err_t ret = esp_hosted_slave_ota(image_url);
    if (ret == ESP_OK) {
        printf("co-processor OTA update failed[%d]\n", ret);
    }
@@ -236,7 +236,7 @@ You can re-use your existing web server or create a new locally for testing. Bel
 
 > [!NOTE]
 >
-> - The `esp_hosted_ota` function is part of the ESP-Hosted-MCU API and handles the OTA process through the transport layer.
+> - The `esp_hosted_slave_ota` function is part of the ESP-Hosted-MCU API and handles the OTA process through the transport layer.
 > - Ensure that your host application has web server connectivity to download the firmware file.
 > - The co-processor device doesn't need to be connected to the web server for this OTA method.
 

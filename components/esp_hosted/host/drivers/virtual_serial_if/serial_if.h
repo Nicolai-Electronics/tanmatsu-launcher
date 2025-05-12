@@ -8,14 +8,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "adapter.h"
+#include "esp_hosted_transport.h"
 #include "os_wrapper.h"
 
 #define SIZE_OF_TYPE                1
 #define SIZE_OF_LENGTH              2
 
 /*
- * The data written on serial driver file, `SERIAL_IF_FILE` from adapter.h
+ * The data written on serial driver file, `SERIAL_IF_FILE` from esp_hosted_transport.h
  * In TLV i.e. Type Length Value format, to transfer data between host and ESP32
  *  | type | length | value |
  * Types are 0x01 : for endpoint name

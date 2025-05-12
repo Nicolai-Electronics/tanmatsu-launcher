@@ -156,7 +156,7 @@ Setting up the hardware involves connecting the master and co-processor devices 
 
 
 > [!NOTE]
-> 
+>
 > A. Try to use IO_MUX pins from the datasheet for optimal performance on both sides. \
 > B. These GPIO assignments are based on default Kconfig configurations. You can modify these in the menuconfig for both host and co-processor if needed. \
 > C. Once ported, any other host with standard SDIO can be used. \
@@ -252,9 +252,9 @@ idf.py -p <co-processor_serial_port> flash
 > [!NOTE]
 >
 > If you are not able to flash the co-processor, there might be a chance that host is not allowing to to do so.
-> 
+>
 > Put host in bootloader mode using following command and then retry flashing the co-processor
-> 
+>
 > ```bash
 > esptool.py -p **<host_serial_port>** --before default_reset --after no_reset run
 > ```
@@ -284,14 +284,14 @@ You can re-use your existing web server or create a new locally for testing. Bel
 4. Verify if web server is set-up correctly
   - Open link `http://127.0.0.1:8080` in the browser and check if network_adapter.bin is available.
   - Right click and copy the complete URL of this network_adapter.bin and note somewhere.
- 
-5. On the **host side**, use the `esp_hosted_ota` function to initiate the OTA update:
+
+5. On the **host side**, use the `esp_hosted_slave_ota` function to initiate the OTA update:
 
    ```c
-   #include "esp_hosted_api.h"
+   #include "esp_hosted.h"
 
    const char* image_url = "http://example.com/path/to/network_adapter.bin"; //web server full url
-   esp_err_t ret = esp_hosted_ota(image_url);
+   esp_err_t ret = esp_hosted_slave_ota(image_url);
    if (ret == ESP_OK) {
        printf("co-processor OTA update failed[%d]\n", ret);
    }
@@ -299,13 +299,13 @@ You can re-use your existing web server or create a new locally for testing. Bel
 
    This function will download the firmware in chunk by chunk as http client from the specified URL and flash it to the co-processor device through the established transport.
    In above web server example, You can paste the copied url earlier.
-   
+
 
 6. Monitor the OTA progress through the console output on both the host and co-processor devices.
 
 > [!NOTE]
 >
-> A. The `esp_hosted_ota` function is part of the ESP-Hosted-MCU API and handles the OTA process through the transport layer. \
+> A. The `esp_hosted_slave_ota` function is part of the ESP-Hosted-MCU API and handles the OTA process through the transport layer. \
 > B. Ensure that your host application has web server connectivity to download the firmware file. \
 > C. The co-processor device doesn't need to be connected to the web server for this OTA method.
 
@@ -314,7 +314,7 @@ You can re-use your existing web server or create a new locally for testing. Bel
 | Supported Host Targets  | Any ESP chipset | Any Non-ESP chipset |
 | ----------------------- | --------------- | ------------------- |
 
-Any host having SDIO master can be used as host. Please make sure the hardware configurations, like external pull-ups are installed correctly. Tthe voltage at SDIO pins is expected to be 3v3 volts. 
+Any host having SDIO master can be used as host. Please make sure the hardware configurations, like external pull-ups are installed correctly. Tthe voltage at SDIO pins is expected to be 3v3 volts.
 - ESP chipsets as SDIO master
   - ESP as host could be one of ESP32, ESP32-S3, ESP32-P4.
   - For ESP32 as host, may need additional **eFuse burning** for voltage correction on one of data pin. ESP32-S3 and ESP32-P4 does **not** need this.
@@ -358,9 +358,9 @@ Now that ESP-IDF is set up, follow these steps to prepare the host:
 
 ###### 4. Disable native Wi-Fi if available
    If your host ESP chip already has native Wi-Fi support, disable it by editing the `components/soc/<soc>/include/soc/Kconfig.soc_caps.in` file and changing all `WIFI` related configs to `n`.
-     
+
     If you happen to have both, host and co-processor as same ESP chipset type (for example two ESP32-C2), note an [additional step](docs/troubleshooting/#1-esp-host-to-evaluate-already-has-native-wi-fi)
-    
+
 
 ### 7.3 Menuconfig, Build and Flash Host
 
@@ -396,7 +396,7 @@ Now that ESP-IDF is set up, follow these steps to prepare the host:
    idf.py set-target <host_target>
    ```
    Replace `<host_target>` with your specific ESP chip (e.g., esp32, esp32s3, esp32p4).
-   
+
 ###### 3. Flexible Menuconfig configurations
 
    ```
@@ -414,13 +414,13 @@ Now that ESP-IDF is set up, follow these steps to prepare the host:
       You can use a lower clock speed to verify the connections. Start with a clock speed between 400 kHz to 20 MHz.
       To configure this, use `Menuconfig` on the Host: **Component config** ---> **ESP-Hosted config** ---> **Hosted SDIO Configuration** and set **SDIO Clock Freq (in kHz)**.
     > [!NOTE]
-    > 
+    >
     > The actual clock frequency used is determined by the hardware. Use an oscilloscope or logic analyzer to check the clock frequency.
 
    - Using 1-bit SDIO Mode
      By default, SDIO operates in 4-Bit mode.
      You can set the SDIO Bus Width to 1-Bit. In 1-Bit mode, only `DAT0` and `DAT1` signals are used for data and are less affected by noise on the signal lines. This can help you verify that the SDIO protocol is working at the logical level, if you have issues getting 4-Bit SDIO to work on your prototype board.
-     
+
      To configure this, use `Menuconfig` on the Host: **Component config** ---> **ESP-Hosted config** ---> **Hosted SDIO Configuration** ---> **SDIO Bus Width** to **1 Bit**.
 
    - SDIO Mode

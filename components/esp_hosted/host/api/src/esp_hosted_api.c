@@ -265,6 +265,11 @@ esp_err_t esp_wifi_remote_scan_get_ap_num(uint16_t *number)
 	return rpc_wifi_scan_get_ap_num(number);
 }
 
+esp_err_t esp_wifi_remote_scan_get_ap_record(wifi_ap_record_t *ap_record)
+{
+	return rpc_wifi_scan_get_ap_record(ap_record);
+}
+
 esp_err_t esp_wifi_remote_scan_get_ap_records(uint16_t *number, wifi_ap_record_t *ap_records)
 {
 	return rpc_wifi_scan_get_ap_records(number, ap_records);
@@ -385,6 +390,11 @@ esp_err_t esp_wifi_remote_get_max_tx_power(int8_t *power)
 	return rpc_wifi_get_max_tx_power(power);
 }
 
+esp_err_t esp_wifi_remote_sta_get_negotiated_phymode(wifi_phy_mode_t *phymode)
+{
+	return rpc_wifi_sta_get_negotiated_phymode(phymode);
+}
+
 esp_err_t esp_wifi_remote_sta_get_aid(uint16_t *aid)
 {
 	return rpc_wifi_sta_get_aid(aid);
@@ -431,11 +441,6 @@ esp_err_t esp_wifi_remote_get_bandwidths(wifi_interface_t ifx, wifi_bandwidths_t
 	return rpc_wifi_get_bandwidths(ifx, bw);
 }
 #endif
-
-esp_err_t esp_hosted_ota(const char* image_url)
-{
-	return rpc_ota(image_url);
-}
 
 esp_err_t esp_hosted_get_coprocessor_fwversion(esp_hosted_coprocessor_fwver_t *ver_info)
 {

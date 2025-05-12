@@ -23,6 +23,7 @@
 #include "transport_drv.h"
 #endif
 #include "esp_log.h"
+#include "esp_hosted_transport_init.h"
 
 // use mempool and zero copy for Tx
 #include "mempool.h"
@@ -113,8 +114,8 @@ static void raw_tp_tx_task(void const* pvParameters)
 	g_h.funcs->_h_sleep(5);
 
 	buf_mp_g = mempool_create(MAX_TRANSPORT_BUFFER_SIZE);
-#ifdef CONFIG_ESP_CACHE_MALLOC
-	assert(channel->memp);
+#ifdef H_USE_MEMPOOL
+	assert(buf_mp_g);
 #endif
 
 	while (1) {

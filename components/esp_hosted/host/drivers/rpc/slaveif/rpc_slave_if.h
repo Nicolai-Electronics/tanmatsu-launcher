@@ -141,6 +141,10 @@ typedef struct {
 } rpc_wifi_sta_get_rssi_t;
 
 typedef struct {
+	wifi_phy_mode_t phymode;
+} rpc_wifi_sta_get_negotiated_phymode_t;
+
+typedef struct {
 	uint16_t aid;
 } rpc_wifi_sta_get_aid_t;
 
@@ -206,6 +210,8 @@ typedef struct Ctrl_cmd_t {
 
 		wifi_scan_cfg_t             wifi_scan_config;
 
+		wifi_ap_record_t            wifi_ap_record;
+
 		wifi_scan_ap_list_t         wifi_scan_ap_list;
 
 		wifi_deauth_sta_t           wifi_deauth_sta;
@@ -228,6 +234,7 @@ typedef struct Ctrl_cmd_t {
 
 		rpc_wifi_protocol           wifi_protocol;
 
+		rpc_wifi_sta_get_negotiated_phymode_t wifi_sta_get_negotiated_phymode;
 		rpc_wifi_sta_get_aid_t      wifi_sta_get_aid;
 
 		rpc_coprocessor_fwversion_t coprocessor_fwversion;
@@ -457,6 +464,7 @@ ctrl_cmd_t * wifi_get_config(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_scan_start(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_scan_stop(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_scan_get_ap_num(ctrl_cmd_t *req);
+ctrl_cmd_t * wifi_scan_get_ap_record(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_scan_get_ap_records(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_clear_ap_list(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_restore(ctrl_cmd_t *req);
@@ -479,6 +487,7 @@ ctrl_cmd_t * wifi_ap_get_sta_aid(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_sta_get_rssi(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_set_protocol(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_get_protocol(ctrl_cmd_t *req);
+ctrl_cmd_t * wifi_sta_get_negotiated_phymode(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_sta_get_aid(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_set_protocols(ctrl_cmd_t *req);
 ctrl_cmd_t * wifi_get_protocols(ctrl_cmd_t *req);

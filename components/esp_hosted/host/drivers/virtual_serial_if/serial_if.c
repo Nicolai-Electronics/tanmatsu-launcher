@@ -41,7 +41,7 @@ DEFINE_LOG_TAG(serial_if);
 struct serial_drv_handle_t* serial_handle = NULL;
 
 /*
- * The data written on serial driver file, `SERIAL_IF_FILE` from adapter.h
+ * The data written on serial driver file, `SERIAL_IF_FILE` from esp_hosted_transport.h
  * In TLV i.e. Type Length Value format, to transfer data between host and ESP32
  *  | type | length | value |
  * Types are 0x01 : for endpoint name

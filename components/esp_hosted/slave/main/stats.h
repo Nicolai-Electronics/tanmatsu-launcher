@@ -18,7 +18,7 @@
 #define __STATS__H__
 
 #include <stdint.h>
-#include "adapter.h"
+#include "esp_hosted_interface.h"
 #include "endian.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"

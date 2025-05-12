@@ -18,6 +18,8 @@
 #define __SLAVE_BT_H__
 
 #include "esp_err.h"
+#include "esp_idf_version.h"
+
 #ifdef CONFIG_BT_ENABLED
 
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
@@ -51,7 +53,18 @@
     #define BLUETOOTH_UART   CONFIG_BTDM_CTRL_HCI_UART_NO
   #endif
 
-#elif (defined(CONFIG_IDF_TARGET_ESP32C2) || defined(CONFIG_IDF_TARGET_ESP32C6))
+#elif BT_OVER_C3_S3
+
+  #define BLUETOOTH_BLE      1
+
+  #if defined(CONFIG_BT_CTRL_HCI_MODE_VHCI)
+    #define BLUETOOTH_HCI    4
+  #elif CONFIG_BT_CTRL_HCI_MODE_UART_H4
+    #define BLUETOOTH_UART   CONFIG_ESP_HOSTED_BT_UART_PORT_ESP32_C3_S3
+  #endif
+
+#else
+  /* only BLE for chipsets other than ESP32 */
 
   #define BLUETOOTH_BLE      1
 
@@ -61,18 +74,6 @@
     #define BLUETOOTH_UART   CONFIG_BT_LE_HCI_UART_PORT
   #endif
 
-#elif BT_OVER_C3_S3
-
-   /* only BLE for chipsets other than ESP32 */
-  #define BLUETOOTH_BLE      1
-
-  #if defined(CONFIG_BT_CTRL_HCI_MODE_VHCI)
-    #define BLUETOOTH_HCI    4
-  #elif CONFIG_BT_CTRL_HCI_MODE_UART_H4
-    #define BLUETOOTH_UART   1
-  #endif
-
-
 #endif
 
 #ifdef BLUETOOTH_UART
@@ -81,46 +82,76 @@
 
   #if defined(CONFIG_IDF_TARGET_ESP32)
 
-    #define BT_TX_PIN	        5
-    #define BT_RX_PIN	        18
-    #define BT_RTS_PIN         19
-    #define BT_CTS_PIN         23
+    // GPIO pins are fixed
+    #define BT_TX_PIN	       CONFIG_ESP_HOSTED_BT_UART_TX_PIN_ESP32
+    #define BT_RX_PIN	       CONFIG_ESP_HOSTED_BT_UART_RX_PIN_ESP32
 
-  #elif defined(CONFIG_IDF_TARGET_ESP32C2)
-
-      #define BT_TX_PIN         5
-      #define BT_RX_PIN         18
-      //#define BT_RTS_PIN        9
-      //#define BT_CTS_PIN        8
-
-  #elif defined(CONFIG_IDF_TARGET_ESP32C6)
-
-      #define BT_TX_PIN         5
-      #define BT_RX_PIN         12
-      //#define BT_RTS_PIN        9
-      //#define BT_CTS_PIN        13
+    #if defined(CONFIG_BTDM_CTRL_HCI_UART_FLOW_CTRL_EN)
+    #define BT_RTS_PIN         CONFIG_ESP_HOSTED_BT_UART_RTS_PIN_ESP32
+    #define BT_CTS_PIN         CONFIG_ESP_HOSTED_BT_UART_CTS_PIN_ESP32
+    #else
+    #define BT_RTS_PIN         -1
+    #define BT_CTS_PIN         -1
+    #endif
 
   #elif BT_OVER_C3_S3
 
+    #define BT_BAUDRATE         CONFIG_ESP_HOSTED_BT_UART_BAUDRATE_ESP32_C3_S3
+
     #if defined(CONFIG_IDF_TARGET_ESP32C3)
 
-      #define BT_TX_PIN         5
-      #define BT_RX_PIN         18
-      #define BT_RTS_PIN        19
-      #define BT_CTS_PIN        8
+      #define BT_TX_PIN         CONFIG_ESP_HOSTED_BT_UART_TX_PIN_ESP32_C3_S3
+      #define BT_RX_PIN         CONFIG_ESP_HOSTED_BT_UART_RX_PIN_ESP32_C3_S3
+
+      #define BT_FLOWCTRL       CONFIG_ESP_HOSTED_BT_UART_FLOWCONTROL_ESP32_C3_S3
+
+      #if CONFIG_ESP_HOSTED_BT_UART_FLOWCONTROL_ESP32_C3_S3
+      #define BT_RTS_PIN        CONFIG_ESP_HOSTED_BT_UART_RTS_PIN_ESP32_C3_S3
+      #define BT_CTS_PIN        CONFIG_ESP_HOSTED_BT_UART_CTS_PIN_ESP32_C3_S3
+      #else
+      #define BT_RTS_PIN        -1
+      #define BT_CTS_PIN        -1
+      #endif
 
     #elif defined(CONFIG_IDF_TARGET_ESP32S3)
 
-      #define BT_TX_PIN         17
-      #define BT_RX_PIN         18
-      #define BT_RTS_PIN        19
-      #define BT_CTS_PIN        20
+      #define BT_TX_PIN         CONFIG_ESP_HOSTED_BT_UART_TX_PIN_ESP32_C3_S3
+      #define BT_RX_PIN         CONFIG_ESP_HOSTED_BT_UART_RX_PIN_ESP32_C3_S3
+
+      #define BT_FLOWCTRL       CONFIG_ESP_HOSTED_BT_UART_FLOWCONTROL_ESP32_C3_S3
+
+      #if CONFIG_ESP_HOSTED_BT_UART_FLOWCONTROL_ESP32_C3_S3
+      #define BT_RTS_PIN        CONFIG_ESP_HOSTED_BT_UART_RTS_PIN_ESP32_C3_S3
+      #define BT_CTS_PIN        CONFIG_ESP_HOSTED_BT_UART_CTS_PIN_ESP32_C3_S3
+      #else
+      #define BT_RTS_PIN        -1
+      #define BT_CTS_PIN        -1
+      #endif
 
     #endif
 
     #define UART_RX_THRS       (120)
+
+    #if defined(CONFIG_ESP_HOSTED_BT_UART_FLOWCONTROL_ENABLED)
     #define GPIO_OUTPUT_PIN_SEL  ((1ULL<<BT_TX_PIN) | (1ULL<<BT_RTS_PIN))
     #define GPIO_INPUT_PIN_SEL   ((1ULL<<BT_RX_PIN) | (1ULL<<BT_CTS_PIN))
+    #else
+    #define GPIO_OUTPUT_PIN_SEL  (1ULL<<BT_TX_PIN)
+    #define GPIO_INPUT_PIN_SEL   (1ULL<<BT_RX_PIN)
+    #endif
+
+  #else
+
+    #define BT_TX_PIN         CONFIG_BT_LE_HCI_UART_TX_PIN
+    #define BT_RX_PIN         CONFIG_BT_LE_HCI_UART_RX_PIN
+
+    #if defined(CONFIG_BT_LE_HCI_UART_FLOWCTRL)
+    #define BT_RTS_PIN        CONFIG_BT_LE_HCI_UART_RTS_PIN
+    #define BT_CTS_PIN        CONFIG_BT_LE_HCI_UART_CTS_PIN
+    #else
+    #define BT_RTS_PIN        -1
+    #define BT_CTS_PIN        -1
+    #endif
 
   #endif
 

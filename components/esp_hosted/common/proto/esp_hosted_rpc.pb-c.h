@@ -106,6 +106,8 @@ typedef struct RpcReqWifiScanGetApNum RpcReqWifiScanGetApNum;
 typedef struct RpcRespWifiScanGetApNum RpcRespWifiScanGetApNum;
 typedef struct RpcReqWifiScanGetApRecords RpcReqWifiScanGetApRecords;
 typedef struct RpcRespWifiScanGetApRecords RpcRespWifiScanGetApRecords;
+typedef struct RpcReqWifiScanGetApRecord RpcReqWifiScanGetApRecord;
+typedef struct RpcRespWifiScanGetApRecord RpcRespWifiScanGetApRecord;
 typedef struct RpcReqWifiClearApList RpcReqWifiClearApList;
 typedef struct RpcRespWifiClearApList RpcRespWifiClearApList;
 typedef struct RpcReqWifiRestore RpcReqWifiRestore;
@@ -141,6 +143,8 @@ typedef struct RpcRespWifiGetCountry RpcRespWifiGetCountry;
 typedef struct RpcReqWifiApGetStaList RpcReqWifiApGetStaList;
 typedef struct RpcRespWifiApGetStaList RpcRespWifiApGetStaList;
 typedef struct RpcReqWifiApGetStaAid RpcReqWifiApGetStaAid;
+typedef struct RpcReqWifiStaGetNegotiatedPhymode RpcReqWifiStaGetNegotiatedPhymode;
+typedef struct RpcRespWifiStaGetNegotiatedPhymode RpcRespWifiStaGetNegotiatedPhymode;
 typedef struct RpcRespWifiApGetStaAid RpcRespWifiApGetStaAid;
 typedef struct RpcReqWifiStaGetRssi RpcReqWifiStaGetRssi;
 typedef struct RpcRespWifiStaGetRssi RpcRespWifiStaGetRssi;
@@ -575,13 +579,17 @@ typedef enum _RpcId {
    */
   RPC_ID__Req_GetCoprocessorFwVersion = 350,
   /*
+   *0x15f
+   */
+  RPC_ID__Req_WifiScanGetApRecord = 351,
+  /*
    * Add new control path command response before Req_Max
    * and update Req_Max 
    */
   /*
-   *0x15f
+   *0x160
    */
-  RPC_ID__Req_Max = 351,
+  RPC_ID__Req_Max = 352,
   /*
    ** Response Msgs *
    */
@@ -682,11 +690,12 @@ typedef enum _RpcId {
   RPC_ID__Resp_WifiSetBandMode = 604,
   RPC_ID__Resp_WifiGetBandMode = 605,
   RPC_ID__Resp_GetCoprocessorFwVersion = 606,
+  RPC_ID__Resp_WifiScanGetApRecord = 607,
   /*
    * Add new control path command response before Resp_Max
    * and update Resp_Max 
    */
-  RPC_ID__Resp_Max = 607,
+  RPC_ID__Resp_Max = 608,
   /*
    ** Event Msgs *
    */
@@ -2462,6 +2471,26 @@ struct  RpcRespWifiScanGetApRecords
     , 0, 0, 0,NULL }
 
 
+struct  RpcReqWifiScanGetApRecord
+{
+  ProtobufCMessage base;
+};
+#define RPC__REQ__WIFI_SCAN_GET_AP_RECORD__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&rpc__req__wifi_scan_get_ap_record__descriptor) \
+     }
+
+
+struct  RpcRespWifiScanGetApRecord
+{
+  ProtobufCMessage base;
+  int32_t resp;
+  WifiApRecord *ap_record;
+};
+#define RPC__RESP__WIFI_SCAN_GET_AP_RECORD__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&rpc__resp__wifi_scan_get_ap_record__descriptor) \
+    , 0, NULL }
+
+
 struct  RpcReqWifiClearApList
 {
   ProtobufCMessage base;
@@ -2553,7 +2582,7 @@ struct  RpcRespWifiStaGetApInfo
 {
   ProtobufCMessage base;
   int32_t resp;
-  WifiApRecord *ap_records;
+  WifiApRecord *ap_record;
 };
 #define RPC__RESP__WIFI_STA_GET_AP_INFO__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&rpc__resp__wifi_sta_get_ap_info__descriptor) \
@@ -2815,6 +2844,26 @@ struct  RpcReqWifiApGetStaAid
 #define RPC__REQ__WIFI_AP_GET_STA_AID__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&rpc__req__wifi_ap_get_sta_aid__descriptor) \
     , {0,NULL} }
+
+
+struct  RpcReqWifiStaGetNegotiatedPhymode
+{
+  ProtobufCMessage base;
+};
+#define RPC__REQ__WIFI_STA_GET_NEGOTIATED_PHYMODE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&rpc__req__wifi_sta_get_negotiated_phymode__descriptor) \
+     }
+
+
+struct  RpcRespWifiStaGetNegotiatedPhymode
+{
+  ProtobufCMessage base;
+  int32_t resp;
+  uint32_t phymode;
+};
+#define RPC__RESP__WIFI_STA_GET_NEGOTIATED_PHYMODE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&rpc__resp__wifi_sta_get_negotiated_phymode__descriptor) \
+    , 0, 0 }
 
 
 struct  RpcRespWifiApGetStaAid
@@ -3194,6 +3243,7 @@ typedef enum {
   RPC__PAYLOAD_REQ_WIFI_SET_COUNTRY_CODE = 334,
   RPC__PAYLOAD_REQ_WIFI_GET_COUNTRY_CODE = 335,
   RPC__PAYLOAD_REQ_WIFI_STA_GET_AID = 338,
+  RPC__PAYLOAD_REQ_WIFI_STA_GET_NEGOTIATED_PHYMODE = 339,
   RPC__PAYLOAD_REQ_WIFI_STA_GET_RSSI = 341,
   RPC__PAYLOAD_REQ_WIFI_SET_PROTOCOLS = 342,
   RPC__PAYLOAD_REQ_WIFI_GET_PROTOCOLS = 343,
@@ -3204,6 +3254,7 @@ typedef enum {
   RPC__PAYLOAD_REQ_WIFI_SET_BANDMODE = 348,
   RPC__PAYLOAD_REQ_WIFI_GET_BANDMODE = 349,
   RPC__PAYLOAD_REQ_GET_COPROCESSOR_FWVERSION = 350,
+  RPC__PAYLOAD_REQ_WIFI_SCAN_GET_AP_RECORD = 351,
   RPC__PAYLOAD_RESP_GET_MAC_ADDRESS = 513,
   RPC__PAYLOAD_RESP_SET_MAC_ADDRESS = 514,
   RPC__PAYLOAD_RESP_GET_WIFI_MODE = 515,
@@ -3247,6 +3298,7 @@ typedef enum {
   RPC__PAYLOAD_RESP_WIFI_SET_COUNTRY_CODE = 590,
   RPC__PAYLOAD_RESP_WIFI_GET_COUNTRY_CODE = 591,
   RPC__PAYLOAD_RESP_WIFI_STA_GET_AID = 594,
+  RPC__PAYLOAD_RESP_WIFI_STA_GET_NEGOTIATED_PHYMODE = 595,
   RPC__PAYLOAD_RESP_WIFI_STA_GET_RSSI = 597,
   RPC__PAYLOAD_RESP_WIFI_SET_PROTOCOLS = 598,
   RPC__PAYLOAD_RESP_WIFI_GET_PROTOCOLS = 599,
@@ -3257,6 +3309,7 @@ typedef enum {
   RPC__PAYLOAD_RESP_WIFI_SET_BANDMODE = 604,
   RPC__PAYLOAD_RESP_WIFI_GET_BANDMODE = 605,
   RPC__PAYLOAD_RESP_GET_COPROCESSOR_FWVERSION = 606,
+  RPC__PAYLOAD_RESP_WIFI_SCAN_GET_AP_RECORD = 607,
   RPC__PAYLOAD_EVENT_ESP_INIT = 769,
   RPC__PAYLOAD_EVENT_HEARTBEAT = 770,
   RPC__PAYLOAD_EVENT_AP_STA_CONNECTED = 771,
@@ -3331,6 +3384,7 @@ struct  Rpc
     RpcReqWifiSetCountryCode *req_wifi_set_country_code;
     RpcReqWifiGetCountryCode *req_wifi_get_country_code;
     RpcReqWifiStaGetAid *req_wifi_sta_get_aid;
+    RpcReqWifiStaGetNegotiatedPhymode *req_wifi_sta_get_negotiated_phymode;
     RpcReqWifiStaGetRssi *req_wifi_sta_get_rssi;
     RpcReqWifiSetProtocols *req_wifi_set_protocols;
     RpcReqWifiGetProtocols *req_wifi_get_protocols;
@@ -3341,6 +3395,7 @@ struct  Rpc
     RpcReqWifiSetBandMode *req_wifi_set_bandmode;
     RpcReqWifiGetBandMode *req_wifi_get_bandmode;
     RpcReqGetCoprocessorFwVersion *req_get_coprocessor_fwversion;
+    RpcReqWifiScanGetApRecord *req_wifi_scan_get_ap_record;
     /*
      ** Responses *
      */
@@ -3387,6 +3442,7 @@ struct  Rpc
     RpcRespWifiSetCountryCode *resp_wifi_set_country_code;
     RpcRespWifiGetCountryCode *resp_wifi_get_country_code;
     RpcRespWifiStaGetAid *resp_wifi_sta_get_aid;
+    RpcRespWifiStaGetNegotiatedPhymode *resp_wifi_sta_get_negotiated_phymode;
     RpcRespWifiStaGetRssi *resp_wifi_sta_get_rssi;
     RpcRespWifiSetProtocols *resp_wifi_set_protocols;
     RpcRespWifiGetProtocols *resp_wifi_get_protocols;
@@ -3397,6 +3453,7 @@ struct  Rpc
     RpcRespWifiSetBandMode *resp_wifi_set_bandmode;
     RpcRespWifiGetBandMode *resp_wifi_get_bandmode;
     RpcRespGetCoprocessorFwVersion *resp_get_coprocessor_fwversion;
+    RpcRespWifiScanGetApRecord *resp_wifi_scan_get_ap_record;
     /*
      ** Notifications *
      */
@@ -5144,6 +5201,44 @@ RpcRespWifiScanGetApRecords *
 void   rpc__resp__wifi_scan_get_ap_records__free_unpacked
                      (RpcRespWifiScanGetApRecords *message,
                       ProtobufCAllocator *allocator);
+/* RpcReqWifiScanGetApRecord methods */
+void   rpc__req__wifi_scan_get_ap_record__init
+                     (RpcReqWifiScanGetApRecord         *message);
+size_t rpc__req__wifi_scan_get_ap_record__get_packed_size
+                     (const RpcReqWifiScanGetApRecord   *message);
+size_t rpc__req__wifi_scan_get_ap_record__pack
+                     (const RpcReqWifiScanGetApRecord   *message,
+                      uint8_t             *out);
+size_t rpc__req__wifi_scan_get_ap_record__pack_to_buffer
+                     (const RpcReqWifiScanGetApRecord   *message,
+                      ProtobufCBuffer     *buffer);
+RpcReqWifiScanGetApRecord *
+       rpc__req__wifi_scan_get_ap_record__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   rpc__req__wifi_scan_get_ap_record__free_unpacked
+                     (RpcReqWifiScanGetApRecord *message,
+                      ProtobufCAllocator *allocator);
+/* RpcRespWifiScanGetApRecord methods */
+void   rpc__resp__wifi_scan_get_ap_record__init
+                     (RpcRespWifiScanGetApRecord         *message);
+size_t rpc__resp__wifi_scan_get_ap_record__get_packed_size
+                     (const RpcRespWifiScanGetApRecord   *message);
+size_t rpc__resp__wifi_scan_get_ap_record__pack
+                     (const RpcRespWifiScanGetApRecord   *message,
+                      uint8_t             *out);
+size_t rpc__resp__wifi_scan_get_ap_record__pack_to_buffer
+                     (const RpcRespWifiScanGetApRecord   *message,
+                      ProtobufCBuffer     *buffer);
+RpcRespWifiScanGetApRecord *
+       rpc__resp__wifi_scan_get_ap_record__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   rpc__resp__wifi_scan_get_ap_record__free_unpacked
+                     (RpcRespWifiScanGetApRecord *message,
+                      ProtobufCAllocator *allocator);
 /* RpcReqWifiClearApList methods */
 void   rpc__req__wifi_clear_ap_list__init
                      (RpcReqWifiClearApList         *message);
@@ -5808,6 +5903,44 @@ RpcReqWifiApGetStaAid *
                       const uint8_t       *data);
 void   rpc__req__wifi_ap_get_sta_aid__free_unpacked
                      (RpcReqWifiApGetStaAid *message,
+                      ProtobufCAllocator *allocator);
+/* RpcReqWifiStaGetNegotiatedPhymode methods */
+void   rpc__req__wifi_sta_get_negotiated_phymode__init
+                     (RpcReqWifiStaGetNegotiatedPhymode         *message);
+size_t rpc__req__wifi_sta_get_negotiated_phymode__get_packed_size
+                     (const RpcReqWifiStaGetNegotiatedPhymode   *message);
+size_t rpc__req__wifi_sta_get_negotiated_phymode__pack
+                     (const RpcReqWifiStaGetNegotiatedPhymode   *message,
+                      uint8_t             *out);
+size_t rpc__req__wifi_sta_get_negotiated_phymode__pack_to_buffer
+                     (const RpcReqWifiStaGetNegotiatedPhymode   *message,
+                      ProtobufCBuffer     *buffer);
+RpcReqWifiStaGetNegotiatedPhymode *
+       rpc__req__wifi_sta_get_negotiated_phymode__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   rpc__req__wifi_sta_get_negotiated_phymode__free_unpacked
+                     (RpcReqWifiStaGetNegotiatedPhymode *message,
+                      ProtobufCAllocator *allocator);
+/* RpcRespWifiStaGetNegotiatedPhymode methods */
+void   rpc__resp__wifi_sta_get_negotiated_phymode__init
+                     (RpcRespWifiStaGetNegotiatedPhymode         *message);
+size_t rpc__resp__wifi_sta_get_negotiated_phymode__get_packed_size
+                     (const RpcRespWifiStaGetNegotiatedPhymode   *message);
+size_t rpc__resp__wifi_sta_get_negotiated_phymode__pack
+                     (const RpcRespWifiStaGetNegotiatedPhymode   *message,
+                      uint8_t             *out);
+size_t rpc__resp__wifi_sta_get_negotiated_phymode__pack_to_buffer
+                     (const RpcRespWifiStaGetNegotiatedPhymode   *message,
+                      ProtobufCBuffer     *buffer);
+RpcRespWifiStaGetNegotiatedPhymode *
+       rpc__resp__wifi_sta_get_negotiated_phymode__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   rpc__resp__wifi_sta_get_negotiated_phymode__free_unpacked
+                     (RpcRespWifiStaGetNegotiatedPhymode *message,
                       ProtobufCAllocator *allocator);
 /* RpcRespWifiApGetStaAid methods */
 void   rpc__resp__wifi_ap_get_sta_aid__init
@@ -6692,6 +6825,12 @@ typedef void (*RpcReqWifiScanGetApRecords_Closure)
 typedef void (*RpcRespWifiScanGetApRecords_Closure)
                  (const RpcRespWifiScanGetApRecords *message,
                   void *closure_data);
+typedef void (*RpcReqWifiScanGetApRecord_Closure)
+                 (const RpcReqWifiScanGetApRecord *message,
+                  void *closure_data);
+typedef void (*RpcRespWifiScanGetApRecord_Closure)
+                 (const RpcRespWifiScanGetApRecord *message,
+                  void *closure_data);
 typedef void (*RpcReqWifiClearApList_Closure)
                  (const RpcReqWifiClearApList *message,
                   void *closure_data);
@@ -6796,6 +6935,12 @@ typedef void (*RpcRespWifiApGetStaList_Closure)
                   void *closure_data);
 typedef void (*RpcReqWifiApGetStaAid_Closure)
                  (const RpcReqWifiApGetStaAid *message,
+                  void *closure_data);
+typedef void (*RpcReqWifiStaGetNegotiatedPhymode_Closure)
+                 (const RpcReqWifiStaGetNegotiatedPhymode *message,
+                  void *closure_data);
+typedef void (*RpcRespWifiStaGetNegotiatedPhymode_Closure)
+                 (const RpcRespWifiStaGetNegotiatedPhymode *message,
                   void *closure_data);
 typedef void (*RpcRespWifiApGetStaAid_Closure)
                  (const RpcRespWifiApGetStaAid *message,
@@ -6996,6 +7141,8 @@ extern const ProtobufCMessageDescriptor rpc__req__wifi_scan_get_ap_num__descript
 extern const ProtobufCMessageDescriptor rpc__resp__wifi_scan_get_ap_num__descriptor;
 extern const ProtobufCMessageDescriptor rpc__req__wifi_scan_get_ap_records__descriptor;
 extern const ProtobufCMessageDescriptor rpc__resp__wifi_scan_get_ap_records__descriptor;
+extern const ProtobufCMessageDescriptor rpc__req__wifi_scan_get_ap_record__descriptor;
+extern const ProtobufCMessageDescriptor rpc__resp__wifi_scan_get_ap_record__descriptor;
 extern const ProtobufCMessageDescriptor rpc__req__wifi_clear_ap_list__descriptor;
 extern const ProtobufCMessageDescriptor rpc__resp__wifi_clear_ap_list__descriptor;
 extern const ProtobufCMessageDescriptor rpc__req__wifi_restore__descriptor;
@@ -7031,6 +7178,8 @@ extern const ProtobufCMessageDescriptor rpc__resp__wifi_get_country__descriptor;
 extern const ProtobufCMessageDescriptor rpc__req__wifi_ap_get_sta_list__descriptor;
 extern const ProtobufCMessageDescriptor rpc__resp__wifi_ap_get_sta_list__descriptor;
 extern const ProtobufCMessageDescriptor rpc__req__wifi_ap_get_sta_aid__descriptor;
+extern const ProtobufCMessageDescriptor rpc__req__wifi_sta_get_negotiated_phymode__descriptor;
+extern const ProtobufCMessageDescriptor rpc__resp__wifi_sta_get_negotiated_phymode__descriptor;
 extern const ProtobufCMessageDescriptor rpc__resp__wifi_ap_get_sta_aid__descriptor;
 extern const ProtobufCMessageDescriptor rpc__req__wifi_sta_get_rssi__descriptor;
 extern const ProtobufCMessageDescriptor rpc__resp__wifi_sta_get_rssi__descriptor;

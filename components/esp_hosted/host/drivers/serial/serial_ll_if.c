@@ -19,7 +19,8 @@
 #include "serial_ll_if.h"
 #include "esp_log.h"
 #include "transport_drv.h"
-#include "adapter.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_header.h"
 
 DEFINE_LOG_TAG(serial_ll);
 

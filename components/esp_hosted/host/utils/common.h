@@ -26,6 +26,7 @@ extern "C" {
 #include "stdio.h"
 #include "os_wrapper.h"
 #include "esp_err.h"
+#include "esp_hosted_transport.h"
 
 
 /** Constants/Macros **/
@@ -35,11 +36,10 @@ extern "C" {
 
 #define UNUSED_VAR(x)                     (void)(x);
 
-#define MAX_SPI_BUFFER_SIZE               1600
-/* TODO: SDIO buffers to be set same at both, ESP and host side */
-#define MAX_SDIO_BUFFER_SIZE              1536
-#define MAX_SPI_HD_BUFFER_SIZE            1600
-#define MAX_UART_BUFFER_SIZE              1600
+#define MAX_SPI_BUFFER_SIZE               ESP_TRANSPORT_SPI_MAX_BUF_SIZE
+#define MAX_SDIO_BUFFER_SIZE              ESP_TRANSPORT_SDIO_MAX_BUF_SIZE
+#define MAX_SPI_HD_BUFFER_SIZE            ESP_TRANSPORT_SPI_HD_MAX_BUF_SIZE
+#define MAX_UART_BUFFER_SIZE              ESP_TRANSPORT_UART_MAX_BUF_SIZE
 
 #define MAX_SUPPORTED_SDIO_CLOCK_MHZ      40
 

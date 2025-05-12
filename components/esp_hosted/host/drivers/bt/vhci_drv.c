@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "adapter.h"
+#include "esp_hosted_transport.h"
 #include "os_wrapper.h"
 #include "transport_drv.h"
 
@@ -17,9 +17,30 @@
 #include "nimble/hci_common.h"
 #endif
 
+#if H_BT_HOST_ESP_BLUEDROID
+#include "esp_hosted_bt.h"
+#endif
+
 #include "esp_hosted_log.h"
 static const char TAG[] = "vhci_drv";
 
+#if H_BT_HOST_ESP_NIMBLE
+#define BLE_HCI_EVENT_HDR_LEN               (2)
+#define BLE_HCI_CMD_HDR_LEN                 (3)
+#endif
+
+void hci_drv_init(void)
+{
+	// do nothing for VHCI: underlying transport should be ready
+}
+
+void hci_drv_show_configuration(void)
+{
+	ESP_LOGI(TAG, "Host BT Support: Enabled");
+	ESP_LOGI(TAG, "\tBT Transport Type: VHCI");
+}
+
+#if H_BT_HOST_ESP_NIMBLE
 /**
  * HCI_H4_xxx is the first byte of the received data
  */
@@ -58,7 +79,7 @@ int hci_rx_handler(interface_buffer_handle_t *buf_handle)
 			evbuf = ble_transport_alloc_evt(1);
 			/* Skip advertising report if we're out of memory */
 			if (!evbuf) {
-				ESP_LOGE(TAG, "Rx: failed transport_alloc_evt(1)");
+				ESP_LOGW(TAG, "Rx: Drop ADV Report Event: NimBLE OOM (not fatal)");
 				return ESP_FAIL;
 			}
 		} else {
@@ -97,18 +118,6 @@ int hci_rx_handler(interface_buffer_handle_t *buf_handle)
 	return ESP_OK;
 }
 
-void hci_drv_init(void)
-{
-	// do nothing for VHCI: underlying transport should be ready
-}
-
-void hci_drv_show_configuration(void)
-{
-	ESP_LOGI(TAG, "Host BT Support: Enabled");
-	ESP_LOGI(TAG, "\tBT Transport Type: VHCI");
-}
-
-#if H_BT_HOST_ESP_NIMBLE
 /**
  * ESP NimBLE expects these interfaces for Tx
  *
@@ -189,3 +198,61 @@ int ble_transport_to_ll_cmd_impl(void *buf)
 	return res;
 }
 #endif // H_BT_HOST_ESP_NIMBLE
+
+#if H_BT_HOST_ESP_BLUEDROID
+static esp_bluedroid_hci_driver_callbacks_t s_callback = { 0 };
+
+int hci_rx_handler(interface_buffer_handle_t *buf_handle)
+{
+	uint8_t * data = buf_handle->payload;
+	uint32_t len_total_read = buf_handle->payload_len;
+
+	if (s_callback.notify_host_recv) {
+		s_callback.notify_host_recv(data, len_total_read);
+	}
+
+	return ESP_FAIL;
+}
+
+void hosted_hci_bluedroid_open(void)
+{
+	ESP_ERROR_CHECK(transport_drv_reconfigure());
+}
+
+void hosted_hci_bluedroid_close(void)
+{
+}
+
+esp_err_t hosted_hci_bluedroid_register_host_callback(const esp_bluedroid_hci_driver_callbacks_t *callback)
+{
+	s_callback.notify_host_send_available = callback->notify_host_send_available;
+	s_callback.notify_host_recv = callback->notify_host_recv;
+
+	return ESP_OK;
+}
+
+void hosted_hci_bluedroid_send(uint8_t *data, uint16_t len)
+{
+	int res;
+	uint8_t * ptr = NULL;
+
+	ptr = MEM_ALLOC(len);
+	if (!ptr) {
+		ESP_LOGE(TAG, "%s: malloc failed", __func__);
+		return;
+	}
+	memcpy(ptr, data, len);
+
+	res = esp_hosted_tx(ESP_HCI_IF, 0, ptr, len, H_BUFF_NO_ZEROCOPY, H_DEFLT_FREE_FUNC);
+
+	if (res) {
+		ESP_LOGE(TAG, "%s: Tx failed", __func__);
+	}
+}
+
+bool hosted_hci_bluedroid_check_send_available(void)
+{
+	return true;
+}
+
+#endif // H_BT_HOST_ESP_BLUEDROID

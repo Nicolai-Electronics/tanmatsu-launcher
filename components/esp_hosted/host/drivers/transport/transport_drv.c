@@ -18,7 +18,9 @@
 
 #include "esp_wifi.h"
 #include "transport_drv.h"
-#include "adapter.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_transport_init.h"
+#include "esp_hosted_transport_config.h"
 #include "stats.h"
 #include "esp_log.h"
 #include "esp_hosted_log.h"
@@ -61,14 +63,20 @@ uint8_t is_transport_tx_ready(void)
 
 static void reset_slave(void)
 {
-	ESP_LOGI(TAG, "Reset slave using GPIO[%u]", H_GPIO_PIN_RESET_Pin);
-	g_h.funcs->_h_config_gpio(H_GPIO_PIN_RESET_Port, H_GPIO_PIN_RESET_Pin, H_GPIO_MODE_DEF_OUTPUT);
+	gpio_pin_t reset_pin = { 0 };
+	if (ESP_TRANSPORT_OK != esp_hosted_transport_get_reset_config(&reset_pin)) {
+		ESP_LOGE(TAG, "Unable to get RESET config for transport");
+		return;
+	}
 
-	g_h.funcs->_h_write_gpio(H_GPIO_PIN_RESET_Port, H_GPIO_PIN_RESET_Pin, H_RESET_VAL_ACTIVE);
+	ESP_LOGI(TAG, "Reset slave using GPIO[%u]", reset_pin.pin);
+	g_h.funcs->_h_config_gpio(H_GPIO_PIN_RESET_Port, reset_pin.pin, H_GPIO_MODE_DEF_OUTPUT);
+
+	g_h.funcs->_h_write_gpio(reset_pin.port, reset_pin.pin, H_RESET_VAL_ACTIVE);
 	g_h.funcs->_h_msleep(50);
-	g_h.funcs->_h_write_gpio(H_GPIO_PIN_RESET_Port, H_GPIO_PIN_RESET_Pin, H_RESET_VAL_INACTIVE);
+	g_h.funcs->_h_write_gpio(reset_pin.port, reset_pin.pin, H_RESET_VAL_INACTIVE);
 	g_h.funcs->_h_msleep(50);
-	g_h.funcs->_h_write_gpio(H_GPIO_PIN_RESET_Port, H_GPIO_PIN_RESET_Pin, H_RESET_VAL_ACTIVE);
+	g_h.funcs->_h_write_gpio(reset_pin.port, reset_pin.pin, H_RESET_VAL_ACTIVE);
 
 	/* stop spi transactions short time to avoid slave sync issues */
 	g_h.funcs->_h_sleep(1);
@@ -311,7 +319,7 @@ transport_channel_t *transport_drv_add_channel(void *api_chan,
 
 	/* Need to change size wrt transport */
 	channel->memp = mempool_create(MAX_TRANSPORT_BUFFER_SIZE);
-#ifdef CONFIG_ESP_CACHE_MALLOC
+#ifdef H_USE_MEMPOOL
 	assert(channel->memp);
 #endif
 
@@ -462,19 +470,19 @@ static void verify_host_config_for_slave(uint8_t chip_type)
 	uint8_t exp_chip_id = 0xff;
 
 
-#if CONFIG_SLAVE_CHIPSET_ESP32
+#if H_SLAVE_TARGET_ESP32
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32;
-#elif CONFIG_SLAVE_CHIPSET_ESP32C2
+#elif H_SLAVE_TARGET_ESP32C2
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32C2;
-#elif CONFIG_SLAVE_CHIPSET_ESP32C3
+#elif H_SLAVE_TARGET_ESP32C3
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32C3;
-#elif CONFIG_SLAVE_CHIPSET_ESP32C6
+#elif H_SLAVE_TARGET_ESP32C6
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32C6;
-#elif CONFIG_SLAVE_CHIPSET_ESP32S2
+#elif H_SLAVE_TARGET_ESP32S2
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32S2;
-#elif CONFIG_SLAVE_CHIPSET_ESP32S3
+#elif H_SLAVE_TARGET_ESP32S3
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32S3;
-#elif CONFIG_SLAVE_CHIPSET_ESP32C5
+#elif H_SLAVE_TARGET_ESP32C5
 	exp_chip_id = ESP_PRIV_FIRMWARE_CHIP_ESP32C5;
 #else
 	ESP_LOGW(TAG, "Incorrect host config for ESP slave chipset[%x]", chip_type);
@@ -563,7 +571,7 @@ int process_init_event(uint8_t *evt_buf, uint16_t len)
 	ESP_LOGD(TAG, "Init event length: %u", len);
 	if (len > 64) {
 		ESP_LOGE(TAG, "Init event length: %u", len);
-#if CONFIG_ESP_SPI_HOST_INTERFACE
+#if H_TRANSPORT_IN_USE == H_TRANSPORT_SPI
 		ESP_LOGE(TAG, "Seems incompatible SPI mode try changing SPI mode. Asserting for now.");
 #endif
 		assert(len < 64);

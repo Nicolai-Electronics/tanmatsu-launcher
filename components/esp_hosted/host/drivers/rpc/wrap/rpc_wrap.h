@@ -54,6 +54,7 @@ esp_err_t rpc_wifi_set_mac(wifi_interface_t mode, const uint8_t mac[6]);
 esp_err_t rpc_wifi_scan_start(const wifi_scan_config_t *config, bool block);
 esp_err_t rpc_wifi_scan_stop(void);
 esp_err_t rpc_wifi_scan_get_ap_num(uint16_t *number);
+esp_err_t rpc_wifi_scan_get_ap_record(wifi_ap_record_t *ap_record);
 esp_err_t rpc_wifi_scan_get_ap_records(uint16_t *number, wifi_ap_record_t *ap_records);
 esp_err_t rpc_wifi_clear_ap_list(void);
 esp_err_t rpc_wifi_restore(void);
@@ -78,9 +79,14 @@ esp_err_t rpc_wifi_set_protocol(wifi_interface_t ifx, uint8_t protocol_bitmap);
 esp_err_t rpc_wifi_get_protocol(wifi_interface_t ifx, uint8_t *protocol_bitmap);
 esp_err_t rpc_wifi_set_max_tx_power(int8_t power);
 esp_err_t rpc_wifi_get_max_tx_power(int8_t *power);
+esp_err_t rpc_wifi_sta_get_negotiated_phymode(wifi_phy_mode_t *phymode);
 esp_err_t rpc_wifi_sta_get_aid(uint16_t *aid);
 esp_err_t rpc_ota(const char* image_url);
 esp_err_t rpc_get_coprocessor_fwversion(esp_hosted_coprocessor_fwver_t *ver_info);
+
+esp_err_t rpc_ota_begin(void);
+esp_err_t rpc_ota_write(uint8_t* ota_data, uint32_t ota_data_len);
+esp_err_t rpc_ota_end(void);
 
 #if H_WIFI_DUALBAND_SUPPORT
 esp_err_t rpc_wifi_set_band(wifi_band_t band);

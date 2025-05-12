@@ -12,10 +12,10 @@ This high-level block diagram shows ESP-Hosted's relationship with the host MCU 
 
 For detailed design diagrams in Wi-Fi and Bluetooth, refer to the following design documents:
 
-- [WiFi Design](https://github.com/espressif/esp-hosted/blob/feature/esp_as_mcu_host/docs/wifi_design.md)
-- [Bluetooth Design](https://github.com/espressif/esp-hosted/blob/feature/esp_as_mcu_host/docs/bluetooth_design.md)
+- [WiFi Design](https://github.com/espressif/esp-hosted-mcu/blob/main/docs/wifi_design.md)
+- [Bluetooth Design](https://github.com/espressif/esp-hosted-mcu/blob/main/docs/bluetooth_design.md)
 
-This branch, `feature/esp_as_mcu_host` is dedicated for any host as MCU support. If you are interested in Linux as host, please refer to [`master`](https://github.com/espressif/esp-hosted/blob/master) branch.
+`esp-hosted-mcu` is dedicated for any host as MCU support. If you are interested in Linux as host, please refer to the [`esp-hosted`](https://github.com/espressif/esp-hosted) repository.
 
 ## 2 Architecture
 
@@ -81,14 +81,13 @@ No worries if you don't have an ESP32-P4. In fact, most users don't. You can cho
 
 ### 5.1 ESP-Hosted-MCU Source Code
 
-- ESP-Hosted-MCU code can be found at Espressif Registry Component [`esp_hosted` (ESP-Hosted)](https://components.espressif.com/components/espressif/esp_hosted) or GitHub repo at [`ESP-Hosted`](https://github.com/espressif/esp-hosted/tree/feature/esp_as_mcu_host)
+- ESP-Hosted-MCU code can be found at Espressif Registry Component [`esp_hosted` (ESP-Hosted)](https://components.espressif.com/components/espressif/esp_hosted) or GitHub repo at [`esp-hosted-mcu`](https://github.com/espressif/esp-hosted-mcu/)
 
 - ESP-Hosted repo clone is **not** required if you have ESP as host.
   - Reason: [ESP component manager](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/tools/idf-component-manager.html) automatically clones esp-hosted component while building.
 - However, For non-ESP host development, you can clone the repo using command:
 ```bash
-git clone --recurse-submodules --branch feature/esp_as_mcu_host --depth 1 \
-https://github.com/espressif/esp-hosted esp_hosted_mcu
+git clone --recurse-submodules --depth 1 https://github.com/espressif/esp-hosted-mcu.git
 ```
 
 ### 5.2 Dependencies
@@ -102,7 +101,7 @@ ESP-Hosted-MCU Solution is dependent on `ESP-IDF`, `esp_wifi_remote` and `protob
 
 ###### Wi-Fi Remote
   - [`esp_wifi_remote`](https://components.espressif.com/components/espressif/esp_wifi_remote) i.e. 'Wi-Fi Remote' is very thin interface made up of ESP-IDF Wi-Fi APIs with empty weak definitions. Real definitions for these APIs are provided by ESP-Hosted-MCU
-  - Wi-Fi Remote Code can be found at either [GitHub Repo](https://github.com/espressif/esp-protocols/tree/master/components/esp_wifi_remote) or [Espressif Registry Component](https://components.espressif.com/components/espressif/esp_wifi_remote)
+  - Wi-Fi Remote Code can be found at either [GitHub Repo](https://github.com/espressif/esp-wifi-remote/) or [Espressif Registry Component](https://components.espressif.com/components/espressif/esp_wifi_remote)
 
 ###### Protobuf
   - [`protobuf-c`](https://github.com/protobuf-c/protobuf-c) is data serialization framework provided by Google. RPC messages communicated in host and slave are protobuf encoded.
@@ -177,7 +176,7 @@ Legends:
 
 With jumper cables, 'Standard SPI' and 'Dual SPI' solutions are easiest to evaluate, without much of hardware dependencies. SDIO 1-Bit can be tested with jumper cables, but it needs some additional hardware config, such as installation of external pull-up registers.
 
-In case case of dedicated platforms, Blutooth uses standard HCI over UART. In rest of cases, Bluetooth and Wi-Fi uses same transport and hence less GPIOs and less complicated. In shared mode, bluetooth runs as vHCI (multiplexed mode)
+In case case of dedicated platforms, Blutooth uses standard HCI over UART. In rest of cases, Bluetooth and Wi-Fi uses same transport and hence less GPIOs and less complicated. In shared mode, bluetooth runs as Hosted HCI (multiplexed mode)
 
 ## 7 ESP-Hosted-MCU Header
 
@@ -209,7 +208,7 @@ Start of header states which type of frame is being carried.
 | ESP\_STA\_IF           | 1     | Station frame                                    |
 | ESP\_AP\_IF            | 2     | SoftAP frame                                     |
 | ESP\_SERIAL\_IF        | 3     | Control frame                                    |
-| ESP\_HCI\_IF           | 4     | Bluetooth vHCI frame                            |
+| ESP\_HCI\_IF           | 4     | Bluetooth Hosted HCI frame                       |
 | ESP\_PRIV\_IF          | 5     | Private communication between slave and host     |
 | ESP\_TEST\_IF          | 6     | Transport throughput test                        |
 | ESP\_ETH\_IF           | 7     | Invalid                                          |
@@ -221,7 +220,7 @@ Once you decided the transport to use, this section should guide how to set this
 
 > [!IMPORTANT]
 >
-> [Design Considerations](https://github.com/espressif/esp-hosted/blob/feature/esp_as_mcu_host/docs/design_consideration.md) that could be reffered to, before you stick to any transport option. Referring to these consideration would help to get you faster to solution, make your design stable and less error-prone.
+> [Design Considerations](https://github.com/espressif/esp-hosted-mcu/blob/main/docs/design_consideration.md) that could be referred to, before you stick to any transport option. Referring to these consideration would help to get you faster to solution, make your design stable and less error-prone.
 
 
 Irrespective of transport chosen, following steps are needed, which are step-wise explained in each transport.
@@ -238,24 +237,30 @@ Irrespective of transport chosen, following steps are needed, which are step-wis
   - Host flashing
   - Host logs
 
-- [**Standard SPI (Full duplex)**](https://github.com/espressif/esp-hosted/blob/feature/esp_as_mcu_host/docs/spi_full_duplex.md)
+- [**Standard SPI (Full duplex)**](https://github.com/espressif/esp-hosted-mcu/blob/main/docs/spi_full_duplex.md)
 
-- [**SPI - Dual / Quad Half Duplex**](https://github.com/espressif/esp-hosted/blob/feature/esp_as_mcu_host/docs/spi_half_duplex.md)
+- [**SPI - Dual / Quad Half Duplex**](https://github.com/espressif/esp-hosted-mcu/blob/main/docs/spi_half_duplex.md)
 
-- [**SDIO (1-Bit / 4-Bit)**](https://github.com/espressif/esp-hosted/blob/feature/esp_as_mcu_host/docs/sdio.md)
+- [**SDIO (1-Bit / 4-Bit)**](https://github.com/espressif/esp-hosted-mcu/blob/main/docs/sdio.md)
 
-- [**UART for Wi-Fi and Bluetooth**](https://github.com/espressif/esp-hosted/blob/feature/esp_as_mcu_host/docs/uart.md)
+- [**UART for Wi-Fi and Bluetooth**](https://github.com/espressif/esp-hosted-mcu/blob/main/docs/uart.md)
 
 ## 9 Examples
-Check [examples](https://github.com/espressif/esp-hosted/blob/feature/esp_as_mcu_host/examples) directory for sample applications using ESP-Hosted.
- - `examples/bleprph_host_only_vhci`
-   - Bluetooth without needing extra GPIOs
+Check [examples](https://github.com/espressif/esp-hosted-mcu/tree/main/examples) directory for sample applications using ESP-Hosted.
+ - `examples/host_bluedroid_ble_compatibility_test`
+   - host BlueDroid Bluetooth example to test the Bluetooth compatibility and mobile phones
+ - `examples/host_bluedroid_bt_hid_mouse_device`
+   - host BlueDroid Bluetooth example to show how to implement a Bluetooth HID device using the APIs provided by Classic Bluetooth HID profile
+ - `examples/host_bluedroid_host_only`
+   - host BlueDroid Bluetooth example Bluetooth Host using ESP-Hosted as HCI IO to the BT Controller
+ - `examples/host_nimble_bleprph_host_only_vhci`
+   - host NimBLE Bluetooth example without needing extra GPIOs for HCI transport
 
 ## 10 Troubleshooting
 
 If you encounter issues with using ESP-Hosted, see the following guide:
 
-- [Troubleshooting Guide](https://github.com/espressif/esp-hosted/blob/feature/esp_as_mcu_host/docs/troubleshooting.md)
+- [Troubleshooting Guide](https://github.com/espressif/esp-hosted-mcu/blob/main/docs/troubleshooting.md)
 
 ## 11 References
 
