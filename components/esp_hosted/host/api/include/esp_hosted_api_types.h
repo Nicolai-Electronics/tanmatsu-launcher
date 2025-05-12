@@ -18,7 +18,6 @@ typedef struct {
 	uint32_t patch1;
 } esp_hosted_coprocessor_fwver_t;
 
-
 #ifdef __cplusplus
 }
 #endif

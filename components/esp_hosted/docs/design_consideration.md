@@ -184,7 +184,7 @@ solution to your problem may have already been provided.
 **External Links**
 
 - ESP Product Selector: https://products.espressif.com/
-- ESP-Hosted Github Issues: https://github.com/espressif/esp-hosted/issues
+- ESP-Hosted Github Issues: https://github.com/espressif/esp-hosted-mcu/issues
 
 **ESP-Hosted Documentation Links**
 

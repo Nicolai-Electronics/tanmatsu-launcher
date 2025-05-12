@@ -1,7 +1,7 @@
-AC_PREREQ(2.63)
+AC_PREREQ([2.63])
 
 AC_INIT([protobuf-c],
-        [1.4.1],
+        [1.5.2],
         [https://github.com/protobuf-c/protobuf-c/issues],
         [protobuf-c],
         [https://github.com/protobuf-c/protobuf-c])
@@ -11,7 +11,7 @@ AC_SUBST(PACKAGE_DESCRIPTION)
 AC_CONFIG_SRCDIR([protobuf-c/protobuf-c.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules subdir-objects])
-AC_PROG_CC_STDC
+AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_LN_S
 AC_PROG_MKDIR_P
@@ -38,10 +38,6 @@ my_CFLAGS="\
 -Wstrict-prototypes \
 -Wtype-limits \
 "
-#AX_CHECK_COMPILE_FLAG(["-Wc90-c99-compat"],
-#                      [my_CFLAGS="$my_CFLAGS -Wc90-c99-compat"])
-AX_CHECK_COMPILE_FLAG(["-Wc99-c11-compat"],
-                      [my_CFLAGS="$my_CFLAGS -Wc99-c11-compat"])
 AX_CHECK_COMPILE_FLAG(["-Werror=incompatible-pointer-types"],
                       [my_CFLAGS="$my_CFLAGS -Werror=incompatible-pointer-types"])
 AX_CHECK_COMPILE_FLAG(["-Werror=int-conversion"],
@@ -69,19 +65,12 @@ if test -n "$PKG_CONFIG"; then
     fi
 fi
 
-proto3_supported="no"
-
 AC_ARG_ENABLE([protoc],
   AS_HELP_STRING([--disable-protoc], [Disable building protoc_c (also disables tests)]))
 if test "x$enable_protoc" != "xno"; then
   AC_LANG_PUSH([C++])
-
-  AX_CXX_COMPILE_STDCXX(11, noext, mandatory)
-
-  PKG_CHECK_MODULES([protobuf], [protobuf >= 3.0.0],
-    [proto3_supported=yes],
-    [PKG_CHECK_MODULES([protobuf], [protobuf >= 2.6.0])]
-  )
+  AX_CXX_COMPILE_STDCXX(17, noext, mandatory)
+  PKG_CHECK_MODULES([protobuf], [protobuf >= 3.0.0])
 
   save_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$save_CPPFLAGS $protobuf_CFLAGS"
@@ -104,10 +93,7 @@ else
 fi
 
 AM_CONDITIONAL([BUILD_COMPILER], [test "x$enable_protoc" != "xno"])
-AM_CONDITIONAL([BUILD_PROTO3], [test "x$proto3_supported" != "xno"])
 AM_CONDITIONAL([CROSS_COMPILING], [test "x$cross_compiling" != "xno"])
-
-AM_COND_IF([BUILD_PROTO3], [AC_DEFINE([HAVE_PROTO3], [1], [Support proto3 syntax])])
 
 gl_LD_VERSION_SCRIPT
 

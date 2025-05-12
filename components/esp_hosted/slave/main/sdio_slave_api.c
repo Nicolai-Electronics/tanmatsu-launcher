@@ -20,13 +20,16 @@
 #include "esp_log.h"
 #include "esp_hosted_log.h"
 #include "interface.h"
-#include "adapter.h"
 #include "sdio_slave_api.h"
 #include "driver/sdio_slave.h"
 #include "soc/sdio_slave_periph.h"
 #include "endian.h"
 #include "mempool.h"
 #include "stats.h"
+#include "esp_hosted_interface.h"
+#include "esp_hosted_header.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_transport_init.h"
 
 //#define SIMPLIFIED_SDIO_SLAVE          1
 #define SDIO_SLAVE_QUEUE_SIZE            20

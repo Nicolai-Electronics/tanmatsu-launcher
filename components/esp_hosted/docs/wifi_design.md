@@ -9,7 +9,7 @@ response is returned to the application.
 
 ```mermaid
 sequenceDiagram
-    box Grey Host With Native WI-Fi
+    box rgb(128, 128, 128) Host With Native WI-Fi
     participant app as Application
     participant api as ESP-IDF Wi-Fi Library
     participant wifi as Wi-Fi Hardware
@@ -35,14 +35,14 @@ encapsulates the data for transport.
 
 ```mermaid
 sequenceDiagram
-    box Grey Host with ESP-Hosted
+    box rgb(128, 128, 128) Host with ESP-Hosted
     participant app as Application
     participant remote as Wi-Fi Remote
     participant hostedh as ESP-Hosted
     participant transporth as Host Transport
     end
 
-    box SlateGrey Slave ESP-Hosted
+    box rgb(128, 128, 128) Slave ESP-Hosted
     participant transports as Slave Transport
     participant hosteds as Slave Hosted
     participant api as ESP-IDF Wi-Fi Library
@@ -60,11 +60,11 @@ sequenceDiagram
     transports ->> hosteds : 
     Note over hosteds : remove Hosted header
     hosteds ->> api : esp_wifi_xxx()
-    api ->> wifi : Wi-Fi command
     hosteds ->> wifi : Network Data
+    api ->> wifi : Wi-Fi command or Data
     Note over wifi: Do Wi-Fi action
+    wifi -->> api : Wi-Fi response or Data
     wifi -->> hosteds : Network Data
-    wifi -->> api : Wi-Fi response
     api -->> hosteds : Response
     Note over hosteds : add Hosted header
     hosteds -->> transports : 
@@ -77,7 +77,3 @@ sequenceDiagram
     hostedh -->> remote : Wi-Fi Command response
     remote -->> app : Response
 ```
-
-
-
-

@@ -8,17 +8,6 @@
 
 #include "esp_hosted_bt_config.h"
 
-#if H_BT_ENABLED
-
-#if H_BT_HOST_ESP_NIMBLE
-#include "host/ble_hs_mbuf.h"
-#endif
-
-#endif
-
-#define BLE_HCI_EVENT_HDR_LEN               (2)
-#define BLE_HCI_CMD_HDR_LEN                 (3)
-
 void hci_drv_init(void);
 
 void hci_drv_show_configuration(void);

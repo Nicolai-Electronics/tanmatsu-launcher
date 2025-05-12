@@ -1,0 +1,261 @@
+name: Test Builds
+
+on:
+  push:
+    branches:
+      - master
+      - next
+
+  pull_request:
+    types: [ opened, reopened, synchronize, edited, ready_for_review, review_requested ]
+
+  schedule:
+    - cron: '0 0 * * 5' # Every Friday at 00:00
+
+jobs:
+  distcheck:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-22.04, ubuntu-24.04]
+      fail-fast: false
+
+    steps:
+      - name: Checkout protobuf-c
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update -q -y
+          sudo apt-get install -q -y \
+            libprotobuf-dev \
+            libprotoc-dev \
+            protobuf-compiler \
+          ;
+
+      - name: Install Mac dependencies
+        if: startsWith(matrix.os, 'macos')
+        run: brew install protobuf automake libtool
+
+      - name: Run distcheck
+        run: |
+          ./autogen.sh
+          ./configure
+          make -j${nproc} distcheck VERBOSE=1
+
+  distcheck-multiarch:
+    runs-on: ubuntu-24.04
+
+    strategy:
+      matrix:
+        include:
+          - arch: armv7
+          - arch: aarch64
+          - arch: s390x
+          - arch: ppc64le
+      fail-fast: false
+
+    steps:
+      - name: Checkout protobuf-c
+        uses: actions/checkout@v4
+
+      - name: Install dependencies and run distcheck on multiple arches
+        uses: uraimo/run-on-arch-action@v2
+        id: runcmd
+        with:
+          arch: ${{ matrix.arch }}
+          githubToken: ${{ github.token }}
+          distro: bookworm
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y \
+              autoconf \
+              automake \
+              build-essential \
+              libprotobuf-dev \
+              libprotoc-dev \
+              libtool \
+              pkg-config \
+              protobuf-compiler \
+            ;
+
+          run: |
+            ./autogen.sh
+            ./configure
+            make -j3 distcheck VERBOSE=1
+
+  valgrind:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout protobuf-c
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -q -y
+          sudo apt-get install -q -y \
+            libprotobuf-dev \
+            libprotoc-dev \
+            protobuf-compiler \
+            valgrind \
+          ;
+
+      - name: Run distcheck with valgrind
+        run: |
+          ./autogen.sh
+          ./configure \
+            --enable-valgrind-tests \
+            CFLAGS="-fsanitize=undefined -fno-sanitize-recover=undefined" \
+          ;
+          make -j${nproc} \
+            distcheck \
+            DISTCHECK_CONFIGURE_FLAGS="--enable-valgrind-tests CFLAGS=\"-fsanitize=undefined -fno-sanitize-recover=undefined\"" \
+            VERBOSE=1 \
+          ;
+
+  coverage:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout protobuf-c
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -q -y
+          sudo apt-get install -q -y \
+            lcov \
+            libprotobuf-dev \
+            libprotoc-dev \
+            protobuf-compiler \
+          ;
+
+      - name: Build protobuf-c and run coverage build
+        run: |
+          ./autogen.sh
+          ./configure --enable-code-coverage
+          make -j${nproc}
+          mkdir coverage
+          lcov --no-external --capture --initial --directory . --output-file ./coverage/lcov.info --include '*protobuf-c.c'
+          make check
+          lcov --no-external --capture --directory . --output-file ./coverage/lcov.info --include '*protobuf-c.c'
+
+      - name: Upload Coveralls results
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  cmake:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+        os: [macos-latest, ubuntu-22.04, ubuntu-24.04]
+      fail-fast: false
+
+    steps:
+      - name: Checkout protobuf-c
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev libprotoc-dev
+
+      - name: Install Mac dependencies
+        if: startsWith(matrix.os, 'macos')
+        run: brew install protobuf abseil
+
+      - name: Build protobuf-c and run tests
+        run: |
+          cmake -S build-cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_INSTALL_PREFIX=protobuf-c-bin \
+            -DBUILD_TESTS=ON \
+          ;
+          cmake --build "build" -j3
+          cmake --build "build" --target test
+          cmake --build "build" --target install
+
+  cmake-msvc:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        build-type: [Debug, Release]
+        shared-lib: [ON]
+      fail-fast: false
+
+    name: "MSVC CMake (${{ matrix.build-type }}, DLL: ${{ matrix.shared-lib }})"
+
+    steps:
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+            arch: amd64
+
+      - name: Install CMake and Ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Checkout protobuf-c
+        uses: actions/checkout@v4
+
+      - name: Checkout abseil
+        uses: actions/checkout@v4
+        with:
+          repository: abseil/abseil-cpp
+          path: "abseil"
+          ref: "20240722.0"
+
+      - name: Checkout protobuf
+        uses: actions/checkout@v4
+        with:
+          repository: protocolbuffers/protobuf
+          path: "protobuf"
+          ref: "v29.3"
+
+      - name: Build and install abseil
+        working-directory: "./abseil"
+        run: |
+          cmake -B build -G Ninja `
+            -DCMAKE_CXX_STANDARD=17 `
+            -DCMAKE_INSTALL_PREFIX=~/abseil-bin `
+            -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} `
+            -DABSL_PROPAGATE_CXX_STD=ON `
+            -DBUILD_SHARED_LIBS=${{ matrix.shared-lib }} `
+          ;
+          ninja -C build install
+
+      - name: Build and install protobuf
+        working-directory: "./protobuf"
+        run: |
+          cmake -B build -G Ninja `
+            -DCMAKE_CXX_STANDARD=17 `
+            -DCMAKE_INSTALL_PREFIX=~/protobuf-bin `
+            -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} `
+            -Dabsl_ROOT=~/abseil-bin `
+            -Dprotobuf_ABSL_PROVIDER=package `
+            -Dprotobuf_BUILD_EXAMPLES=OFF `
+            -Dprotobuf_BUILD_LIBUPB=OFF `
+            -Dprotobuf_BUILD_SHARED_LIBS=${{ matrix.shared-lib }} `
+            -Dprotobuf_BUILD_TESTS=OFF `
+          ;
+          ninja -C build install
+
+      - name: Build protobuf-c
+        run: |
+          cmake -S build-cmake -B build -G Ninja `
+            -DCMAKE_INSTALL_PREFIX=~/protobuf-c-bin `
+            -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} `
+            -DBUILD_TESTS=ON `
+            -DBUILD_SHARED_LIBS=${{ matrix.shared-lib }} `
+            -DProtobuf_ROOT="~/protobuf-bin" `
+            -Dabsl_ROOT="~/abseil-bin" `
+          ;
+          ninja -C build
+          cmake --build "build" --target test
+          cmake --build "build" --target install

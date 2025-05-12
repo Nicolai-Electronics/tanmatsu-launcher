@@ -23,6 +23,7 @@
 #include "esp_hosted_log.h"
 #include "hci_drv.h"
 #include "endian.h"
+#include "esp_hosted_transport_init.h"
 
 static const char TAG[] = "H_SDIO_DRV";
 
@@ -33,8 +34,8 @@ static const char TAG[] = "H_SDIO_DRV";
 #define DO_COMBINED_REG_READ (1)
 
 /** Constants/Macros **/
-#define TO_SLAVE_QUEUE_SIZE               CONFIG_ESP_SDIO_TX_Q_SIZE
-#define FROM_SLAVE_QUEUE_SIZE             CONFIG_ESP_SDIO_RX_Q_SIZE
+#define TO_SLAVE_QUEUE_SIZE               H_SDIO_TX_Q
+#define FROM_SLAVE_QUEUE_SIZE             H_SDIO_RX_Q
 
 #define RX_TASK_STACK_SIZE                4096
 #define TX_TASK_STACK_SIZE                4096
@@ -47,8 +48,8 @@ static const char TAG[] = "H_SDIO_DRV";
 // max number of time to try to read write buffer available reg
 #define MAX_WRITE_BUF_RETRIES             50
 
-// max number of times to try to write data to slave device
-#define MAX_WRITE_RETRIES                 2
+/* Actual data sdio_write max retry */
+#define MAX_SDIO_WRITE_RETRY              2
 
 // this locks the sdio transaction at the driver level, instead of at the HAL layer
 #define USE_DRIVER_LOCK
@@ -143,7 +144,7 @@ static inline void sdio_mempool_create(void)
 {
 	MEM_DUMP("sdio_mempool_create");
 	buf_mp_g = mempool_create(MAX_SDIO_BUFFER_SIZE);
-#ifdef CONFIG_ESP_CACHE_MALLOC
+#ifdef H_USE_MEMPOOL
 	assert(buf_mp_g);
 #endif
 }
@@ -177,19 +178,19 @@ static int sdio_generate_slave_intr(uint8_t intr_no)
 		return ESP_ERR_INVALID_ARG;
 	}
 
-	return g_h.funcs->_h_sdio_write_reg(HOST_TO_SLAVE_INTR, &intr_mask,
+	return g_h.funcs->_h_sdio_write_reg(sdio_handle, HOST_TO_SLAVE_INTR, &intr_mask,
 		sizeof(intr_mask), ACQUIRE_LOCK);
 }
 
 static inline int sdio_get_intr(uint32_t *interrupts)
 {
-	return g_h.funcs->_h_sdio_read_reg(ESP_SLAVE_INT_RAW_REG, (uint8_t *)interrupts,
+	return g_h.funcs->_h_sdio_read_reg(sdio_handle, ESP_SLAVE_INT_RAW_REG, (uint8_t *)interrupts,
 		sizeof(uint32_t), ACQUIRE_LOCK);
 }
 
 static inline int sdio_clear_intr(uint32_t interrupts)
 {
-	return g_h.funcs->_h_sdio_write_reg(ESP_SLAVE_INT_CLR_REG, (uint8_t *)&interrupts,
+	return g_h.funcs->_h_sdio_write_reg(sdio_handle, ESP_SLAVE_INT_CLR_REG, (uint8_t *)&interrupts,
 		sizeof(uint32_t), ACQUIRE_LOCK);
 }
 
@@ -198,7 +199,7 @@ static int sdio_get_tx_buffer_num(uint32_t *tx_num, bool is_lock_needed)
 	uint32_t len = 0;
 	int ret = 0;
 
-	ret = g_h.funcs->_h_sdio_read_reg(ESP_SLAVE_TOKEN_RDATA, (uint8_t *)&len,
+	ret = g_h.funcs->_h_sdio_read_reg(sdio_handle, ESP_SLAVE_TOKEN_RDATA, (uint8_t *)&len,
 		sizeof(len), is_lock_needed);
 
 	if (ret) {
@@ -217,7 +218,7 @@ static int sdio_get_tx_buffer_num(uint32_t *tx_num, bool is_lock_needed)
 #if DO_COMBINED_REG_READ
 static int sdio_read_regs(uint8_t * buf)
 {
-	return g_h.funcs->_h_sdio_read_reg(ESP_SLAVE_INT_RAW_REG, buf, REG_BUF_LEN, ACQUIRE_LOCK);
+	return g_h.funcs->_h_sdio_read_reg(sdio_handle, ESP_SLAVE_INT_RAW_REG, buf, REG_BUF_LEN, ACQUIRE_LOCK);
 }
 #endif
 
@@ -268,7 +269,7 @@ static int sdio_get_len_from_slave(uint32_t *rx_size, bool is_lock_needed)
 		return ESP_FAIL;
 	*rx_size = 0;
 
-	ret = g_h.funcs->_h_sdio_read_reg(ESP_SLAVE_PACKET_LEN_REG,
+	ret = g_h.funcs->_h_sdio_read_reg(sdio_handle, ESP_SLAVE_PACKET_LEN_REG,
 		(uint8_t *)&len, sizeof(len), is_lock_needed);
 
 	if (ret) {
@@ -302,25 +303,40 @@ static int sdio_get_len_from_slave(uint32_t *rx_size, bool is_lock_needed)
 
 #endif
 
+#define MAX_BUFF_FETCH_PERIODICITY 30000
+
 static int sdio_is_write_buffer_available(uint32_t buf_needed)
 {
 	static uint32_t buf_available = 0;
 	uint8_t retry = MAX_WRITE_BUF_RETRIES;
+	uint32_t max_retry_sdio_not_responding = 2;
+	uint32_t interval_us = 400;
 
 	/*If buffer needed are less than buffer available
 	  then only read for available buffer number from slave*/
 	if (buf_available < buf_needed) {
 		while (retry) {
-			sdio_get_tx_buffer_num(&buf_available, ACQUIRE_LOCK);
+			if (sdio_get_tx_buffer_num(&buf_available, ACQUIRE_LOCK) ==
+					ESP_HOSTED_SDIO_UNRESPONSIVE_CODE) {
+				max_retry_sdio_not_responding--;
+				/* restart the host to avoid the sdio locked out state */
+
+				if (!max_retry_sdio_not_responding) {
+					ESP_LOGE(TAG, "%s: SDIO slave unresponsive, restart host", __func__);
+					g_h.funcs->_h_restart_host();
+				}
+				continue;
+			}
 
 			if (buf_available < buf_needed) {
 
 				ESP_LOGV(TAG, "Retry get write buffers %d", retry);
 				retry--;
 
-				if (retry < MAX_WRITE_BUF_RETRIES/2)
-					g_h.funcs->_h_msleep(1);
-
+				g_h.funcs->_h_usleep(interval_us);
+				if (interval_us < MAX_BUFF_FETCH_PERIODICITY) {
+					interval_us += 400;
+				}
 				continue;
 			}
 			break;
@@ -415,14 +431,15 @@ static void sdio_write_task(void const* pvParameters)
 				// copy first byte of payload into header
 				payload_header->hci_pkt_type = buf_handle.payload[0];
 				// adjust actual payload len
-				payload_header->len = htole16(len - 1);
-				g_h.funcs->_h_memcpy(payload, &buf_handle.payload[1], len - 1);
+				len -= 1;
+				payload_header->len = htole16(len);
+				g_h.funcs->_h_memcpy(payload, &buf_handle.payload[1], len);
 			}
 		} else
 		if (!buf_handle.payload_zcopy)
 			g_h.funcs->_h_memcpy(payload, buf_handle.payload, len);
 
-#if CONFIG_ESP_SDIO_CHECKSUM
+#if H_SDIO_CHECKSUM
 		payload_header->checksum = htole16(compute_checksum(sendbuf,
 			sizeof(struct esp_payload_header) + len));
 #endif
@@ -456,22 +473,24 @@ static void sdio_write_task(void const* pvParameters)
 			 */
 			uint32_t block_send_len = ((len_to_send + ESP_BLOCK_SIZE - 1) / ESP_BLOCK_SIZE) * ESP_BLOCK_SIZE;
 
-			ret = g_h.funcs->_h_sdio_write_block(ESP_SLAVE_CMD53_END_ADDR - data_left,
+			ret = g_h.funcs->_h_sdio_write_block(sdio_handle, ESP_SLAVE_CMD53_END_ADDR - data_left,
 				pos, block_send_len, ACQUIRE_LOCK);
 #else
-			ret = g_h.funcs->_h_sdio_write_block(ESP_SLAVE_CMD53_END_ADDR - data_left,
+			ret = g_h.funcs->_h_sdio_write_block(sdio_handle, ESP_SLAVE_CMD53_END_ADDR - data_left,
 				pos, len_to_send, ACQUIRE_LOCK);
 #endif
 			if (ret) {
 				ESP_LOGE(TAG, "%s: %d: Failed to send data: %d %ld %ld", __func__,
 					retries, ret, len_to_send, data_left);
 				retries++;
-				if (retries < MAX_WRITE_RETRIES) {
+				if (retries < MAX_SDIO_WRITE_RETRY) {
 					ESP_LOGD(TAG, "retry");
 					continue;
 				} else {
-					ESP_LOGE(TAG, "abort sending of data");
-					goto unlock_done;
+					SDIO_DRV_UNLOCK();
+					ESP_LOGE(TAG, "Unrecoverable host sdio state, reset host mcu");
+					g_h.funcs->_h_restart_host();
+					goto done;
 				}
 			}
 
@@ -502,7 +521,7 @@ static int is_valid_sdio_rx_packet(uint8_t *rxbuff_a, uint16_t *len_a, uint16_t 
 {
 	struct esp_payload_header * h = (struct esp_payload_header *)rxbuff_a;
 	uint16_t len = 0, offset = 0;
-#if CONFIG_ESP_SDIO_CHECKSUM
+#if H_SDIO_CHECKSUM
 	uint16_t rx_checksum = 0, checksum = 0;
 #endif
 
@@ -527,7 +546,7 @@ static int is_valid_sdio_rx_packet(uint8_t *rxbuff_a, uint16_t *len_a, uint16_t 
 
 	}
 
-#if CONFIG_ESP_SDIO_CHECKSUM
+#if H_SDIO_CHECKSUM
 	rx_checksum = le16toh(h->checksum);
 	h->checksum = 0;
 	checksum = compute_checksum((uint8_t*)h, len + offset);
@@ -786,7 +805,7 @@ static void sdio_read_task(void const* pvParameters)
 
 		// wait for sdio interrupt from slave
 		// call will block until there is an interrupt, timeout or error
-		res = g_h.funcs->_h_sdio_wait_slave_intr(HOSTED_BLOCK_MAX);
+		res = g_h.funcs->_h_sdio_wait_slave_intr(sdio_handle, HOSTED_BLOCK_MAX);
 
 		if (res != ESP_OK) {
 			ESP_LOGE(TAG, "wait_slave_intr error: %d", res);
@@ -813,6 +832,8 @@ static void sdio_read_task(void const* pvParameters)
 			ESP_LOGE(TAG, "failed to read interrupt register");
 
 			SDIO_DRV_UNLOCK();
+			ESP_LOGI(TAG, "Host is reseting itself, to avoid any sdio race condition");
+			g_h.funcs->_h_restart_host();
 			continue;
 		}
 #endif
@@ -872,11 +893,11 @@ static void sdio_read_task(void const* pvParameters)
 			 * will ignore.
 			 */
 			uint32_t block_read_len = ((len_to_read + ESP_BLOCK_SIZE - 1) / ESP_BLOCK_SIZE) * ESP_BLOCK_SIZE;
-			ret = g_h.funcs->_h_sdio_read_block(
+			ret = g_h.funcs->_h_sdio_read_block(sdio_handle,
 					ESP_SLAVE_CMD53_END_ADDR - data_left,
 					pos, block_read_len, ACQUIRE_LOCK);
 #else
-			ret = g_h.funcs->_h_sdio_read_block(
+			ret = g_h.funcs->_h_sdio_read_block(sdio_handle,
 					ESP_SLAVE_CMD53_END_ADDR - data_left,
 					pos, len_to_read, ACQUIRE_LOCK);
 #endif

@@ -13,6 +13,8 @@ ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
 EXTRA_DIST += LICENSE
 EXTRA_DIST += README.md
+EXTRA_DIST += CHANGELOG.md
+EXTRA_DIST += ChangeLog.old
 
 AM_CPPFLAGS = \
 	-include $(top_builddir)/config.h \
@@ -72,43 +74,44 @@ EXTRA_DIST += protobuf-c/libprotobuf-c.pc.in
 
 if BUILD_COMPILER
 
-bin_PROGRAMS += protoc-c/protoc-gen-c
-protoc_c_protoc_gen_c_SOURCES = \
-	protoc-c/c_bytes_field.cc \
-	protoc-c/c_bytes_field.h \
-	protoc-c/c_enum.cc \
-	protoc-c/c_enum.h \
-	protoc-c/c_enum_field.cc \
-	protoc-c/c_enum_field.h \
-	protoc-c/c_extension.cc \
-	protoc-c/c_extension.h \
-	protoc-c/c_field.cc \
-	protoc-c/c_field.h \
-	protoc-c/c_file.cc \
-	protoc-c/c_file.h \
-	protoc-c/c_generator.cc \
-	protoc-c/c_generator.h \
-	protoc-c/c_helpers.cc \
-	protoc-c/c_helpers.h \
-	protoc-c/c_message.cc \
-	protoc-c/c_message.h \
-	protoc-c/c_message_field.cc \
-	protoc-c/c_message_field.h \
-	protoc-c/c_primitive_field.cc \
-	protoc-c/c_primitive_field.h \
-	protoc-c/c_service.cc \
-	protoc-c/c_service.h \
-	protoc-c/c_string_field.cc \
-	protoc-c/c_string_field.h \
+bin_PROGRAMS += protoc-gen-c/protoc-gen-c
+protoc_gen_c_protoc_gen_c_SOURCES = \
+	protoc-gen-c/c_bytes_field.cc \
+	protoc-gen-c/c_bytes_field.h \
+	protoc-gen-c/c_enum.cc \
+	protoc-gen-c/c_enum.h \
+	protoc-gen-c/c_enum_field.cc \
+	protoc-gen-c/c_enum_field.h \
+	protoc-gen-c/c_extension.cc \
+	protoc-gen-c/c_extension.h \
+	protoc-gen-c/c_field.cc \
+	protoc-gen-c/c_field.h \
+	protoc-gen-c/c_file.cc \
+	protoc-gen-c/c_file.h \
+	protoc-gen-c/c_generator.cc \
+	protoc-gen-c/c_generator.h \
+	protoc-gen-c/c_helpers.cc \
+	protoc-gen-c/c_helpers.h \
+	protoc-gen-c/c_message.cc \
+	protoc-gen-c/c_message.h \
+	protoc-gen-c/c_message_field.cc \
+	protoc-gen-c/c_message_field.h \
+	protoc-gen-c/c_primitive_field.cc \
+	protoc-gen-c/c_primitive_field.h \
+	protoc-gen-c/c_service.cc \
+	protoc-gen-c/c_service.h \
+	protoc-gen-c/c_string_field.cc \
+	protoc-gen-c/c_string_field.h \
+	protoc-gen-c/compat.h \
 	protobuf-c/protobuf-c.pb.cc \
 	protobuf-c/protobuf-c.pb.h \
-	protoc-c/main.cc
-protoc_c_protoc_gen_c_CXXFLAGS = \
+	protoc-gen-c/main.cc
+protoc_gen_c_protoc_gen_c_CXXFLAGS = \
 	$(AM_CXXFLAGS) \
 	$(protobuf_CFLAGS)
-protoc_c_protoc_gen_c_LDADD = \
-	$(protobuf_LIBS) \
-	-lprotoc
+protoc_gen_c_protoc_gen_c_LDADD = \
+	-lprotoc \
+	$(protobuf_LIBS)
 
 protobuf-c/protobuf-c.pb.cc protobuf-c/protobuf-c.pb.h: @PROTOC@ $(top_srcdir)/protobuf-c/protobuf-c.proto
 	$(AM_V_GEN)@PROTOC@ -I$(top_srcdir) --cpp_out=$(top_builddir) $(top_srcdir)/protobuf-c/protobuf-c.proto
@@ -139,11 +142,13 @@ LOG_COMPILER = $(VALGRIND)
 check_PROGRAMS += \
 	t/generated-code/test-generated-code \
 	t/generated-code2/test-generated-code2 \
+	t/generated-code3/test-generated-code3 \
 	t/version/version
 
 TESTS += \
 	t/generated-code/test-generated-code \
 	t/generated-code2/test-generated-code2 \
+	t/generated-code3/test-generated-code3 \
 	t/version/version
 
 t_generated_code_test_generated_code_SOURCES = \
@@ -157,6 +162,16 @@ t_generated_code2_test_generated_code2_SOURCES = \
 	t/test-full.pb-c.c \
 	t/test-optimized.pb-c.c
 t_generated_code2_test_generated_code2_LDADD = \
+	protobuf-c/libprotobuf-c.la
+
+t_generated_code3_test_generated_code3_CPPFLAGS = \
+	-DPROTO3
+
+t_generated_code3_test_generated_code3_SOURCES = \
+	t/generated-code/test-generated-code.c \
+	t/test-proto3.pb-c.c
+
+t_generated_code3_test_generated_code3_LDADD = \
 	protobuf-c/libprotobuf-c.la
 
 noinst_PROGRAMS += \
@@ -173,17 +188,20 @@ t_generated_code2_cxx_generate_packed_data_CXXFLAGS = \
 t_generated_code2_cxx_generate_packed_data_LDADD = \
 	$(protobuf_LIBS)
 
-t/test.pb-c.c t/test.pb-c.h: $(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/test.proto
-	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/test.proto
+t/test.pb-c.c t/test.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/test.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/test.proto
 
-t/test-optimized.pb-c.c t/test-optimized.pb-c.h: $(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/test-optimized.proto
-	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/test-optimized.proto
+t/test-optimized.pb-c.c t/test-optimized.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/test-optimized.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/test-optimized.proto
 
-t/test-full.pb-c.c t/test-full.pb-c.h: $(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/test-full.proto
-	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/test-full.proto
+t/test-full.pb-c.c t/test-full.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/test-full.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/test-full.proto
 
 t/test-full.pb.cc t/test-full.pb.h: @PROTOC@ $(top_srcdir)/t/test-full.proto
 	$(AM_V_GEN)@PROTOC@ -I$(top_srcdir) --cpp_out=$(top_builddir) $(top_srcdir)/t/test-full.proto
+
+t/test-proto3.pb-c.c t/test-proto3.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/test-proto3.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/test-proto3.proto
 
 t/generated-code2/test-full-cxx-output.inc: t/generated-code2/cxx-generate-packed-data$(EXEEXT)
 	$(AM_V_GEN)$(top_builddir)/t/generated-code2/cxx-generate-packed-data$(EXEEXT) > $(top_builddir)/t/generated-code2/test-full-cxx-output.inc
@@ -193,33 +211,8 @@ BUILT_SOURCES += \
 	t/test-full.pb-c.c t/test-full.pb-c.h \
 	t/test-optimized.pb-c.c t/test-optimized.pb-c.h \
 	t/test-full.pb.cc t/test-full.pb.h \
+	t/test-proto3.pb-c.c t/test-proto3.pb-c.h \
 	t/generated-code2/test-full-cxx-output.inc
-
-if BUILD_PROTO3
-
-check_PROGRAMS += \
-	t/generated-code3/test-generated-code3
-
-TESTS += \
-	t/generated-code3/test-generated-code3
-
-t_generated_code3_test_generated_code3_CPPFLAGS = \
-	-DPROTO3
-
-t_generated_code3_test_generated_code3_LDADD = \
-	protobuf-c/libprotobuf-c.la
-
-t_generated_code3_test_generated_code3_SOURCES = \
-	t/generated-code/test-generated-code.c \
-	t/test-proto3.pb-c.c
-
-t/test-proto3.pb-c.c t/test-proto3.pb-c.h: $(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/test-proto3.proto
-	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/test-proto3.proto
-
-BUILT_SOURCES += \
-	t/test-proto3.pb-c.c t/test-proto3.pb-c.h
-
-endif # BUILD_PROTO3
 
 t_version_version_SOURCES = \
 	t/version/version.c
@@ -236,8 +229,8 @@ t_issue204_issue204_SOURCES = \
 	t/issue204/issue204.pb-c.c
 t_issue204_issue204_LDADD = \
 	protobuf-c/libprotobuf-c.la
-t/issue204/issue204.pb-c.c t/issue204/issue204.pb-c.h: $(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue204/issue204.proto
-	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue204/issue204.proto
+t/issue204/issue204.pb-c.c t/issue204/issue204.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue204/issue204.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue204/issue204.proto
 BUILT_SOURCES += \
 	t/issue204/issue204.pb-c.c t/issue204/issue204.pb-c.h
 EXTRA_DIST += \
@@ -253,8 +246,8 @@ t_issue220_issue220_SOURCES = \
 	t/issue220/issue220.pb-c.c
 t_issue220_issue220_LDADD = \
 	protobuf-c/libprotobuf-c.la
-t/issue220/issue220.pb-c.c t/issue220/issue220.pb-c.h: $(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue220/issue220.proto
-	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue220/issue220.proto
+t/issue220/issue220.pb-c.c t/issue220/issue220.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue220/issue220.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue220/issue220.proto
 BUILT_SOURCES += \
 	t/issue220/issue220.pb-c.c t/issue220/issue220.pb-c.h
 EXTRA_DIST += \
@@ -270,15 +263,14 @@ t_issue251_issue251_SOURCES = \
 	t/issue251/issue251.pb-c.c
 t_issue251_issue251_LDADD = \
 	protobuf-c/libprotobuf-c.la
-t/issue251/issue251.pb-c.c t/issue251/issue251.pb-c.h: $(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue251/issue251.proto
-	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue251/issue251.proto
+t/issue251/issue251.pb-c.c t/issue251/issue251.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue251/issue251.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue251/issue251.proto
 BUILT_SOURCES += \
 	t/issue251/issue251.pb-c.c t/issue251/issue251.pb-c.h
 EXTRA_DIST += \
 	t/issue251/issue251.proto
 
 # Issue #330
-if BUILD_PROTO3
 check_PROGRAMS += \
 	t/issue330/issue330
 TESTS += \
@@ -288,38 +280,21 @@ t_issue330_issue330_SOURCES = \
 	t/issue330/issue330.pb-c.c
 t_issue330_issue330_LDADD = \
 	protobuf-c/libprotobuf-c.la
-t/issue330/issue330.pb-c.c t/issue330/issue330.pb-c.h: $(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue330/issue330.proto
-	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue330/issue330.proto
+t/issue330/issue330.pb-c.c t/issue330/issue330.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue330/issue330.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue330/issue330.proto
 BUILT_SOURCES += \
 	t/issue330/issue330.pb-c.c t/issue330/issue330.pb-c.h
+EXTRA_DIST += \
+	t/issue330/issue330.proto
 
 t_issue330_issue330_SOURCES += \
 	t/issue389/issue389.pb-c.c # Tack onto issue330 since there is no need for a separate binary here
-t/issue389/issue389.pb-c.c t/issue389/issue389.pb-c.h: $(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue389/issue389.proto
-	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue389/issue389.proto
+t/issue389/issue389.pb-c.c t/issue389/issue389.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue389/issue389.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue389/issue389.proto
 BUILT_SOURCES += \
 	t/issue389/issue389.pb-c.c t/issue389/issue389.pb-c.h
 EXTRA_DIST += \
 	t/issue389/issue389.proto
-
-check_PROGRAMS += \
-	t/issue440/issue440
-TESTS += \
-	t/issue440/issue440
-t_issue440_issue440_SOURCES = \
-	t/issue440/issue440.c \
-	t/issue440/issue440.pb-c.c
-t_issue440_issue440_LDADD = \
-	protobuf-c/libprotobuf-c.la
-t/issue440/issue440.pb-c.c t/issue440/issue440.pb-c.h: $(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue440/issue440.proto
-	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue440/issue440.proto
-BUILT_SOURCES += \
-	t/issue440/issue440.pb-c.c t/issue440/issue440.pb-c.h
-EXTRA_DIST += \
-	t/issue440/issue440.proto
-endif # BUILD_PROTO3
-EXTRA_DIST += \
-	t/issue330/issue330.proto
 
 # Issue #375
 check_PROGRAMS += \
@@ -331,12 +306,46 @@ t_issue375_issue375_SOURCES = \
 	t/issue375/issue375.pb-c.c
 t_issue375_issue375_LDADD = \
 	protobuf-c/libprotobuf-c.la
-t/issue375/issue375.pb-c.c t/issue375/issue375.pb-c.h: $(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue375/issue375.proto
-	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue375/issue375.proto
+t/issue375/issue375.pb-c.c t/issue375/issue375.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue375/issue375.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue375/issue375.proto
 BUILT_SOURCES += \
 	t/issue375/issue375.pb-c.c t/issue375/issue375.pb-c.h
 EXTRA_DIST += \
 	t/issue375/issue375.proto
+
+# Issue #440
+check_PROGRAMS += \
+	t/issue440/issue440
+TESTS += \
+	t/issue440/issue440
+t_issue440_issue440_SOURCES = \
+	t/issue440/issue440.c \
+	t/issue440/issue440.pb-c.c
+t_issue440_issue440_LDADD = \
+	protobuf-c/libprotobuf-c.la
+t/issue440/issue440.pb-c.c t/issue440/issue440.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue440/issue440.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue440/issue440.proto
+BUILT_SOURCES += \
+	t/issue440/issue440.pb-c.c t/issue440/issue440.pb-c.h
+EXTRA_DIST += \
+	t/issue440/issue440.proto
+
+# Issue #745
+check_PROGRAMS += \
+	t/issue745/issue745
+TESTS += \
+	t/issue745/issue745
+t_issue745_issue745_SOURCES = \
+	t/issue745/issue745.c \
+	t/issue745/issue745.pb-c.c
+t_issue745_issue745_LDADD = \
+	protobuf-c/libprotobuf-c.la
+t/issue745/issue745.pb-c.c t/issue745/issue745.pb-c.h: $(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) $(top_srcdir)/t/issue745/issue745.proto
+	$(AM_V_GEN)@PROTOC@ --plugin=protoc-gen-c=$(top_builddir)/protoc-gen-c/protoc-gen-c$(EXEEXT) -I$(top_srcdir) --c_out=$(top_builddir) $(top_srcdir)/t/issue745/issue745.proto
+BUILT_SOURCES += \
+	t/issue745/issue745.pb-c.c t/issue745/issue745.pb-c.h
+EXTRA_DIST += \
+	t/issue745/issue745.proto
 
 endif # CROSS_COMPILING
 
@@ -380,3 +389,4 @@ endif
 EXTRA_DIST += Doxyfile.in
 EXTRA_DIST += DoxygenLayout.xml
 EXTRA_DIST += build-cmake/CMakeLists.txt
+EXTRA_DIST += build-cmake/Config.cmake.in

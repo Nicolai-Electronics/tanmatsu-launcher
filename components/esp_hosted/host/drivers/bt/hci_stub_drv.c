@@ -11,6 +11,10 @@ static const char TAG[] = "hci_stub_drv";
 #include "nimble/transport.h"
 #endif
 
+#if H_BT_HOST_ESP_BLUEDROID
+#include "esp_hosted_bt.h"
+#endif
+
 #define WEAK __attribute__((weak))
 
 int hci_rx_handler(interface_buffer_handle_t *buf_handle)
@@ -63,3 +67,27 @@ WEAK int ble_transport_to_ll_cmd_impl(void *buf)
 	return ESP_FAIL;
 }
 #endif // H_BT_HOST_ESP_NIMBLE
+
+#if H_BT_HOST_ESP_BLUEDROID
+WEAK void hosted_hci_bluedroid_open(void)
+{
+}
+
+WEAK void hosted_hci_bluedroid_close(void)
+{
+}
+
+WEAK void hosted_hci_bluedroid_send(uint8_t *data, uint16_t len)
+{
+}
+
+WEAK bool hosted_hci_bluedroid_check_send_available(void)
+{
+	return false;
+}
+
+WEAK esp_err_t hosted_hci_bluedroid_register_host_callback(const esp_bluedroid_hci_driver_callbacks_t *callback)
+{
+	return ESP_FAIL;
+}
+#endif // H_BT_HOST_ESP_BLUEDROID

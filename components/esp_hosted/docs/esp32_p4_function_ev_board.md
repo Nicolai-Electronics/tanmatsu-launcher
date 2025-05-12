@@ -84,6 +84,12 @@ espressif/esp-extconn:
 It is always good to use `esp_wifi_remote` as it provides all the Wi-Fi config and a wrapper abstraction layer.
 But you can also evaluate without using it.
 
+> [!IMPORTANT]
+> Co-processor selection is done by wifi-remote. Ensure the correct
+> co-processor chip is selected in `Component config` -> `Wi-Fi
+> Remote` -> `choose slave target`. The target selected will affect
+> the ESP-Hosted transport options and default GPIOs used.
+
 ### 3.2. Configuring Defaults
 
 Edit the `sdkconfig.defaults.esp32p4` file such that, it would have following content:
@@ -216,13 +222,13 @@ idf.py build
 ```
 #include "esp_hosted.h"
 
-esp_err_t esp_hosted_ota_start(const char *url);
+esp_err_t esp_hosted_slave_ota(const char *url);
 ```
 
-7. Call the `esp_hosted_ota_start` function with the URL of the firmware binary:
+7. Call the `esp_hosted_slave_ota` function with the URL of the firmware binary:
 
 ```
-esp_err_t err = esp_hosted_ota_start("http://example.com/path/to/network_adapter.bin");
+esp_err_t err = esp_hosted_slave_ota("http://example.com/path/to/network_adapter.bin");
 if (err != ESP_OK) {
     ESP_LOGE(TAG, "Failed to start OTA update: %s", esp_err_to_name(err));
 }
@@ -370,8 +376,11 @@ Use GPIOs 36 or lower on the P4 DevKit to avoid LDO power issues with high numbe
 | CLK        | 26   |
 | CS         | 6    |
 | Handshake  | 20   |
-| Data Ready | 36   |
+| Data Ready | 32   |
 | Reset      | 2    |
+
+> [!NOTE]
+> Avoid using GPIO 35 and 36 as they affect the ESP32-P4 Bootloader Mode. See [ESP32-P4 Boot Mode Selection](https://docs.espressif.com/projects/esptool/en/latest/esp32p4/advanced-topics/boot-mode-selection.html#select-bootloader-mode) for more information.
 
 ## 9. References
 

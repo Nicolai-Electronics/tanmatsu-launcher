@@ -15,11 +15,9 @@ extern "C" {
 /** Includes **/
 #include "stdbool.h"
 #include "esp_wifi.h"
-#include "transport_drv.h"
 #include "esp_wifi_remote.h"
-#include "esp_hosted_config.h"
-#include "esp_hosted_wifi_config.h"
 #include "esp_hosted_api_types.h"
+#include "esp_hosted_ota.h"
 
 /** Exported variables **/
 #define ESP_HOSTED_CHANNEL_CONFIG_DEFAULT()  { \
@@ -27,7 +25,7 @@ extern "C" {
 }
 
 struct esp_remote_channel_config {
-	esp_hosted_if_type_t if_type;
+	int if_type; // values should be of esp_hosted_if_type_t
 	bool secure;
 };
 
@@ -60,6 +58,7 @@ esp_err_t esp_wifi_remote_set_mac(wifi_interface_t mode, const uint8_t mac[6]);
 esp_err_t esp_wifi_remote_scan_start(const wifi_scan_config_t *config, bool block);
 esp_err_t esp_wifi_remote_scan_stop(void);
 esp_err_t esp_wifi_remote_scan_get_ap_num(uint16_t *number);
+esp_err_t esp_wifi_remote_scan_get_ap_record(wifi_ap_record_t *ap_record);
 esp_err_t esp_wifi_remote_scan_get_ap_records(uint16_t *number, wifi_ap_record_t *ap_records);
 esp_err_t esp_wifi_remote_clear_ap_list(void);
 esp_err_t esp_wifi_remote_restore(void);
@@ -84,8 +83,8 @@ esp_err_t esp_wifi_remote_set_protocol(wifi_interface_t ifx, uint8_t protocol_bi
 esp_err_t esp_wifi_remote_get_protocol(wifi_interface_t ifx, uint8_t *protocol_bitmap);
 esp_err_t esp_wifi_remote_set_max_tx_power(int8_t power);
 esp_err_t esp_wifi_remote_get_max_tx_power(int8_t *power);
+esp_err_t esp_wifi_remote_sta_get_negotiated_phymode(wifi_phy_mode_t *phymode);
 esp_err_t esp_wifi_remote_sta_get_aid(uint16_t *aid);
-esp_err_t esp_hosted_ota(const char* image_url);
 esp_err_t esp_hosted_get_coprocessor_fwversion(esp_hosted_coprocessor_fwver_t *ver_info);
 
 #if H_WIFI_DUALBAND_SUPPORT

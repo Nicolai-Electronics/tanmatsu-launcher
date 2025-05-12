@@ -5,6 +5,9 @@
 #include "t/test-optimized.pb-c.h"
 #include "t/generated-code2/test-full-cxx-output.inc"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+
 #define TEST_ENUM_SMALL_TYPE_NAME   Foo__TestEnumSmall
 #define TEST_ENUM_SMALL(shortname)   FOO__TEST_ENUM_SMALL__##shortname
 #define TEST_ENUM_TYPE_NAME   Foo__TestEnum
@@ -2370,7 +2373,7 @@ static Test tests[] =
 };
 #define n_tests (sizeof(tests)/sizeof(Test))
 
-int main ()
+int main(void)
 {
   unsigned i;
   for (i = 0; i < n_tests; i++)

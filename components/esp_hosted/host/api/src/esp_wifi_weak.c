@@ -94,6 +94,11 @@ WEAK esp_err_t esp_wifi_scan_get_ap_num(uint16_t *number)
 	return esp_wifi_remote_scan_get_ap_num(number);
 }
 
+WEAK esp_err_t esp_wifi_scan_get_ap_record(wifi_ap_record_t *ap_record)
+{
+	return esp_wifi_remote_scan_get_ap_record(ap_record);
+}
+
 WEAK esp_err_t esp_wifi_scan_get_ap_records(uint16_t *number, wifi_ap_record_t *ap_records)
 {
 	return esp_wifi_remote_scan_get_ap_records(number, ap_records);
@@ -212,6 +217,11 @@ WEAK esp_err_t esp_wifi_set_country_code(const char *country, bool ieee80211d_en
 WEAK esp_err_t esp_wifi_get_country_code(char *country)
 {
 	return esp_wifi_remote_get_country_code(country);
+}
+
+WEAK esp_err_t esp_wifi_sta_get_negotiated_phymode(wifi_phy_mode_t *phymode)
+{
+	return esp_wifi_remote_sta_get_negotiated_phymode(phymode);
 }
 
 WEAK esp_err_t esp_wifi_sta_get_aid(uint16_t *aid)

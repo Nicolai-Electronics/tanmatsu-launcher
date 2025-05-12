@@ -3,8 +3,8 @@
 
 #include "rpc_core.h"
 #include "rpc_slave_if.h"
-#include "adapter.h"
 #include "esp_log.h"
+#include "esp_hosted_transport.h"
 
 DEFINE_LOG_TAG(rpc_evt);
 

@@ -20,7 +20,7 @@
 #include "transport_drv.h"
 #include "spi_drv.h"
 #include "serial_drv.h"
-#include "adapter.h"
+#include "esp_hosted_transport.h"
 #include "esp_log.h"
 #include "esp_hosted_log.h"
 #include "stats.h"
@@ -69,7 +69,7 @@ static inline void spi_mempool_create(void)
 {
 	MEM_DUMP("spi_mempool_create");
 	buf_mp_g = mempool_create(MAX_SPI_BUFFER_SIZE);
-#ifdef CONFIG_ESP_CACHE_MALLOC
+#ifdef H_USE_MEMPOOL
 	assert(buf_mp_g);
 #endif
 }
@@ -676,8 +676,9 @@ static uint8_t * get_next_tx_buffer(uint8_t *is_valid_tx_buf, void (**free_func)
 				// copy first byte of payload into header
 				payload_header->hci_pkt_type = buf_handle.payload[0];
 				// adjust actual payload len
-				payload_header->len = htole16(len - 1);
-				g_h.funcs->_h_memcpy(payload, &buf_handle.payload[1], len - 1);
+				len -= 1;
+				payload_header->len = htole16(len);
+				g_h.funcs->_h_memcpy(payload, &buf_handle.payload[1], len);
 			}
 		} else
 		if (!buf_handle.payload_zcopy)

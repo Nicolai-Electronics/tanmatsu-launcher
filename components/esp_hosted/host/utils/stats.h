@@ -58,7 +58,7 @@ extern "C" {
 #define TEST_RAW_TP__ESP_TO_HOST     1
 #define TEST_RAW_TP__HOST_TO_ESP     !TEST_RAW_TP__ESP_TO_HOST
 #endif
-#define TEST_RAW_TP__TIMEOUT         CONFIG_ESP_RAW_TP_REPORT_INTERVAL
+#define TEST_RAW_TP__TIMEOUT         H_RAW_TP_REPORT_INTERVAL
 
 void update_test_raw_tp_rx_len(uint16_t len);
 void process_test_capabilities(uint8_t cap);
@@ -72,12 +72,12 @@ void process_test_capabilities(uint8_t cap);
  * TCP: Find MSS in nodes
  * H_ESP_PAYLOAD_HEADER_OFFSET is header size, which is not included in calcs
  */
-#define TEST_RAW_TP__BUF_SIZE    CONFIG_ESP_RAW_TP_HOST_TO_ESP_PKT_LEN
+#define TEST_RAW_TP__BUF_SIZE    H_RAW_TP_PKT_LEN
 
 
 #endif
 
-#ifdef CONFIG_ESP_PKT_STATS
+#if H_PKT_STATS
 #define ESP_PKT_STATS 1
 #endif
 

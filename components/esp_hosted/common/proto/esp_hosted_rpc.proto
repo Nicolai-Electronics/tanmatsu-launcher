@@ -412,9 +412,11 @@ enum RpcId {
 
 	Req_GetCoprocessorFwVersion       = 350; //0x15e
 
+	Req_WifiScanGetApRecord           = 351; //0x15f
+
 /* Add new control path command response before Req_Max
 	 * and update Req_Max */
-	Req_Max = 351; //0x15f
+	Req_Max = 352; //0x160
 
 	/** Response Msgs **/
 	Resp_Base                         = 512;
@@ -536,9 +538,11 @@ enum RpcId {
 
 	Resp_GetCoprocessorFwVersion      = 606;
 
+	Resp_WifiScanGetApRecord          = 607;
+
 	/* Add new control path command response before Resp_Max
 	 * and update Resp_Max */
-	Resp_Max = 607;
+	Resp_Max = 608;
 
 	/** Event Msgs **/
 	Event_Base = 768;
@@ -1261,6 +1265,14 @@ message Rpc_Resp_WifiScanGetApRecords {
 	repeated wifi_ap_record ap_records = 3;
 }
 
+message Rpc_Req_WifiScanGetApRecord {
+}
+
+message Rpc_Resp_WifiScanGetApRecord {
+	int32 resp = 1;
+	wifi_ap_record ap_record = 2;
+}
+
 message Rpc_Req_WifiClearApList {
 }
 
@@ -1296,7 +1308,7 @@ message Rpc_Req_WifiStaGetApInfo {
 
 message Rpc_Resp_WifiStaGetApInfo {
 	int32 resp = 1;
-	wifi_ap_record ap_records = 2;
+	wifi_ap_record ap_record = 2;
 }
 
 message Rpc_Req_WifiSetProtocol {
@@ -1404,6 +1416,14 @@ message Rpc_Resp_WifiApGetStaList {
 
 message Rpc_Req_WifiApGetStaAid {
 	bytes mac = 1;
+}
+
+message Rpc_Req_WifiStaGetNegotiatedPhymode {
+}
+
+message Rpc_Resp_WifiStaGetNegotiatedPhymode {
+	int32 resp = 1;
+	uint32 phymode = 2;
 }
 
 message Rpc_Resp_WifiApGetStaAid {
@@ -1630,6 +1650,7 @@ message Rpc {
 		Rpc_Req_WifiSetCountryCode          req_wifi_set_country_code         = 334;
 		Rpc_Req_WifiGetCountryCode          req_wifi_get_country_code         = 335;
 		Rpc_Req_WifiStaGetAid               req_wifi_sta_get_aid              = 338;
+		Rpc_Req_WifiStaGetNegotiatedPhymode req_wifi_sta_get_negotiated_phymode = 339;
 
 		Rpc_Req_WifiStaGetRssi              req_wifi_sta_get_rssi             = 341;
 
@@ -1644,6 +1665,8 @@ message Rpc {
 		Rpc_Req_WifiGetBandMode             req_wifi_get_bandmode             = 349;
 
 		Rpc_Req_GetCoprocessorFwVersion     req_get_coprocessor_fwversion     = 350;
+
+		Rpc_Req_WifiScanGetApRecord         req_wifi_scan_get_ap_record       = 351;
 
 		/** Responses **/
 		Rpc_Resp_GetMacAddress              resp_get_mac_address               = 513;
@@ -1708,6 +1731,7 @@ message Rpc {
 		Rpc_Resp_WifiSetCountryCode         resp_wifi_set_country_code         = 590;
 		Rpc_Resp_WifiGetCountryCode         resp_wifi_get_country_code         = 591;
 		Rpc_Resp_WifiStaGetAid              resp_wifi_sta_get_aid              = 594;
+		Rpc_Resp_WifiStaGetNegotiatedPhymode resp_wifi_sta_get_negotiated_phymode = 595;
 
 		Rpc_Resp_WifiStaGetRssi             resp_wifi_sta_get_rssi             = 597;
 
@@ -1722,6 +1746,8 @@ message Rpc {
 		Rpc_Resp_WifiGetBandMode            resp_wifi_get_bandmode             = 605;
 
 		Rpc_Resp_GetCoprocessorFwVersion    resp_get_coprocessor_fwversion     = 606;
+
+		Rpc_Resp_WifiScanGetApRecord        resp_wifi_scan_get_ap_record       = 607;
 
 		/** Notifications **/
 		Rpc_Event_ESPInit                   event_esp_init                     = 769;

@@ -1,5 +1,7 @@
-slave/build
-slave/sdkconfig
-slave/sdkconfig.old
+build
+dependencies.lock
+managed_components
+sdkconfig
+sdkconfig.old
 slave/main/coprocessor_fw_version.h
 slave/main/coprocessor_fw_version.txt

@@ -24,7 +24,7 @@
 #include <protocomm.h>
 #include <protocomm_priv.h>
 #include "protocomm_pserial.h"
-#include "adapter.h"
+#include "esp_hosted_transport.h"
 
 static const char TAG[] = "protocomm_pserial";
 

@@ -22,11 +22,15 @@
 #include "driver/gpio.h"
 #include "driver/spi_slave_hd.h"
 
-#include "adapter.h"
 #include "interface.h"
 #include "endian.h"
 #include "mempool.h"
 #include "stats.h"
+#include "esp_hosted_interface.h"
+#include "esp_hosted_header.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_transport_init.h"
+#include "esp_hosted_transport_spi_hd.h"
 
 #include "esp_log.h"
 static const char TAG[] = "SPI_HD_DRIVER";

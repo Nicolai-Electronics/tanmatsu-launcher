@@ -1,0 +1,5 @@
+dependencies:
+  espressif/esp_wifi_remote:
+    version: "~0.5.1"
+    rules:
+      - if: "target in [esp32p4, esp32h2]"

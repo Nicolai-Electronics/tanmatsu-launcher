@@ -90,7 +90,7 @@ uint8_t * serial_drv_read(struct serial_drv_handle_t *serial_drv_handle,
 	uint8_t* read_buf = NULL;
 	int ret = 0;
 	/* Any of `RPC_EP_NAME_EVT` and `RPC_EP_NAME_RSP` could be used,
-	 * as both have same strlen in adapter.h */
+	 * as both have same strlen in esp_hosted_transport.h */
 	const char* ep_name = RPC_EP_NAME_RSP;
 	uint8_t *buf = NULL;
 	uint32_t buf_len = 0;
@@ -212,8 +212,8 @@ int serial_drv_close(struct serial_drv_handle_t** serial_drv_handle)
 int rpc_platform_init(void)
 {
 	/* rpc semaphore */
-	readSemaphore = g_h.funcs->_h_create_semaphore(CONFIG_ESP_MAX_SIMULTANEOUS_SYNC_RPC_REQUESTS +
-			CONFIG_ESP_MAX_SIMULTANEOUS_ASYNC_RPC_REQUESTS);
+	readSemaphore = g_h.funcs->_h_create_semaphore(H_MAX_SYNC_RPC_REQUESTS +
+			H_MAX_ASYNC_RPC_REQUESTS);
 	assert(readSemaphore);
 
 	/* grab the semaphore, so that task will be mandated to wait on semaphore */
@@ -249,5 +249,3 @@ static void rpc_rx_indication(void)
 		g_h.funcs->_h_post_semaphore(readSemaphore);
 	}
 }
-
-

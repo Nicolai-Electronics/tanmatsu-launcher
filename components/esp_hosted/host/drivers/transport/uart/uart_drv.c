@@ -26,13 +26,14 @@
 
 static const char TAG[] = "H_UART_DRV";
 
-#define UART_PROCESS_RX_DATA_ERROR (-1)
-#define UART_PROCESS_WAITING_MORE_RX_DATA (0)
-#define UART_PROCESS_RX_DATA_DONE (1)
+// UART is low throughput, so throttling should not be needed
+#define USE_DATA_THROTTLING (0)
 
 static void h_uart_write_task(void const* pvParameters);
 static void h_uart_read_task(void const* pvParameters);
+#if USE_DATA_THROTTLING
 static int update_flow_ctrl(uint8_t *rxbuff);
+#endif
 
 /* TODO to move this in transport drv */
 extern transport_channel_t *chan_arr[ESP_MAX_IF];
@@ -58,7 +59,7 @@ static inline void h_uart_mempool_create(void)
 {
 	MEM_DUMP("h_uart_mempool_create");
 	buf_mp_g = mempool_create(MAX_UART_BUFFER_SIZE);
-#ifdef CONFIG_ESP_CACHE_MALLOC
+#ifdef H_USE_MEMPOOL
 	assert(buf_mp_g);
 #endif
 }
@@ -147,8 +148,9 @@ static void h_uart_write_task(void const* pvParameters)
 				// copy first byte of payload into header
 				payload_header->hci_pkt_type = buf_handle.payload[0];
 				// adjust actual payload len
-				payload_header->len = htole16(len - 1);
-				g_h.funcs->_h_memcpy(payload, &buf_handle.payload[1], len - 1);
+				len -= 1;
+				payload_header->len = htole16(len);
+				g_h.funcs->_h_memcpy(payload, &buf_handle.payload[1], len);
 			}
 		} else
 		if (!buf_handle.payload_zcopy)
@@ -160,7 +162,7 @@ static void h_uart_write_task(void const* pvParameters)
 #endif
 
 		tx_len_to_send = len + sizeof(struct esp_payload_header);
-		tx_len = g_h.funcs->_h_uart_write(sendbuf, tx_len_to_send);
+		tx_len = g_h.funcs->_h_uart_write(uart_handle, sendbuf, tx_len_to_send);
 		if (tx_len != tx_len_to_send) {
 			ESP_LOGE(TAG, "failed to send uart data");
 		}
@@ -174,6 +176,7 @@ done:
 	}
 }
 
+#if USE_DATA_THROTTLING
 static int update_flow_ctrl(uint8_t *rxbuff)
 {
 	struct esp_payload_header * h = (struct esp_payload_header *)rxbuff;
@@ -189,6 +192,7 @@ static int update_flow_ctrl(uint8_t *rxbuff)
 		return 0;
 	}
 }
+#endif
 
 static void h_uart_process_rx_task(void const* pvParameters)
 {
@@ -280,7 +284,7 @@ static void h_uart_process_rx_task(void const* pvParameters)
 }
 
 // pushes received packet data on to rx queue
-static esp_err_t h_uart_push_pkt_to_queue(uint8_t * rxbuff, uint16_t len, uint16_t offset)
+static esp_err_t push_to_rx_queue(uint8_t * rxbuff, uint16_t len, uint16_t offset)
 {
 	uint8_t pkt_prio = PRIO_Q_OTHERS;
 	struct esp_payload_header *h= NULL;
@@ -362,118 +366,20 @@ static int is_valid_uart_rx_packet(uint8_t *rxbuff_a, uint16_t *len_a, uint16_t 
 	return 1;
 }
 
-static esp_err_t h_uart_push_data_to_queue(uint8_t * buf, uint32_t buf_len)
-{
-	uint16_t len = 0;
-	uint16_t offset = 0;
-
-	if (update_flow_ctrl(buf)) {
-		// detected and updated flow control
-		// no need to further process the packet
-		h_uart_buffer_free(buf);
-		return ESP_OK;
-	}
-
-	/* Drop packet if no processing needed */
-	if (!is_valid_uart_rx_packet(buf, &len, &offset)) {
-		/* Free up buffer, as one of following -
-		 * 1. no payload to process
-		 * 2. input packet size > driver capacity
-		 * 3. payload header size mismatch,
-		 * wrong header/bit packing?
-		 * */
-		ESP_LOGE(TAG, "Dropping packet");
-		h_uart_buffer_free(buf);
-		return ESP_FAIL;
-	}
-
-	if (h_uart_push_pkt_to_queue(buf, len, offset)) {
-		ESP_LOGE(TAG, "Failed to push Rx packet to queue");
-		h_uart_buffer_free(buf);
-		return ESP_FAIL;
-	}
-
-	return ESP_OK;
-}
-
-// large incoming data may be broken up into several serial packets
-static int current_rx_len = 0;
-static int expected_pkt_len = 0;
 static uint8_t * uart_scratch_buf = NULL;
-
-static int process_uart_rx_data(size_t size)
-{
-	int bytes_read;
-	uint8_t * rxbuff = NULL;
-	int remaining_len;
-
-	if (!uart_scratch_buf) {
-		uart_scratch_buf = malloc(MAX_UART_BUFFER_SIZE);
-		assert(uart_scratch_buf);
-	}
-
-	bytes_read = g_h.funcs->_h_uart_read(&uart_scratch_buf[current_rx_len], size);
-	current_rx_len += bytes_read;
-	ESP_LOGD(TAG, "current_rx_len %d", current_rx_len);
-
-	// process all data in buffer until there isn't enough to form a packet header
-	while (1) {
-		// get the packet size
-		if (!expected_pkt_len) {
-			if (current_rx_len < sizeof(struct esp_payload_header)) {
-				// not yet enough info in data to decode header
-				ESP_LOGD(TAG, "not enough data to decode header");
-				return UART_PROCESS_WAITING_MORE_RX_DATA;
-			}
-			struct esp_payload_header * h = (struct esp_payload_header *)uart_scratch_buf;
-			expected_pkt_len = le16toh(h->len) + sizeof(struct esp_payload_header);
-			ESP_LOGD(TAG, "expected_pkt_len %d", expected_pkt_len);
-		}
-		if (expected_pkt_len > MAX_UART_BUFFER_SIZE) {
-			ESP_LOGE(TAG, "packet size error");
-			current_rx_len = 0;
-			expected_pkt_len = 0;
-			return UART_PROCESS_RX_DATA_ERROR;
-		}
-		if (current_rx_len < expected_pkt_len) {
-			// still got more data to read
-			return UART_PROCESS_WAITING_MORE_RX_DATA;
-		}
-
-		// we have enough data to form a complete packet
-		rxbuff = h_uart_buffer_alloc(MEMSET_REQUIRED);
-		assert(rxbuff);
-
-		// copy data to the buffer
-		memcpy(rxbuff, uart_scratch_buf, expected_pkt_len);
-
-		if (h_uart_push_data_to_queue(rxbuff, expected_pkt_len)) {
-			ESP_LOGE(TAG, "Failed to push data to rx queue");
-		}
-
-		// clean up the scratch buffer
-		if (current_rx_len > expected_pkt_len) {
-			// got part of another packet at the end. Move to the front
-			ESP_LOGD(TAG, "moving remaining data");
-			remaining_len = current_rx_len - expected_pkt_len;
-			memmove(uart_scratch_buf, &uart_scratch_buf[expected_pkt_len], remaining_len);
-
-			current_rx_len = remaining_len;
-			expected_pkt_len = 0;
-		} else {
-			current_rx_len = 0;
-			expected_pkt_len = 0;
-			break;
-		}
-	}
-	return UART_PROCESS_RX_DATA_DONE;
-}
 
 static void h_uart_read_task(void const* pvParameters)
 {
-	int rx_len;
+	struct esp_payload_header *header = NULL;
+	uint16_t len = 0, offset = 0;
+#if HOSTED_UART_CHECKSUM
+	uint16_t rx_checksum = 0, checksum = 0;
+#endif
+	int bytes_read;
+	int total_len;
+	uint8_t * rxbuff = NULL;
 
-	// wait for transport to be in reset state
+	// wait for transport to be in ready
 	while (true) {
 		vTaskDelay(pdMS_TO_TICKS(100));
 		if (is_transport_rx_ready()) {
@@ -483,15 +389,72 @@ static void h_uart_read_task(void const* pvParameters)
 
 	create_debugging_tasks();
 
+	if (!uart_scratch_buf) {
+		uart_scratch_buf = malloc(MAX_UART_BUFFER_SIZE);
+		assert(uart_scratch_buf);
+	}
+
+	header = (struct esp_payload_header *)uart_scratch_buf;
+
 	while (1) {
-		// call will block until there is data to read, or an error occurred
-		rx_len = g_h.funcs->_h_uart_wait_rx_data(HOSTED_BLOCK_MAX);
-		if (rx_len < 0) {
-			ESP_LOGE(TAG, "error waiting for uart data");
+		// get the header
+		bytes_read = g_h.funcs->_h_uart_read(uart_handle, uart_scratch_buf,
+				sizeof(struct esp_payload_header));
+		ESP_LOGD(TAG, "Read %d bytes (header)", bytes_read);
+		if (bytes_read < sizeof(struct esp_payload_header)) {
+			ESP_LOGE(TAG, "Failed to read header");
 			continue;
 		}
-		if (rx_len)
-			process_uart_rx_data(rx_len);
+
+		len = le16toh(header->len);
+		offset = le16toh(header->offset);
+		total_len = len + sizeof(struct esp_payload_header);
+		if (total_len > MAX_UART_BUFFER_SIZE) {
+			ESP_LOGE(TAG, "incoming data too big: %d", total_len);
+			continue;
+		}
+
+		// get the data
+		bytes_read = g_h.funcs->_h_uart_read(uart_handle, &uart_scratch_buf[offset], len);
+		ESP_LOGD(TAG, "Read %d bytes (payload)", bytes_read);
+		if (bytes_read < len) {
+			ESP_LOGE(TAG, "Failed to read payload");
+			continue;
+		}
+
+		rxbuff = h_uart_buffer_alloc(MEMSET_REQUIRED);
+		assert(rxbuff);
+
+		// copy data to the buffer
+		memcpy(rxbuff, uart_scratch_buf, total_len);
+
+#if USE_DATA_THROTTLING
+		if (update_flow_ctrl(rxbuff)) {
+			// detected and updated flow control
+			// no need to further process the packet
+			h_uart_buffer_free(rxbuff);
+			continue;
+		}
+#endif
+
+		/* Drop packet if no processing needed */
+		if (!is_valid_uart_rx_packet(rxbuff, &len, &offset)) {
+			/* Free up buffer, as one of following -
+			 * 1. no payload to process
+			 * 2. input packet size > driver capacity
+			 * 3. payload header size mismatch,
+			 * wrong header/bit packing?
+			 * */
+			ESP_LOGE(TAG, "Dropping packet");
+			h_uart_buffer_free(rxbuff);
+			continue;
+		}
+
+		if (push_to_rx_queue(rxbuff, len, offset)) {
+			ESP_LOGE(TAG, "Failed to push Rx packet to queue");
+			h_uart_buffer_free(rxbuff);
+			continue;
+		}
 	}
 }
 

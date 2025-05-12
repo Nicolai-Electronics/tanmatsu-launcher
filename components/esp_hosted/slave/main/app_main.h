@@ -17,7 +17,10 @@
 #ifndef __NETWORK_ADAPTER_PRIV__H
 #define __NETWORK_ADAPTER_PRIV__H
 
-#include "adapter.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_header.h"
+#include "esp_hosted_interface.h"
+#include "esp_hosted_transport_init.h"
 
 typedef struct {
 	interface_context_t *context;

@@ -232,6 +232,12 @@ ctrl_cmd_t * wifi_scan_get_ap_num(ctrl_cmd_t *req)
 	RPC_DECODE_RSP_IF_NOT_ASYNC();
 }
 
+ctrl_cmd_t * wifi_scan_get_ap_record(ctrl_cmd_t *req)
+{
+	RPC_SEND_REQ(RPC_ID__Req_WifiScanGetApRecord);
+	RPC_DECODE_RSP_IF_NOT_ASYNC();
+}
+
 ctrl_cmd_t * wifi_scan_get_ap_records(ctrl_cmd_t *req)
 {
 	RPC_SEND_REQ(RPC_ID__Req_WifiScanGetApRecords);
@@ -349,6 +355,12 @@ ctrl_cmd_t * wifi_set_protocol(ctrl_cmd_t *req)
 ctrl_cmd_t * wifi_get_protocol(ctrl_cmd_t *req)
 {
 	RPC_SEND_REQ(RPC_ID__Req_WifiGetProtocol);
+	RPC_DECODE_RSP_IF_NOT_ASYNC();
+}
+
+ctrl_cmd_t * wifi_sta_get_negotiated_phymode(ctrl_cmd_t *req)
+{
+	RPC_SEND_REQ(RPC_ID__Req_WifiStaGetNegotiatedPhymode);
 	RPC_DECODE_RSP_IF_NOT_ASYNC();
 }
 

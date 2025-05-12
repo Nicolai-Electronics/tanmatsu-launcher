@@ -24,11 +24,14 @@
 #include "esp_hosted_log.h"
 #include "driver/uart.h"
 
-#include "adapter.h"
 #include "endian.h"
 #include "interface.h"
 #include "mempool.h"
 #include "stats.h"
+#include "esp_hosted_interface.h"
+#include "esp_hosted_transport.h"
+#include "esp_hosted_transport_init.h"
+#include "esp_hosted_header.h"
 
 #define HOSTED_UART                CONFIG_ESP_UART_PORT
 #define HOSTED_UART_GPIO_TX        CONFIG_ESP_UART_PIN_TX
@@ -42,11 +45,6 @@
 #define HOSTED_UART_CHECKSUM       CONFIG_ESP_UART_CHECKSUM
 
 #define BUFFER_SIZE                MAX_TRANSPORT_BUF_SIZE
-#define EVENT_QUEUE_SIZE           100
-
-#define UART_PROCESS_RX_DATA_ERROR (-1)
-#define UART_PROCESS_WAITING_MORE_RX_DATA (0)
-#define UART_PROCESS_RX_DATA_DONE (1)
 
 static const char TAG[] = "UART_DRIVER";
 
@@ -94,7 +92,6 @@ if_ops_t if_ops = {
 	.deinit = h_uart_deinit,
 };
 
-static QueueHandle_t uart_queue;
 static interface_handle_t if_handle_g;
 static interface_context_t context;
 
@@ -116,14 +113,6 @@ static inline void h_uart_mempool_create()
 	assert(buf_mp_tx_g);
 	assert(buf_mp_rx_g);
 #endif
-}
-
-static unsigned int h_uart_for_loop_delay(unsigned int number)
-{
-	volatile int idx = 0;
-	for (idx=0; idx<100*number; idx++) {
-	}
-	return 0;
 }
 
 static inline void h_uart_mempool_destroy()
@@ -227,12 +216,9 @@ static void uart_rx_read_done(void *handle)
 	h_uart_buffer_rx_free(buf);
 }
 
-// large incoming data may be broken up into several serial packets
-static int current_rx_len = 0;
-static int expected_pkt_len = 0;
 static uint8_t * uart_scratch_buf = NULL;
 
-static int process_uart_rx_data(size_t size)
+static void uart_rx_task(void* pvParameters)
 {
 	struct esp_payload_header *header = NULL;
 	interface_buffer_handle_t buf_handle = {0};
@@ -242,71 +228,75 @@ static int process_uart_rx_data(size_t size)
 	uint16_t rx_checksum = 0, checksum = 0;
 #endif
 	int bytes_read;
-	int remaining_len;
+	int total_len;
+
+	// delay for a while to let app main threads start and become ready
+	vTaskDelay(100 / portTICK_PERIOD_MS);
+
+	// now ready: open data path
+	if (context.event_handler) {
+		context.event_handler(ESP_OPEN_DATA_PATH);
+	}
 
 	if (!uart_scratch_buf) {
 		uart_scratch_buf = malloc(BUFFER_SIZE);
 		assert(uart_scratch_buf);
 	}
 
-	bytes_read = uart_read_bytes(HOSTED_UART, &uart_scratch_buf[current_rx_len],
-			size, portMAX_DELAY);
-	current_rx_len += bytes_read;
-	ESP_LOGD(TAG, "current_rx_len %d", current_rx_len);
+	header = (struct esp_payload_header *)uart_scratch_buf;
 
 	// process all data in buffer until there isn't enough to form a packet header
 	while (1) {
-		if (!expected_pkt_len) {
-			if (current_rx_len < sizeof(struct esp_payload_header)) {
-				// not yet enough info in data to decode header
-				ESP_LOGD(TAG, "not enough data to decode header");
-				return 0;
-			}
-			struct esp_payload_header * h = (struct esp_payload_header *)uart_scratch_buf;
-			expected_pkt_len = le16toh(h->len) + sizeof(struct esp_payload_header);
-			ESP_LOGD(TAG, "expected_pkt_len %d", expected_pkt_len);
-		}
-		if (expected_pkt_len > BUFFER_SIZE) {
-			ESP_LOGE(TAG, "packet size error");
-			current_rx_len = 0;
-			expected_pkt_len = 0;
-			return UART_PROCESS_RX_DATA_ERROR;
-		}
-		if (current_rx_len < expected_pkt_len) {
-			// still got more data to read
-			return UART_PROCESS_WAITING_MORE_RX_DATA;
+		// get the header
+		bytes_read = uart_read_bytes(HOSTED_UART, uart_scratch_buf,
+				sizeof(struct esp_payload_header), portMAX_DELAY);
+		ESP_LOGD(TAG, "Read %d bytes (header)", bytes_read);
+		if (bytes_read < sizeof(struct esp_payload_header)) {
+			ESP_LOGE(TAG, "Failed to read header");
+			continue;
 		}
 
-		// we have enough data to form a complete packet
-		buf = h_uart_buffer_rx_alloc(MEMSET_REQUIRED);
-		assert(buf);
-
-		// copy data to the buffer
-		memcpy(buf, uart_scratch_buf, expected_pkt_len);
-
-		/* Process received data */
-		buf_handle.payload = buf;
-		buf_handle.payload_len = expected_pkt_len;
-
-		header = (struct esp_payload_header *)buf_handle.payload;
 		len = le16toh(header->len);
 		offset = le16toh(header->offset);
+		total_len = len + sizeof(struct esp_payload_header);
+		if (total_len > BUFFER_SIZE) {
+			ESP_LOGE(TAG, "incoming data too big: %d", total_len);
+			continue;
+		}
+		// get the data
+		bytes_read = uart_read_bytes(HOSTED_UART, &uart_scratch_buf[offset],
+				len, portMAX_DELAY);
+		ESP_LOGD(TAG, "Read %d bytes (payload)", bytes_read);
+		if (bytes_read < len) {
+			ESP_LOGE(TAG, "Failed to read payload");
+			continue;
+		}
 
 #if HOSTED_UART_CHECKSUM
+		// calculate checksum over data in scratch buffer
 		rx_checksum = le16toh(header->checksum);
 		header->checksum = 0;
 
-		checksum = compute_checksum(buf_handle.payload, len+offset);
+		checksum = compute_checksum(uart_scratch_buf, total_len);
 
 		if (checksum != rx_checksum) {
 			ESP_LOGE(TAG, "%s: cal_chksum[%u] != exp_chksum[%u], drop len[%u] offset[%u]",
 					 __func__, checksum, rx_checksum, len, offset);
-			h_uart_buffer_rx_free(buf);
-			return UART_PROCESS_RX_DATA_ERROR;
+			continue;
 		}
 #endif
 
-		/* Buffer is valid */
+		// allocate a rx buffer
+		buf = h_uart_buffer_rx_alloc(MEMSET_REQUIRED);
+		assert(buf);
+
+		// copy data to the buffer
+		memcpy(buf, uart_scratch_buf, total_len);
+
+		/* Process received data */
+		buf_handle.payload = buf;
+		buf_handle.payload_len = total_len;
+
 		buf_handle.if_type = header->if_type;
 		buf_handle.if_num = header->if_num;
 		buf_handle.free_buf_handle = uart_rx_read_done;
@@ -328,69 +318,6 @@ static int process_uart_rx_data(size_t size)
 			xQueueSend(uart_rx_queue[PRIO_Q_OTHERS], &buf_handle, portMAX_DELAY);
 		}
 		xSemaphoreGive(uart_rx_sem);
-
-		// clean up the scratch buffer
-		if (current_rx_len > expected_pkt_len) {
-			// got part of another packet at the end. Move to the front
-			ESP_LOGD(TAG, "moving remaining data");
-			remaining_len = current_rx_len - expected_pkt_len;
-			memmove(uart_scratch_buf, &uart_scratch_buf[expected_pkt_len], remaining_len);
-
-			current_rx_len = remaining_len;
-			expected_pkt_len = 0;
-		} else {
-			current_rx_len = 0;
-			expected_pkt_len = 0;
-			break;
-		}
-	}
-
-	return UART_PROCESS_RX_DATA_DONE;
-}
-
-static void uart_rx_task(void* pvParameters)
-{
-	uart_event_t event;
-
-	// delay for a while to let app main threads start and become ready
-	vTaskDelay(100 / portTICK_PERIOD_MS);
-
-	// now ready: open data path
-	if (context.event_handler) {
-		context.event_handler(ESP_OPEN_DATA_PATH);
-	}
-
-	while (1) {
-		// wait for uart event
-		if (xQueueReceive(uart_queue, (void *)&event, (TickType_t)portMAX_DELAY)) {
-			switch (event.type) {
-			case UART_DATA:
-				process_uart_rx_data(event.size);
-				break;
-			case UART_FIFO_OVF:
-				ESP_LOGE(TAG, "uart hw fifo overflow");
-				uart_flush_input(HOSTED_UART);
-				xQueueReset(uart_queue);
-				break;
-			case UART_BUFFER_FULL:
-				ESP_LOGE(TAG, "uart ring buffer full");
-				uart_flush_input(HOSTED_UART);
-				xQueueReset(uart_queue);
-				break;
-			case UART_BREAK:
-				ESP_LOGW(TAG, "uart rx break");
-				break;
-			case UART_PARITY_ERR:
-				ESP_LOGE(TAG, "uart parity error");
-				break;
-			case UART_FRAME_ERR:
-				ESP_LOGW(TAG, "uart frame error");
-				break;
-			default:
-				ESP_LOGW(TAG, "uart event type: %d", event.type);
-				break;
-			}
-		}
 	}
 }
 
@@ -477,8 +404,6 @@ static int32_t h_uart_write(interface_handle_t *handle, interface_buffer_handle_
 	// wait until all data is transmitted
 	uart_wait_tx_done(HOSTED_UART, portMAX_DELAY);
 
-	h_uart_for_loop_delay(250);
-
 	if ((tx_len < 0) || (tx_len != total_len)) {
 		ESP_LOGE(TAG , "uart transmit error");
 		h_uart_buffer_tx_free(sendbuf);
@@ -560,21 +485,10 @@ static interface_handle_t * h_uart_init(void)
 	};
 
 	ESP_ERROR_CHECK(uart_driver_install(HOSTED_UART, BUFFER_SIZE, BUFFER_SIZE,
-			EVENT_QUEUE_SIZE, &uart_queue, 0));
+			0, NULL, 0));
 	ESP_ERROR_CHECK(uart_param_config(HOSTED_UART, &uart_config));
 	ESP_ERROR_CHECK(uart_set_pin(HOSTED_UART, HOSTED_UART_GPIO_TX, HOSTED_UART_GPIO_RX,
 			UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-	// lower rx receive threshold to prevent uart ring buffer overflow at high baud rates
-	if (HOSTED_UART_BAUD_RATE > 230400) {
-		ESP_ERROR_CHECK(uart_set_rx_full_threshold(HOSTED_UART, 64));
-	} else
-	if (HOSTED_UART_BAUD_RATE > 1000000) {
-		ESP_ERROR_CHECK(uart_set_rx_full_threshold(HOSTED_UART, 32));
-	} else
-	if (HOSTED_UART_BAUD_RATE > 2500000) {
-		ESP_ERROR_CHECK(uart_set_rx_full_threshold(HOSTED_UART, 16));
-	}
-
 	ESP_LOGI(TAG, "UART GPIOs: Tx: %"PRIu16 ", Rx: %"PRIu16 ", Baud Rate %i",
 			HOSTED_UART_GPIO_TX, HOSTED_UART_GPIO_RX, HOSTED_UART_BAUD_RATE);
 	ESP_LOGI(TAG, "Hosted UART Queue Sizes: Tx: %"PRIu16 ", Rx: %"PRIu16,

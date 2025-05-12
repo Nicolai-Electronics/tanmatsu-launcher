@@ -5,12 +5,13 @@
 #include <string.h>
 #include <errno.h>
 #include "rpc_core.h"
-#include "rpc_common.h"
+#include "esp_hosted_rpc.h"
 #include "serial_if.h"
 #include "serial_drv.h"
 #include <unistd.h>
 #include "esp_log.h"
 #include "esp_task.h"
+#include "esp_hosted_config.h"
 
 
 DEFINE_LOG_TAG(rpc_core);
@@ -76,8 +77,8 @@ typedef struct {
  *    When the response comes, the this registered callback function will be called
  *    with input as response
  */
-#define MAX_SYNC_RPC_TRANSACTIONS  CONFIG_ESP_MAX_SIMULTANEOUS_SYNC_RPC_REQUESTS
-#define MAX_ASYNC_RPC_TRANSACTIONS CONFIG_ESP_MAX_SIMULTANEOUS_ASYNC_RPC_REQUESTS
+#define MAX_SYNC_RPC_TRANSACTIONS  H_MAX_SYNC_RPC_REQUESTS
+#define MAX_ASYNC_RPC_TRANSACTIONS H_MAX_ASYNC_RPC_REQUESTS
 
 static sync_rsp_t sync_rsp_table[MAX_SYNC_RPC_TRANSACTIONS] = { 0 };
 static async_rsp_t async_rsp_table[MAX_ASYNC_RPC_TRANSACTIONS] = { 0 };
@@ -1005,8 +1006,8 @@ int rpc_core_init(void)
 	int ret = SUCCESS;
 
 	/* semaphore init */
-	rpc_tx_sem = g_h.funcs->_h_create_semaphore(CONFIG_ESP_MAX_SIMULTANEOUS_SYNC_RPC_REQUESTS +
-			CONFIG_ESP_MAX_SIMULTANEOUS_ASYNC_RPC_REQUESTS);
+	rpc_tx_sem = g_h.funcs->_h_create_semaphore(MAX_SYNC_RPC_TRANSACTIONS +
+			MAX_ASYNC_RPC_TRANSACTIONS);
 	if (!rpc_tx_sem) {
 		ESP_LOGE(TAG, "sem init failed, exiting");
 		goto free_bufs;
