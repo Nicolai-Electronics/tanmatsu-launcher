@@ -9,7 +9,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "badgelink/badgelink.h"
+#include "badgelink.h"
 #include "bsp/device.h"
 #include "esp_log.h"
 #include "esp_mac.h"

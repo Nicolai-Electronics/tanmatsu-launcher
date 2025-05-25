@@ -2,27 +2,28 @@ dependencies:
   idf:
     version: '>=5.4.0'
   badgeteam/badge-bsp:
-    version: '^0.2.1'
+    version: ^0.2.1
   robotman2412/pax-gfx:
-    version: '^1.1.2'
+    version: ^1.1.2
   badgeteam/appfs:
-    version: '^1.0.1'
+    version: ^1.0.1
   nicolaielectronics/rvswd:
     version: ^0.2.0
     rules:
     - if: target == esp32p4
   badgeteam/custom-certificates:
-    version: '^1.0.0'
+    version: ^1.0.0
   nicolaielectronics/wifi-manager:
-    version: '^0.1.1'
+    version: ^0.1.1
   espressif/esp_tinyusb:
-    version: '^1.1'
+    version: ^1.1
     rules:
     - if: target == esp32p4
   badgeteam/esptool:
-    version: '^0.0.2'
+    version: ^0.0.2
     rules:
     - if: target == esp32p4
   nicolaielectronics/pocketpy:
-    version: '^2.0.0'
+    version: ^2.0.0
   badgeteam/terminal-emulator: ^0.0.2
+  badgeteam/badgelink: ^0.0.2

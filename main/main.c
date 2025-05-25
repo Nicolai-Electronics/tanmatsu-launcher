@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "appfs.h"
-#include "badgelink/badgelink.h"
+#include "badgelink.h"
 #include "bsp/device.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
@@ -384,7 +384,7 @@ void app_main(void) {
 
     badgelink_init();
     usb_initialize();
-    badgelink_start();
+    badgelink_start(usb_send_data);
 
     load_icons();
 
