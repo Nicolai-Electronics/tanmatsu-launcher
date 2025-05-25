@@ -112,21 +112,5 @@ void menu_radio_update(pax_buf_t* buffer, gui_theme_t* theme) {
 
     ESP_ERROR_CHECK(et2_cmd_deflate_finish(true));
 
-    /*
-    // Send FLASH_BEGIN command to initiate memory writes
-    uint8_t* dummy_data = malloc(4096);
-
-    for (int i = 0; i < 4096; i++) dummy_data[i] = i;
-
-    ESP_ERROR_CHECK(et2_cmd_flash_begin(4096 * 4, 0));
-    ESP_ERROR_CHECK(et2_cmd_flash_data(dummy_data, 4096, 0));
-    ESP_ERROR_CHECK(et2_cmd_flash_data(dummy_data, 4096, 1));
-    ESP_ERROR_CHECK(et2_cmd_flash_data(dummy_data, 4096, 2));
-    ESP_ERROR_CHECK(et2_cmd_flash_data(dummy_data, 4096, 3));
-    ESP_ERROR_CHECK(et2_cmd_flash_finish(false));
-    */
-
     esp_restart();
-
-    // bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_APPLICATION);
 }
