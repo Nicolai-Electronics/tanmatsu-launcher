@@ -17,6 +17,22 @@
 // #include "shapes/pax_misc.h"
 #include "wifi_ota.h"
 
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/tanmatsu-"
+#elif defined(CONFIG_BSP_TARGET_KONSOOL)
+#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/konsool-"
+#elif defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/hackerhotel-2026-"
+#elif defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
+#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/p4-function-ev-board-"
+#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/mch2022-"
+#elif defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
+#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/hackerhotel-2024-"
+#else
+#error "Unsupported target for firmware update"
+#endif
+
 static void firmware_update_callback(const char* status_text) {
     printf("OTA status changed: %s\r\n", status_text);
     pax_buf_t* buffer = display_get_buffer();
@@ -41,14 +57,14 @@ void menu_firmware_update(pax_buf_t* buffer, gui_theme_t* theme) {
     if (experimental) {
         pax_draw_text(buffer, 0xFF340132, &chakrapetchmedium, 16, 20, 70, "Update target: experimental");
         display_blit_buffer(buffer);
-        ota_update("https://selfsigned.ota.tanmatsu.cloud/experimental.bin", firmware_update_callback);
+        ota_update(OTA_BASE_URL "experimental.bin", firmware_update_callback);
     } else if (staging) {
         pax_draw_text(buffer, 0xFF340132, &chakrapetchmedium, 16, 20, 70, "Update target: staging");
         display_blit_buffer(buffer);
-        ota_update("https://selfsigned.ota.tanmatsu.cloud/staging.bin", firmware_update_callback);
+        ota_update(OTA_BASE_URL "staging.bin", firmware_update_callback);
     } else {
         pax_draw_text(buffer, 0xFF340132, &chakrapetchmedium, 16, 20, 70, "Update target: stable");
         display_blit_buffer(buffer);
-        ota_update("https://selfsigned.ota.tanmatsu.cloud/stable.bin", firmware_update_callback);
+        ota_update(OTA_BASE_URL "stable.bin", firmware_update_callback);
     }
 }
