@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <sys/time.h>
+#include <time.h>
 #include "appfs.h"
 #include "badgelink.h"
 #include "bsp/device.h"
@@ -239,6 +241,32 @@ gui_theme_t theme = {
 #error "Unsupported target"
 #endif
 
+static void fix_rtc_out_of_bounds(void) {
+    time_t rtc_time = time(NULL);
+
+    bool adjust = false;
+
+    if (rtc_time < 1735689600) {  // 2025-01-01 00:00:00 UTC
+        rtc_time = 1735689600;
+        adjust   = true;
+    }
+
+    if (rtc_time > 4102441200) {  // 2100-01-01 00:00:00 UTC
+        rtc_time = 4102441200;
+        adjust   = true;
+    }
+
+    if (adjust) {
+        struct timeval rtc_timeval = {
+            .tv_sec  = rtc_time,
+            .tv_usec = 0,
+        };
+
+        settimeofday(&rtc_timeval, NULL);
+        bsp_rtc_set_time(rtc_time);
+    }
+}
+
 void startup_screen(const char* text) {
     pax_buf_t* fb = display_get_buffer();
     pax_background(fb, theme.palette.color_background);
@@ -295,6 +323,8 @@ void app_main(void) {
         ESP_LOGE(TAG, "Failed to initialize BSP, bailing out.");
         return;
     }
+
+    fix_rtc_out_of_bounds();
 
     startup_screen("Mounting FAT filesystem...");
 
