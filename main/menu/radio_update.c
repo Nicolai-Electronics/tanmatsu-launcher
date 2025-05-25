@@ -13,12 +13,15 @@
 #include "esp_log_level.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
-#include "esptoolsquared.h"
 #include "gui_footer.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "pax_gfx.h"
 #include "pax_types.h"
+
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+#include "esptoolsquared.h"
+#endif
 
 static const char* TAG = "radio_update";
 
@@ -34,6 +37,8 @@ static void radio_update_callback(const char* status_text) {
 }
 
 void menu_radio_update(pax_buf_t* buffer, gui_theme_t* theme) {
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
     pax_background(buffer, theme->palette.color_background);
     gui_render_header_adv(buffer, theme, ((gui_header_field_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Radio update"}}), 1,
                           NULL, 0);
@@ -113,4 +118,5 @@ void menu_radio_update(pax_buf_t* buffer, gui_theme_t* theme) {
     ESP_ERROR_CHECK(et2_cmd_deflate_finish(true));
 
     esp_restart();
+#endif
 }

@@ -79,7 +79,11 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
                           get_icon(ICON_SYSTEM_UPDATE));
     menu_insert_item_icon(&menu, "Device information", NULL, (void*)ACTION_DEVICE_INFO, -1, get_icon(ICON_DEVICE_INFO));
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
-    // menu_insert_item_icon(&menu, "Radio update", NULL, (void*)ACTION_RADIO_UPDATE, -1, get_icon(ICON_RELEASE_ALERT));
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+    menu_insert_item_icon(&menu, "Update radio from SD card (testing only)", NULL, (void*)ACTION_RADIO_UPDATE, -1,
+                          get_icon(ICON_RELEASE_ALERT));
+#endif
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
