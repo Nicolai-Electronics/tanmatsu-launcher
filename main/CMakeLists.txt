@@ -2,6 +2,10 @@ if (CONFIG_BSP_TARGET_TANMATSU OR CONFIG_BSP_TARGET_KONSOOL OR CONFIG_BSP_TARGET
 list(APPEND files "tanmatsu_coprocessor.bin")
 endif()
 
+if (CONFIG_IDF_TARGET_ESP32P4)
+list(APPEND extra_requires esp-hosted-tanmatsu)
+endif()
+
 idf_component_register(
 	SRCS
 		"main.c"
@@ -38,7 +42,6 @@ idf_component_register(
 		nvs_flash
 		badge-bsp
 		gui
-		esp-hosted-tanmatsu
 		wpa_supplicant
 		esp_https_ota
 		app_update
@@ -53,6 +56,7 @@ idf_component_register(
 		json
 		freertos
 		badgelink
+		${extra_requires}
 	INCLUDE_DIRS
 		"."
 		"include"
