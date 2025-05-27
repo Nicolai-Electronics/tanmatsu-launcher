@@ -38,7 +38,7 @@ idf_component_register(
 		nvs_flash
 		badge-bsp
 		gui
-		esp_hosted
+		esp-hosted-tanmatsu
 		wpa_supplicant
 		esp_https_ota
 		app_update

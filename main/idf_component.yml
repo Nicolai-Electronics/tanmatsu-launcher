@@ -27,3 +27,5 @@ dependencies:
     version: ^2.0.0
   badgeteam/terminal-emulator: ^0.0.2
   badgeteam/badgelink: ^0.0.2
+  nicolaielectronics/esp-wifi-remote-tanmatsu: ^0.0.1
+  nicolaielectronics/esp-hosted-tanmatsu: ^0.0.1
