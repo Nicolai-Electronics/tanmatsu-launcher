@@ -16,15 +16,15 @@ static float get_icon_text_width(gui_theme_t* theme, int x, int y, gui_header_fi
 }
 
 static float render_icon_text(pax_buf_t* pax_buffer, gui_theme_t* theme, int x, int y, gui_header_field_t* content,
-                              float padding) {
+                              float padding, int box_height) {
     float icon_width = 0;
     if (content->icon) {
         icon_width        = pax_buf_get_width(content->icon);
         float icon_height = pax_buf_get_height(content->icon);
-        pax_draw_image(pax_buffer, content->icon, x, y + (theme->footer.height - icon_height) / 2);
+        pax_draw_image(pax_buffer, content->icon, x, y + (box_height - icon_height) / 2);
     }
     pax_draw_text(pax_buffer, theme->palette.color_foreground, theme->footer.text_font, theme->footer.text_height,
-                  x + icon_width + padding, y + (theme->footer.height - theme->footer.text_height) / 2, content->text);
+                  x + icon_width + padding, y + (box_height - theme->footer.text_height) / 2, content->text);
     pax_vec2f text_size = pax_text_size(theme->footer.text_font, theme->footer.text_height, content->text);
     return icon_width + padding + text_size.x;
 }
@@ -41,14 +41,14 @@ void gui_render_header_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_header
 
     int x = style->horizontal_margin + style->horizontal_padding;
     for (size_t i = 0; i < left_count; i++) {
-        x += render_icon_text(pax_buffer, theme, x, style->vertical_margin, &left[i], style->horizontal_padding);
+        x += render_icon_text(pax_buffer, theme, x, 0, &left[i], style->horizontal_padding, box_height);
     }
 
     x = buffer_width - style->horizontal_margin;
     for (size_t i = 0; i < right_count; i++) {
-        x -= get_icon_text_width(theme, buffer_width, style->vertical_margin, &right[i], style->horizontal_padding);
-        render_icon_text(pax_buffer, theme, x - style->horizontal_padding, style->vertical_margin, &right[i],
-                         style->horizontal_padding);
+        x -= get_icon_text_width(theme, buffer_width, 0, &right[i], style->horizontal_padding);
+        render_icon_text(pax_buffer, theme, x - style->horizontal_padding, 0, &right[i], style->horizontal_padding,
+                         box_height);
     }
 }
 
@@ -64,15 +64,15 @@ void gui_render_footer_adv(pax_buf_t* pax_buffer, gui_theme_t* theme, gui_header
 
     int x = style->horizontal_margin + style->horizontal_padding;
     for (size_t i = 0; i < left_count; i++) {
-        x += render_icon_text(pax_buffer, theme, x, buffer_height - style->height - style->vertical_margin, &left[i],
-                              style->horizontal_padding);
+        x += render_icon_text(pax_buffer, theme, x, buffer_height - box_height, &left[i], style->horizontal_padding,
+                              box_height);
     }
 
     x = buffer_width - style->horizontal_margin;
     for (size_t i = 0; i < right_count; i++) {
         x -= get_icon_text_width(theme, buffer_width, buffer_height, &right[i], style->horizontal_padding);
-        render_icon_text(pax_buffer, theme, x - style->horizontal_padding,
-                         buffer_height - style->height - style->vertical_margin, &right[i], style->horizontal_padding);
+        render_icon_text(pax_buffer, theme, x - style->horizontal_padding, buffer_height - box_height, &right[i],
+                         style->horizontal_padding, box_height);
     }
 
     /*pax_vec2f text_width = pax_text_size(style->text_font, style->text_height, right_text);

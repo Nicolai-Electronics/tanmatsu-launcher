@@ -1,4 +1,5 @@
 #include "icons.h"
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "pax_codecs.h"
 
@@ -75,7 +76,14 @@ void load_icons(void) {
             ESP_LOGE(TAG, "Failed to open icon file %s", icon_paths[i]);
             continue;
         }
-        if (!pax_decode_png_fd(&icons[i], fd, PAX_BUF_32_8888ARGB, 0)) {
+        void* buffer = heap_caps_calloc(1, 32 * 32 * 4, MALLOC_CAP_SPIRAM);
+        if (buffer == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate memory for icon %s", icon_paths[i]);
+            fclose(fd);
+            continue;
+        }
+        pax_buf_init(&icons[i], buffer, 32, 32, PAX_BUF_32_8888ARGB);
+        if (!pax_decode_png_fd(&icons[i], fd, PAX_BUF_32_8888ARGB, CODEC_FLAG_EXISTING)) {
             ESP_LOGE(TAG, "Failed to decode icon file %s", icon_paths[i]);
         }
         fclose(fd);

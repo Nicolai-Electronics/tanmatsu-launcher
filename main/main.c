@@ -149,21 +149,21 @@ gui_theme_t theme = {
 gui_theme_t theme = {
     .palette =
         {
-            .color_foreground          = 0xFF340132,  // #340132
-            .color_background          = 0xFFEEEAEE,  // #EEEAEE
-            .color_active_foreground   = 0xFF340132,  // #340132
-            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
-            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
+            .color_foreground          = 0xFFA72872,  // #A72872
+            .color_background          = 0xFFFFFFFF,  // #FFFFFF
+            .color_active_foreground   = 0xFFFFFFFF,  // #FFFFFF
+            .color_active_background   = 0xFFA72872,  // #a72872
+            .color_highlight_primary   = 0xFF6A0080,  // #6a0080
             .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
             .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
         },
     .footer =
         {
-            .height             = 16,
+            .height             = 24,
             .vertical_margin    = 0,
             .horizontal_margin  = 0,
             .text_height        = 16,
-            .vertical_padding   = 5,
+            .vertical_padding   = 0,
             .horizontal_padding = 0,
             .text_font          = &chakrapetchmedium,
         },
