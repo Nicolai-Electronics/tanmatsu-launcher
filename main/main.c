@@ -6,6 +6,7 @@
 #include "bsp/device.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
+#include "bsp/led.h"
 #include "bsp/power.h"
 #include "bsp/rtc.h"
 #include "chakrapetchmedium.h"
@@ -324,7 +325,7 @@ void app_main(void) {
         return;
     }
 
-    fix_rtc_out_of_bounds();
+    bsp_led_initialize();
 
     startup_screen("Mounting FAT filesystem...");
 
@@ -386,6 +387,7 @@ void app_main(void) {
         }
         timezone_apply_timezone(zone);
     }
+    fix_rtc_out_of_bounds();
 
     bool sdcard_inserted = false;
     bsp_input_read_action(BSP_INPUT_ACTION_TYPE_SD_CARD, &sdcard_inserted);
