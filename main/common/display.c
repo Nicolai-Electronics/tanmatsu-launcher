@@ -19,17 +19,17 @@
 #include "esp_lcd_mipi_dsi.h"
 #endif
 
-static esp_lcd_panel_handle_t       display_lcd_panel    = NULL;
-static esp_lcd_panel_io_handle_t    display_lcd_panel_io = NULL;
 static size_t                       display_h_res        = 0;
 static size_t                       display_v_res        = 0;
 static lcd_color_rgb_pixel_format_t display_color_format = LCD_COLOR_PIXEL_FORMAT_RGB565;
 static lcd_rgb_data_endian_t        display_data_endian  = LCD_RGB_DATA_ENDIAN_LITTLE;
 static pax_buf_t                    fb                   = {0};
 
+#if defined(CONFIG_BSP_TARGET_KAMI)
+static pax_col_t palette[] = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
+#endif
+
 void display_init(void) {
-    ESP_ERROR_CHECK(bsp_display_get_panel(&display_lcd_panel));
-    ESP_ERROR_CHECK(bsp_display_get_panel_io(&display_lcd_panel_io));
     ESP_ERROR_CHECK(
         bsp_display_get_parameters(&display_h_res, &display_v_res, &display_color_format, &display_data_endian));
 
@@ -46,8 +46,17 @@ void display_init(void) {
             break;
     }
 
+#if defined(CONFIG_BSP_TARGET_KAMI)
+    format = PAX_BUF_2_PAL;
+#endif
+
     pax_buf_init(&fb, NULL, display_h_res, display_v_res, format);
     pax_buf_reversed(&fb, display_data_endian == LCD_RGB_DATA_ENDIAN_BIG);
+
+#if defined(CONFIG_BSP_TARGET_KAMI)
+    fb.palette      = palette;
+    fb.palette_size = sizeof(palette) / sizeof(pax_col_t);
+#endif
 
     bsp_display_rotation_t display_rotation = bsp_display_get_default_rotation();
     pax_orientation_t      orientation      = PAX_O_UPRIGHT;

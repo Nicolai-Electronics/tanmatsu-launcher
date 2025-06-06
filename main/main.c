@@ -238,6 +238,52 @@ gui_theme_t theme = {
             .grid_vertical_count   = 3,
         },
 };
+#elif defined(CONFIG_BSP_TARGET_KAMI)
+gui_theme_t theme = {
+    .palette =
+        {
+            .color_foreground          = 1,
+            .color_background          = 0,
+            .color_active_foreground   = 2,
+            .color_active_background   = 0,
+            .color_highlight_primary   = 2,
+            .color_highlight_secondary = 2,
+            .color_highlight_tertiary  = 2,
+        },
+    .footer =
+        {
+            .height             = 16,
+            .vertical_margin    = 0,
+            .horizontal_margin  = 0,
+            .text_height        = 16,
+            .vertical_padding   = 5,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+        },
+    .header =
+        {
+            .height             = 32,
+            .vertical_margin    = 0,
+            .horizontal_margin  = 0,
+            .text_height        = 16,
+            .vertical_padding   = 0,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+        },
+    .menu =
+        {
+            .height                = 240 - 32 - 16,
+            .vertical_margin       = 0,
+            .horizontal_margin     = 0,
+            .text_height           = 16,
+            .vertical_padding      = 3,
+            .horizontal_padding    = 3,
+            .text_font             = &chakrapetchmedium,
+            .list_entry_height     = 32,
+            .grid_horizontal_count = 3,
+            .grid_vertical_count   = 3,
+        },
+};
 #else
 #error "Unsupported target"
 #endif
