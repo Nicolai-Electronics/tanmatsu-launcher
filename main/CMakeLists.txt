@@ -57,6 +57,7 @@ idf_component_register(
 		json
 		freertos
 		badgelink
+		terminal-emulator
 		${extra_requires}
 	INCLUDE_DIRS
 		"."
