@@ -1,9 +1,12 @@
 #include <stdio.h>
+#include <sys/time.h>
+#include <time.h>
 #include "appfs.h"
-#include "badgelink/badgelink.h"
+#include "badgelink.h"
 #include "bsp/device.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
+#include "bsp/led.h"
 #include "bsp/power.h"
 #include "bsp/rtc.h"
 #include "chakrapetchmedium.h"
@@ -147,21 +150,21 @@ gui_theme_t theme = {
 gui_theme_t theme = {
     .palette =
         {
-            .color_foreground          = 0xFF340132,  // #340132
-            .color_background          = 0xFFEEEAEE,  // #EEEAEE
-            .color_active_foreground   = 0xFF340132,  // #340132
-            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
-            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
+            .color_foreground          = 0xFFA72872,  // #A72872
+            .color_background          = 0xFFFFFFFF,  // #FFFFFF
+            .color_active_foreground   = 0xFFFFFFFF,  // #FFFFFF
+            .color_active_background   = 0xFFA72872,  // #a72872
+            .color_highlight_primary   = 0xFF6A0080,  // #6a0080
             .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
             .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
         },
     .footer =
         {
-            .height             = 16,
+            .height             = 24,
             .vertical_margin    = 0,
             .horizontal_margin  = 0,
             .text_height        = 16,
-            .vertical_padding   = 5,
+            .vertical_padding   = 0,
             .horizontal_padding = 0,
             .text_font          = &chakrapetchmedium,
         },
@@ -235,9 +238,81 @@ gui_theme_t theme = {
             .grid_vertical_count   = 3,
         },
 };
+#elif defined(CONFIG_BSP_TARGET_KAMI)
+gui_theme_t theme = {
+    .palette =
+        {
+            .color_foreground          = 1,
+            .color_background          = 0,
+            .color_active_foreground   = 2,
+            .color_active_background   = 0,
+            .color_highlight_primary   = 2,
+            .color_highlight_secondary = 2,
+            .color_highlight_tertiary  = 2,
+        },
+    .footer =
+        {
+            .height             = 16,
+            .vertical_margin    = 0,
+            .horizontal_margin  = 0,
+            .text_height        = 16,
+            .vertical_padding   = 5,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+        },
+    .header =
+        {
+            .height             = 32,
+            .vertical_margin    = 0,
+            .horizontal_margin  = 0,
+            .text_height        = 16,
+            .vertical_padding   = 0,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+        },
+    .menu =
+        {
+            .height                = 240 - 32 - 16,
+            .vertical_margin       = 0,
+            .horizontal_margin     = 0,
+            .text_height           = 16,
+            .vertical_padding      = 3,
+            .horizontal_padding    = 3,
+            .text_font             = &chakrapetchmedium,
+            .list_entry_height     = 32,
+            .grid_horizontal_count = 3,
+            .grid_vertical_count   = 3,
+        },
+};
 #else
 #error "Unsupported target"
 #endif
+
+static void fix_rtc_out_of_bounds(void) {
+    time_t rtc_time = time(NULL);
+
+    bool adjust = false;
+
+    if (rtc_time < 1735689600) {  // 2025-01-01 00:00:00 UTC
+        rtc_time = 1735689600;
+        adjust   = true;
+    }
+
+    if (rtc_time > 4102441200) {  // 2100-01-01 00:00:00 UTC
+        rtc_time = 4102441200;
+        adjust   = true;
+    }
+
+    if (adjust) {
+        struct timeval rtc_timeval = {
+            .tv_sec  = rtc_time,
+            .tv_usec = 0,
+        };
+
+        settimeofday(&rtc_timeval, NULL);
+        bsp_rtc_set_time(rtc_time);
+    }
+}
 
 void startup_screen(const char* text) {
     pax_buf_t* fb = display_get_buffer();
@@ -295,6 +370,8 @@ void app_main(void) {
         ESP_LOGE(TAG, "Failed to initialize BSP, bailing out.");
         return;
     }
+
+    bsp_led_initialize();
 
     startup_screen("Mounting FAT filesystem...");
 
@@ -356,6 +433,7 @@ void app_main(void) {
         }
         timezone_apply_timezone(zone);
     }
+    fix_rtc_out_of_bounds();
 
     bool sdcard_inserted = false;
     bsp_input_read_action(BSP_INPUT_ACTION_TYPE_SD_CARD, &sdcard_inserted);
@@ -384,9 +462,11 @@ void app_main(void) {
 
     badgelink_init();
     usb_initialize();
-    badgelink_start();
+    badgelink_start(usb_send_data);
 
     load_icons();
+
+    bsp_power_set_usb_host_boost_enabled(true);
 
     pax_buf_t* buffer = display_get_buffer();
     menu_home(buffer, &theme);

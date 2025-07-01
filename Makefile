@@ -3,7 +3,7 @@ PORT ?= /dev/ttyACM0
 IDF_PATH ?= $(shell cat .IDF_PATH 2>/dev/null || echo `pwd`/esp-idf)
 IDF_TOOLS_PATH ?= $(shell cat .IDF_TOOLS_PATH 2>/dev/null || echo `pwd`/esp-idf-tools)
 IDF_BRANCH ?= master
-IDF_COMMIT ?= a3864c088dafb0b8ce94dba272685b850b46c837
+IDF_COMMIT ?= aaebc374676621980878789c49d239232ea714c5
 IDF_EXPORT_QUIET ?= 1
 IDF_GITHUB_ASSETS ?= dl.espressif.com/github_assets
 MAKEFLAGS += --silent
@@ -42,8 +42,8 @@ sdk:
 	if test -d "$(IDF_PATH)"; then echo -e "ESP-IDF target folder exists!\r\nPlease remove the folder or un-set the environment variable."; exit 1; fi
 	if test -d "$(IDF_TOOLS_PATH)"; then echo -e "ESP-IDF tools target folder exists!\r\nPlease remove the folder or un-set the environment variable."; exit 1; fi
 	git clone --recursive --branch "$(IDF_BRANCH)" https://github.com/espressif/esp-idf.git "$(IDF_PATH)" --depth=1 --shallow-submodules
-	#cd "$(IDF_PATH)"; git fetch origin "$(IDF_COMMIT)" --recurse-submodules || true
-	#cd "$(IDF_PATH)"; git checkout "$(IDF_COMMIT)"
+	cd "$(IDF_PATH)"; git fetch origin "$(IDF_COMMIT)" --recurse-submodules || true
+	cd "$(IDF_PATH)"; git checkout "$(IDF_COMMIT)"
 	cd "$(IDF_PATH)"; git submodule update --init --recursive
 	cd "$(IDF_PATH)"; bash install.sh all
 
@@ -197,3 +197,20 @@ buildall:
 flashall:
 	$(MAKE) flash DEVICE=tanmatsu PORT=/dev/ttyACM0
 	$(MAKE) flash DEVICE=mch2022 PORT=/dev/ttyACM2
+
+
+# Debugging
+.PHONY: openocd
+openocd:
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) openocd
+
+.PHONY: gdb
+gdb:
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdb
+.PHONY: gdbgui
+
+gdbgui:
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbgui
+
+gdbtui:
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbtui

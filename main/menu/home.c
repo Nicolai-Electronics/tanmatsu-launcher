@@ -20,13 +20,17 @@
 #include "apps.h"
 #include "charging_mode.h"
 #include "icons.h"
+#include "menu/nametag.h"
 #include "menu/textedit.h"
 #include "sdcard.h"
+#include "terminal.h"
+#include "unistd.h"
 #include "usb_device.h"
 
 typedef enum {
     ACTION_NONE,
     ACTION_APPS,
+    ACTION_NAMETAG,
     ACTION_REPOSITORY,
     ACTION_SETTINGS,
     ACTION_LAST,
@@ -36,6 +40,9 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
     switch (action) {
         case ACTION_APPS:
             menu_apps(fb, theme);
+            break;
+        case ACTION_NAMETAG:
+            menu_nametag(fb, theme);
             break;
         case ACTION_SETTINGS:
             menu_settings(fb, theme);
@@ -104,7 +111,9 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
     menu_t menu = {0};
     menu_initialize(&menu);
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
-    // menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_TAG));
+    if (access("/sd/nametag.png", F_OK) == 0) {
+        menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_NAMETAG, -1, get_icon(ICON_TAG));
+    }
     // menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
     menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
 
@@ -149,14 +158,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     keyboard_backlight();
                                 } else {
-                                    char text[128] = {0};
-                                    bool accepted  = false;
-                                    menu_textedit(buffer, theme, "Put title here", text, sizeof(text), true, &accepted);
-                                    if (accepted) {
-                                        printf("Keyboard result: %s\r\n", text);
-                                    } else {
-                                        printf("Keyboard rejected\r\n");
-                                    }
+                                    menu_terminal(buffer, theme);
                                     render(buffer, theme, &menu, position, false, true);
                                 }
                                 break;

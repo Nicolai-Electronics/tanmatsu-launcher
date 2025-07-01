@@ -17,6 +17,7 @@
 // #include "shapes/pax_misc.h"
 #include "device_information.h"
 #include "firmware_update.h"
+#include "radio_update.h"
 #include "settings_clock.h"
 
 typedef enum {
@@ -27,6 +28,7 @@ typedef enum {
     ACTION_DEVICE_INFO,
     ACTION_ABOUT,
     ACTION_LAST,
+    ACTION_RADIO_UPDATE,
 } menu_home_action_t;
 
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
@@ -46,6 +48,9 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
         case ACTION_ABOUT:
             menu_about(fb, theme);
             break;
+        case ACTION_RADIO_UPDATE:
+            menu_radio_update(fb, theme);
+            break;
         default:
             break;
     }
@@ -54,7 +59,7 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
+                                     ((gui_header_field_t[]){{get_icon(ICON_SETTINGS), "Settings"}}), 1,
                                      ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}),
                                      2, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
     }
@@ -74,6 +79,11 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
                           get_icon(ICON_SYSTEM_UPDATE));
     menu_insert_item_icon(&menu, "Device information", NULL, (void*)ACTION_DEVICE_INFO, -1, get_icon(ICON_DEVICE_INFO));
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+    menu_insert_item_icon(&menu, "Update radio from SD card (testing only)", NULL, (void*)ACTION_RADIO_UPDATE, -1,
+                          get_icon(ICON_RELEASE_ALERT));
+#endif
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);

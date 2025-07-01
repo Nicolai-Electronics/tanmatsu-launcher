@@ -2,6 +2,10 @@ if (CONFIG_BSP_TARGET_TANMATSU OR CONFIG_BSP_TARGET_KONSOOL OR CONFIG_BSP_TARGET
 list(APPEND files "tanmatsu_coprocessor.bin")
 endif()
 
+if (CONFIG_IDF_TARGET_ESP32P4)
+list(APPEND extra_requires esp-hosted-tanmatsu)
+endif()
+
 idf_component_register(
 	SRCS
 		"main.c"
@@ -19,23 +23,16 @@ idf_component_register(
 		"menu/settings_clock.c"
 		"menu/settings_clock_timezone.c"
 		"menu/charging_mode.c"
+		"menu/terminal.c"
 		"menu/textedit.c"
+		"menu/radio_update.c"
+		"menu/nametag.c"
 		"chakrapetchmedium.c"
 		"coprocessor_management.c"
 		"wifi_remote.c"
 		"wifi_ota.c"
 		"icons.c"
 		"usb_device.c"
-		"badgelink/nanopb/pb_common.c"
-		"badgelink/nanopb/pb_decode.c"
-		"badgelink/nanopb/pb_encode.c"
-		"badgelink/badgelink_appfs.c"
-		"badgelink/badgelink_fs.c"
-		"badgelink/badgelink_nvs.c"
-		"badgelink/badgelink_startapp.c"
-		"badgelink/badgelink.c"
-		"badgelink/badgelink.pb.c"
-		"badgelink/cobs.c"
 		"esp_efuse_custom_table.c"
 		"sdcard.c"
 		"app_metadata_parser.c"
@@ -46,7 +43,6 @@ idf_component_register(
 		nvs_flash
 		badge-bsp
 		gui
-		esp_hosted
 		wpa_supplicant
 		esp_https_ota
 		app_update
@@ -60,10 +56,11 @@ idf_component_register(
 		timezone
 		json
 		freertos
+		badgelink
+		${extra_requires}
 	INCLUDE_DIRS
 		"."
 		"include"
-		"badgelink/nanopb"
 	EMBED_FILES
 		${files}
 )

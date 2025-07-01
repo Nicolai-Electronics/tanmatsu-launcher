@@ -19,36 +19,17 @@
 #include "esp_lcd_mipi_dsi.h"
 #endif
 
-static esp_lcd_panel_handle_t       display_lcd_panel    = NULL;
-static esp_lcd_panel_io_handle_t    display_lcd_panel_io = NULL;
 static size_t                       display_h_res        = 0;
 static size_t                       display_v_res        = 0;
 static lcd_color_rgb_pixel_format_t display_color_format = LCD_COLOR_PIXEL_FORMAT_RGB565;
 static lcd_rgb_data_endian_t        display_data_endian  = LCD_RGB_DATA_ENDIAN_LITTLE;
 static pax_buf_t                    fb                   = {0};
 
-SemaphoreHandle_t display_semaphore = NULL;
-
-#ifdef DSI_PANEL
-IRAM_ATTR static bool notify_display_flush_ready(esp_lcd_panel_handle_t panel, esp_lcd_dpi_panel_event_data_t* edata,
-                                                 void* user_ctx) {
-    xSemaphoreGiveFromISR(display_semaphore, NULL);
-    return false;
-}
-#else
-IRAM_ATTR static bool notify_display_flush_ready(esp_lcd_panel_io_handle_t      panel_io,
-                                                 esp_lcd_panel_io_event_data_t* edata, void* user_ctx) {
-    xSemaphoreGiveFromISR(display_semaphore, NULL);
-    return false;
-}
+#if defined(CONFIG_BSP_TARGET_KAMI)
+static pax_col_t palette[] = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
 #endif
 
 void display_init(void) {
-    vSemaphoreCreateBinary(display_semaphore);
-    xSemaphoreGive(display_semaphore);
-
-    ESP_ERROR_CHECK(bsp_display_get_panel(&display_lcd_panel));
-    ESP_ERROR_CHECK(bsp_display_get_panel_io(&display_lcd_panel_io));
     ESP_ERROR_CHECK(
         bsp_display_get_parameters(&display_h_res, &display_v_res, &display_color_format, &display_data_endian));
 
@@ -65,8 +46,17 @@ void display_init(void) {
             break;
     }
 
+#if defined(CONFIG_BSP_TARGET_KAMI)
+    format = PAX_BUF_2_PAL;
+#endif
+
     pax_buf_init(&fb, NULL, display_h_res, display_v_res, format);
     pax_buf_reversed(&fb, display_data_endian == LCD_RGB_DATA_ENDIAN_BIG);
+
+#if defined(CONFIG_BSP_TARGET_KAMI)
+    fb.palette      = palette;
+    fb.palette_size = sizeof(palette) / sizeof(pax_col_t);
+#endif
 
     bsp_display_rotation_t display_rotation = bsp_display_get_default_rotation();
     pax_orientation_t      orientation      = PAX_O_UPRIGHT;
@@ -86,21 +76,6 @@ void display_init(void) {
             break;
     }
     pax_buf_set_orientation(&fb, orientation);
-
-#ifdef DSI_PANEL
-    esp_lcd_dpi_panel_event_callbacks_t cbs = {
-        .on_color_trans_done = notify_display_flush_ready,
-    };
-
-    ESP_ERROR_CHECK(esp_lcd_dpi_panel_register_event_callbacks(display_lcd_panel, &cbs, NULL));
-#else
-    if (display_lcd_panel_io) {
-        esp_lcd_panel_io_callbacks_t cbs = {
-            .on_color_trans_done = notify_display_flush_ready,
-        };
-        ESP_ERROR_CHECK(esp_lcd_panel_io_register_event_callbacks(display_lcd_panel_io, &cbs, NULL));
-    }
-#endif
 }
 
 pax_buf_t* display_get_buffer(void) {
@@ -108,11 +83,9 @@ pax_buf_t* display_get_buffer(void) {
 }
 
 void display_blit_buffer(pax_buf_t* fb) {
-    xSemaphoreTake(display_semaphore, portMAX_DELAY);
-    size_t display_h_res, display_v_res;
+    size_t display_h_res = 0, display_v_res = 0;
     ESP_ERROR_CHECK(bsp_display_get_parameters(&display_h_res, &display_v_res, NULL, NULL));
-    ESP_ERROR_CHECK(
-        esp_lcd_panel_draw_bitmap(display_lcd_panel, 0, 0, display_h_res, display_v_res, pax_buf_get_pixels(fb)));
+    ESP_ERROR_CHECK(bsp_display_blit(0, 0, display_h_res, display_v_res, pax_buf_get_pixels(fb)));
 }
 
 void display_blit(void) {

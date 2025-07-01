@@ -31,6 +31,12 @@ static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
 extern bool wifi_stack_get_task_done(void);
 
 static void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app_t* app) {
+
+    if (app == NULL) {
+        message_dialog(buffer, theme, "Error", "No app selected", "OK");
+        return;
+    }
+
     render_base_screen_statusbar(buffer, theme, true, true, true,
                                  ((gui_header_field_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, NULL, 0, NULL, 0);
     char message[64] = {0};

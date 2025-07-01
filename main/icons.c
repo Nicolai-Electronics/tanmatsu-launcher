@@ -1,8 +1,25 @@
 #include "icons.h"
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "pax_codecs.h"
 
 static char const TAG[] = "icons";
+
+#if defined(CONFIG_BSP_TARGET_KAMI)
+#define ICON_WIDTH        32
+#define ICON_HEIGHT       32
+#define ICON_BUFFER_SIZE  (ICON_WIDTH * ICON_HEIGHT * 4)  // 32x32 pixels, 2 bits per pixel
+#define ICON_COLOR_FORMAT PAX_BUF_2_PAL
+#else
+#define ICON_WIDTH        32
+#define ICON_HEIGHT       32
+#define ICON_BUFFER_SIZE  (ICON_WIDTH * ICON_HEIGHT * 4)  // 32x32 pixels, 4 bytes per pixel (ARGB8888)
+#define ICON_COLOR_FORMAT PAX_BUF_32_8888ARGB
+#endif
+
+#if defined(CONFIG_BSP_TARGET_KAMI)
+static pax_col_t palette[] = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
+#endif
 
 const char* icon_paths[] = {
     [ICON_ESC]                 = "/int/icons/keyboard/esc.png",
@@ -66,7 +83,7 @@ const char* icon_paths[] = {
     [ICON_ERROR]               = "/int/icons/menu/error.png",
 };
 
-pax_buf_t icons[ICON_LAST];
+pax_buf_t icons[ICON_LAST] = {0};
 
 void load_icons(void) {
     for (int i = 0; i < ICON_LAST; i++) {
@@ -75,7 +92,18 @@ void load_icons(void) {
             ESP_LOGE(TAG, "Failed to open icon file %s", icon_paths[i]);
             continue;
         }
-        if (!pax_decode_png_fd(&icons[i], fd, PAX_BUF_32_8888ARGB, 0)) {
+        void* buffer = heap_caps_calloc(1, ICON_BUFFER_SIZE, MALLOC_CAP_SPIRAM);
+        if (buffer == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate memory for icon %s", icon_paths[i]);
+            fclose(fd);
+            continue;
+        }
+        pax_buf_init(&icons[i], buffer, ICON_WIDTH, ICON_HEIGHT, ICON_COLOR_FORMAT);
+#if defined(CONFIG_BSP_TARGET_KAMI)
+        icons[i].palette      = palette;
+        icons[i].palette_size = sizeof(palette) / sizeof(pax_col_t);
+#endif
+        if (!pax_insert_png_fd(&icons[i], fd, 0, 0, 0)) {
             ESP_LOGE(TAG, "Failed to decode icon file %s", icon_paths[i]);
         }
         fclose(fd);

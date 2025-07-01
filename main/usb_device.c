@@ -9,7 +9,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "badgelink/badgelink.h"
+#include "badgelink.h"
 #include "bsp/device.h"
 #include "esp_log.h"
 #include "esp_mac.h"
@@ -183,7 +183,7 @@ uint8_t const desc_ms_os_20[] = {
 
 TU_VERIFY_STATIC(sizeof(desc_ms_os_20) == MS_OS_20_DESC_LEN, "Incorrect size");
 
-#define URL "webusb.tanamtsu.cloud"
+#define URL "webusb.tanmatsu.cloud"
 
 const tusb_desc_webusb_url_t desc_url = {.bLength         = 3 + sizeof(URL) - 1,
                                          .bDescriptorType = 3,  // WEBUSB URL type

@@ -1,0 +1,38 @@
+name: Add release artifacts
+run-name: Add release artifacts
+
+on:
+  workflow_run:
+    branches: ['v*.*.*']
+    workflows: [Build]
+    types:
+      - completed
+
+jobs:
+  on-success:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install zip
+        run: sudo apt-get install zip
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Zip all artifacts
+        run: for i in *; do [ -d "$i" ] && zip -r "$i.zip" "$i"; done
+      - name: Display artifact files
+        run: ls
+      - name: Add artifacts to release
+        run: |
+          gh release upload ${{ github.event.workflow_run.head_branch }} tanmatsu.zip
+          gh release upload ${{ github.event.workflow_run.head_branch }} konsool.zip
+          gh release upload ${{ github.event.workflow_run.head_branch }} mch2022.zip
+          gh release upload ${{ github.event.workflow_run.head_branch }} hackerhotel-2024.zip
+          gh release upload ${{ github.event.workflow_run.head_branch }} hackerhotel-2026.zip
+          gh release upload ${{ github.event.workflow_run.head_branch }} esp32-p4-function-ev-board.zip
+          gh release upload ${{ github.event.workflow_run.head_branch }} kami.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
