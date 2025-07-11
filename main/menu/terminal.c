@@ -73,7 +73,7 @@ void menu_terminal(pax_buf_t* buffer, gui_theme_t* theme) {
     struct cons_insts_s console_instance;
 
     struct cons_config_s con_conf = {
-        .font = pax_font_sky_mono, .font_size_mult = 2, .paxbuf = display_get_buffer(), .output_cb = console_write_cb};
+        .font = pax_font_sky_mono, .font_size_mult = 1, .paxbuf = display_get_buffer(), .output_cb = console_write_cb};
 
     console_init(&console_instance, &con_conf);
     display_blit_buffer(buffer);
