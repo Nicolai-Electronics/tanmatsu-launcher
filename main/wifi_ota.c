@@ -112,9 +112,18 @@ static void default_ota_state_cb(const char* status_text) {
     ESP_LOGI(TAG, "OTA status changed: %s", status_text);
 }
 
+extern bool wifi_stack_get_initialized(void);
+
 void ota_update(char* ota_url, ota_status_cb_t status_cb) {
     if (status_cb == NULL) {
         status_cb = default_ota_state_cb;
+    }
+
+    if (!wifi_stack_get_initialized()) {
+        ESP_LOGE(TAG, "WiFi stack not initialized, cannot perform OTA update");
+        status_cb("WiFi stack not initialized");
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        return;
     }
 
     status_cb("Connecting to WiFi...");
