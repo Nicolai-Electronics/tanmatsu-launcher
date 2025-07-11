@@ -120,7 +120,8 @@ static gui_header_field_t wifi_indicator(void) {
                 return (gui_header_field_t){get_icon(ICON_WIFI_OFF), "Disconnected"};
             }
         } else if (mode == WIFI_MODE_AP) {
-            return (gui_header_field_t){get_icon(ICON_WIFI_OFF), ""};
+            return (gui_header_field_t){get_icon(ICON_WIFI_OFF), ""};  // AP mode is currently unused
+            // The device will be in AP mode by default until connection to a network is
         } else {
             return (gui_header_field_t){get_icon(ICON_WIFI_UNKNOWN), "Other"};
         }
