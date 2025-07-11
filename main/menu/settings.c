@@ -49,7 +49,7 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             menu_about(fb, theme);
             break;
         case ACTION_RADIO_UPDATE:
-            menu_radio_update(fb, theme);
+            radio_update(fb, theme, "/sd/firmware/radio/esp-hosted.zz", true, 1093760);
             break;
         default:
             break;
@@ -79,11 +79,11 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
                           get_icon(ICON_SYSTEM_UPDATE));
     menu_insert_item_icon(&menu, "Device information", NULL, (void*)ACTION_DEVICE_INFO, -1, get_icon(ICON_DEVICE_INFO));
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-    menu_insert_item_icon(&menu, "Update radio from SD card (testing only)", NULL, (void*)ACTION_RADIO_UPDATE, -1,
-                          get_icon(ICON_RELEASE_ALERT));
-#endif
+    /*#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+        defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+        menu_insert_item_icon(&menu, "Update radio from SD card", NULL, (void*)ACTION_RADIO_UPDATE, -1,
+                              get_icon(ICON_RELEASE_ALERT));
+    #endif*/
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
