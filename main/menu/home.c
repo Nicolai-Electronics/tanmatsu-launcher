@@ -12,6 +12,7 @@
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
+#include "menu/rftest.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
@@ -33,6 +34,7 @@ typedef enum {
     ACTION_NAMETAG,
     ACTION_REPOSITORY,
     ACTION_SETTINGS,
+    ACTION_RFTEST,
     ACTION_LAST,
 } menu_home_action_t;
 
@@ -46,6 +48,9 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             break;
         case ACTION_SETTINGS:
             menu_settings(fb, theme);
+            break;
+        case ACTION_RFTEST:
+            menu_rftest(fb, theme);
             break;
         default:
             break;
@@ -77,8 +82,9 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
 static void keyboard_backlight(void) {
     uint8_t brightness;
     bsp_input_get_backlight_brightness(&brightness);
-    brightness += 25;
-    if (brightness > 100) {
+    if (brightness != 100) {
+        brightness = 100;
+    } else {
         brightness = 0;
     }
     printf("Keyboard brightness: %u%%\r\n", brightness);
@@ -116,6 +122,9 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
     }
     // menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
     menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
+    if (access("/int/rftest_local.bin", F_OK) == 0) {
+        menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_DEV));
+    }
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);

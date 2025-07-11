@@ -27,6 +27,7 @@ idf_component_register(
 		"menu/textedit.c"
 		"menu/radio_update.c"
 		"menu/nametag.c"
+		"menu/rftest.c"
 		"chakrapetchmedium.c"
 		"coprocessor_management.c"
 		"wifi_remote.c"

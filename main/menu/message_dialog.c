@@ -120,7 +120,7 @@ static gui_header_field_t wifi_indicator(void) {
                 return (gui_header_field_t){get_icon(ICON_WIFI_OFF), "Disconnected"};
             }
         } else if (mode == WIFI_MODE_AP) {
-            return (gui_header_field_t){get_icon(ICON_WIFI_UNKNOWN), "AP"};
+            return (gui_header_field_t){get_icon(ICON_WIFI_OFF), ""};
         } else {
             return (gui_header_field_t){get_icon(ICON_WIFI_UNKNOWN), "Other"};
         }

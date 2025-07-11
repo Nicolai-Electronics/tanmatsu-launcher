@@ -37,7 +37,7 @@ static void radio_update_callback(const char* status_text) {
     display_blit_buffer(fb);
 }
 
-void menu_radio_update(pax_buf_t* buffer, gui_theme_t* theme) {
+void radio_update(pax_buf_t* buffer, gui_theme_t* theme, char* path, bool compressed, uint32_t uncompressed_size) {
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
     pax_background(buffer, theme->palette.color_background);
@@ -75,7 +75,7 @@ void menu_radio_update(pax_buf_t* buffer, gui_theme_t* theme) {
         printf("Failed to sync with radio: %s\r\n", esp_err_to_name(res));
         radio_update_callback("Failed to sync with radio");
         vTaskDelay(pdMS_TO_TICKS(2000));
-        esp_restart();
+        return;
     }
 
     radio_update_callback("Detecting radio...");
@@ -87,7 +87,7 @@ void menu_radio_update(pax_buf_t* buffer, gui_theme_t* theme) {
         printf("Failed to detect radio chip: %s\r\n", esp_err_to_name(res));
         radio_update_callback("Failed to detect radio chip");
         vTaskDelay(pdMS_TO_TICKS(2000));
-        esp_restart();
+        return;
     }
     radio_update_callback("Detected radio chip, starting stub...");
     printf("Detected chip id: 0x%08" PRIx32 "\r\n", chip_id);
@@ -98,18 +98,18 @@ void menu_radio_update(pax_buf_t* buffer, gui_theme_t* theme) {
         printf("Failed to run flashing stub: %s\r\n", esp_err_to_name(res));
         radio_update_callback("Failed to run flashing stub");
         vTaskDelay(pdMS_TO_TICKS(2000));
-        esp_restart();
+        return;
     }
 
     radio_update_callback("Opening update file...");
     printf("Opening update file...\r\n");
 
-    FILE* fd = fopen("/sd/firmware/radio/esp-hosted.zz", "rb");
+    FILE* fd = fopen(path, "rb");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open file: %s", strerror(errno));
         radio_update_callback("Failed to open firmware file");
         vTaskDelay(pdMS_TO_TICKS(2000));
-        esp_restart();
+        return;
     }
 
     fseek(fd, 0, SEEK_END);
@@ -122,52 +122,88 @@ void menu_radio_update(pax_buf_t* buffer, gui_theme_t* theme) {
         radio_update_callback("Failed to allocate memory");
         vTaskDelay(pdMS_TO_TICKS(2000));
         fclose(fd);
-        esp_restart();
+        return;
     }
 
-    uint32_t uncompressed_size = 1093760;
+    if (compressed) {
+        ESP_ERROR_CHECK(et2_cmd_deflate_begin(uncompressed_size, compressed_size, 0x10000));
 
-    ESP_ERROR_CHECK(et2_cmd_deflate_begin(uncompressed_size, compressed_size, 0x10000));
+        size_t   position = 0;
+        uint32_t seq      = 0;
+        while (position < compressed_size) {
+            size_t block_length = compressed_size - position;
+            if (block_length > 4096) {
+                block_length = 4096;
+            }
 
-    size_t   position = 0;
-    uint32_t seq      = 0;
-    while (position < compressed_size) {
-        size_t block_length = compressed_size - position;
-        if (block_length > 4096) {
-            block_length = 4096;
+            size_t read_bytes = fread(data, 1, block_length, fd);
+            if (read_bytes != block_length) {
+                ESP_LOGE(TAG, "Failed to read firmware data: %s", strerror(errno));
+                radio_update_callback("Failed to read firmware data");
+                vTaskDelay(pdMS_TO_TICKS(2000));
+                free(data);
+                fclose(fd);
+                return;
+            }
+            char buffer[128] = {0};
+            snprintf(buffer, sizeof(buffer), "Writing %zu bytes to radio (block %" PRIu32 ")...\r\n", block_length,
+                     seq);
+            fputs(buffer, stdout);
+            radio_update_callback(buffer);
+            res = et2_cmd_deflate_data(data, block_length, seq);
+            if (res != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to write data to radio: %s", esp_err_to_name(res));
+                radio_update_callback("Failed to write data to radio");
+                vTaskDelay(pdMS_TO_TICKS(2000));
+                free(data);
+                fclose(fd);
+                return;
+            }
+            seq++;
+            position += block_length;
         }
+        ESP_ERROR_CHECK(et2_cmd_deflate_finish(true));
+    } else {
+        ESP_ERROR_CHECK(et2_cmd_flash_begin(compressed_size, 0x10000));
 
-        size_t read_bytes = fread(data, 1, block_length, fd);
-        if (read_bytes != block_length) {
-            ESP_LOGE(TAG, "Failed to read firmware data: %s", strerror(errno));
-            radio_update_callback("Failed to read firmware data");
-            vTaskDelay(pdMS_TO_TICKS(2000));
-            free(data);
-            fclose(fd);
-            esp_restart();
+        size_t   position = 0;
+        uint32_t seq      = 0;
+        while (position < compressed_size) {
+            size_t block_length = compressed_size - position;
+            if (block_length > 4096) {
+                block_length = 4096;
+            }
+
+            size_t read_bytes = fread(data, 1, block_length, fd);
+            if (read_bytes != block_length) {
+                ESP_LOGE(TAG, "Failed to read firmware data: %s", strerror(errno));
+                radio_update_callback("Failed to read firmware data");
+                vTaskDelay(pdMS_TO_TICKS(2000));
+                free(data);
+                fclose(fd);
+                return;
+            }
+            char buffer[128] = {0};
+            snprintf(buffer, sizeof(buffer), "Writing %zu bytes to radio (block %" PRIu32 ")...\r\n", block_length,
+                     seq);
+            fputs(buffer, stdout);
+            radio_update_callback(buffer);
+            res = et2_cmd_flash_data(data, block_length, seq);
+            if (res != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to write data to radio: %s", esp_err_to_name(res));
+                radio_update_callback("Failed to write data to radio");
+                vTaskDelay(pdMS_TO_TICKS(2000));
+                free(data);
+                fclose(fd);
+                return;
+            }
+            seq++;
+            position += block_length;
         }
-        char buffer[128] = {0};
-        snprintf(buffer, sizeof(buffer), "Writing %zu bytes to radio...\r\n", block_length);
-        fputs(buffer, stdout);
-        radio_update_callback(buffer);
-        res = et2_cmd_deflate_data(data, block_length, seq);
-        if (res != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to write data to radio: %s", esp_err_to_name(res));
-            radio_update_callback("Failed to write data to radio");
-            vTaskDelay(pdMS_TO_TICKS(2000));
-            free(data);
-            fclose(fd);
-            esp_restart();
-        }
-        seq++;
-        position += block_length;
+        ESP_ERROR_CHECK(et2_cmd_flash_finish(true));
     }
 
     free(data);
     fclose(fd);
-
-    ESP_ERROR_CHECK(et2_cmd_deflate_finish(true));
-
-    esp_restart();
 #endif
 }
