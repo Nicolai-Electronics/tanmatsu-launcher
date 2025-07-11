@@ -334,9 +334,9 @@ static void wifi_task(void* pvParameters) {
     if (wifi_remote_initialize() == ESP_OK) {
         wifi_connection_init_stack();
         wifi_stack_initialized = true;
-        wifi_connect_try_all();
+        // wifi_connect_try_all();
     } else {
-        bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+        // bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
         ESP_LOGE(TAG, "WiFi radio not responding, did you flash ESP-HOSTED firmware?");
     }
     wifi_stack_task_done = true;
