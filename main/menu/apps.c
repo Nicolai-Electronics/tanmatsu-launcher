@@ -16,7 +16,7 @@
 #include "pax_matrix.h"
 #include "pax_types.h"
 #include "sdkconfig.h"
-// #include "shapes/pax_misc.h"
+#include "usb_device.h"
 
 #define MAX_NUM_APPS 128
 
@@ -51,6 +51,7 @@ static void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t positi
             printf("Waiting for wifi stack task to finish...\n");
             vTaskDelay(pdMS_TO_TICKS(100));
         }
+        usb_mode_set(USB_DEBUG);
         esp_restart();
     } else {
         message_dialog(buffer, theme, "Error", "App not found", "OK");
