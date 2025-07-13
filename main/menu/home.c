@@ -20,6 +20,7 @@
 // #include "shapes/pax_misc.h"
 #include "apps.h"
 #include "charging_mode.h"
+#include "coprocessor_management.h"
 #include "icons.h"
 #include "menu/nametag.h"
 #include "menu/textedit.h"
@@ -166,9 +167,6 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_START:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     keyboard_backlight();
-                                } else {
-                                    menu_terminal(buffer, theme);
-                                    render(buffer, theme, &menu, position, false, true);
                                 }
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_MENU:
@@ -184,7 +182,11 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 }
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F6:
-                                toggle_usb_mode();
+                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
+                                    coprocessor_flash(true);
+                                } else {
+                                    toggle_usb_mode();
+                                }
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_LEFT:
                                 menu_navigate_previous(&menu);

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "coprocessor_management.h"
+#include <stdbool.h>
 #include "bsp/device.h"
 #include "bsp/i2c.h"
 #include "common/display.h"
@@ -30,32 +31,36 @@ static void callback(char const* msg, uint8_t progress) {
     display_blit_buffer(buffer);
 }
 
-void coprocessor_flash(void) {
-    uint16_t coprocessor_firmware_target = 3;
+void coprocessor_flash(bool force) {
+    uint16_t coprocessor_firmware_target = 4;
 
     tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
 
-    if (bsp_device_get_initialized_without_coprocessor()) {
-        ESP_LOGI(TAG, "Coprocessor recovery required, installing firmware version %u\r\n", coprocessor_firmware_target);
-    } else {
+    if (!force) {
+        if (bsp_device_get_initialized_without_coprocessor()) {
+            ESP_LOGI(TAG, "Coprocessor recovery required, installing firmware version %u\r\n",
+                     coprocessor_firmware_target);
+        } else {
 
-        if (bsp_tanmatsu_coprocessor_get_handle(&coprocessor_handle) != ESP_OK) {
-            ESP_LOGE(TAG, "Could not get coprocessor handle");
-            // To-do: display error message
-            while (1) {
-                vTaskDelay(pdMS_TO_TICKS(1000));
+            if (bsp_tanmatsu_coprocessor_get_handle(&coprocessor_handle) != ESP_OK) {
+                ESP_LOGE(TAG, "Could not get coprocessor handle");
+                // To-do: display error message
+                while (1) {
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                }
             }
+
+            uint16_t coprocessor_firmware_version;
+            ESP_ERROR_CHECK(
+                tanmatsu_coprocessor_get_firmware_version(coprocessor_handle, &coprocessor_firmware_version));
+
+            if (coprocessor_firmware_version == coprocessor_firmware_target) {
+                return;
+            }
+
+            ESP_LOGI(TAG, "Coprocessor update required, current version %u will be updated to version %u\r\n",
+                     coprocessor_firmware_version, coprocessor_firmware_target);
         }
-
-        uint16_t coprocessor_firmware_version;
-        ESP_ERROR_CHECK(tanmatsu_coprocessor_get_firmware_version(coprocessor_handle, &coprocessor_firmware_version));
-
-        if (coprocessor_firmware_version == coprocessor_firmware_target) {
-            return;
-        }
-
-        ESP_LOGI(TAG, "Coprocessor update required, current version %u will be updated to version %u\r\n",
-                 coprocessor_firmware_version, coprocessor_firmware_target);
     }
 
     rvswd_handle_t handle = {
@@ -85,7 +90,7 @@ void coprocessor_flash(void) {
 
 #else
 
-void coprocessor_flash(void) {
+void coprocessor_flash(bool force) {
 }
 
 #endif

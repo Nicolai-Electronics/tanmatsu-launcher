@@ -3,4 +3,6 @@
 
 #pragma once
 
-void coprocessor_flash(void);
+#include <stdbool.h>
+
+void coprocessor_flash(bool force);
