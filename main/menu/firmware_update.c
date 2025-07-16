@@ -1,4 +1,5 @@
 #include "firmware_update.h"
+#include <stdint.h>
 #include <string.h>
 #include "appfs.h"
 #include "bsp/display.h"
@@ -35,7 +36,7 @@
 #error "Unsupported target for firmware update"
 #endif
 
-static void firmware_update_callback(const char* status_text) {
+static void firmware_update_callback(const char* status_text, uint8_t progress) {
     printf("OTA status changed: %s\r\n", status_text);
     pax_buf_t* buffer = display_get_buffer();
     pax_draw_rect(buffer, 0xFFEEEAEE, 0, 85, buffer->width, 32);
