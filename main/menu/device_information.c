@@ -37,15 +37,19 @@ typedef enum {
 } device_variant_radio_t;
 
 typedef enum {
-    DEVICE_VARIANT_COLOR_NONE      = 0,
-    DEVICE_VARIANT_COLOR_BLACK     = 1,
-    DEVICE_VARIANT_COLOR_CYBERDECK = 2,
-    DEVICE_VARIANT_COLOR_BLUE      = 3,
-    DEVICE_VARIANT_COLOR_RED       = 4,
-    DEVICE_VARIANT_COLOR_GREEN     = 5,
-    DEVICE_VARIANT_COLOR_PURPLE    = 6,
-    DEVICE_VARIANT_COLOR_YELLOW    = 7,
-    DEVICE_VARIANT_COLOR_WHITE     = 8,
+    // Basic color variants (0x00 - 0x0F)
+    DEVICE_VARIANT_COLOR_NONE             = 0x00,
+    DEVICE_VARIANT_COLOR_BLACK            = 0x01,
+    DEVICE_VARIANT_COLOR_CYBERDECK        = 0x02,
+    DEVICE_VARIANT_COLOR_BLUE             = 0x03,
+    DEVICE_VARIANT_COLOR_RED              = 0x04,
+    DEVICE_VARIANT_COLOR_GREEN            = 0x05,
+    DEVICE_VARIANT_COLOR_PURPLE           = 0x06,
+    DEVICE_VARIANT_COLOR_YELLOW           = 0x07,
+    DEVICE_VARIANT_COLOR_WHITE            = 0x08,
+    // Custom color variants (0x80 - 0x8F)
+    DEVICE_VARIANT_COLOR_ORANGE_BLACK     = 0x81,
+    DEVICE_VARIANT_COLOR_ORANGE_CYBERDECK = 0x82,
 } device_variant_color_t;
 
 typedef struct {
@@ -180,6 +184,10 @@ const char* get_color_name(uint8_t color_id) {
             return "Yellow";
         case DEVICE_VARIANT_COLOR_WHITE:
             return "White";
+        case DEVICE_VARIANT_COLOR_ORANGE_BLACK:
+            return "Orange - Black";
+        case DEVICE_VARIANT_COLOR_ORANGE_CYBERDECK:
+            return "Orange - Cyberdeck";
         default:
             return "Unknown";
     }
