@@ -26,8 +26,8 @@ bsp_input_navigation_key_t message_dialog(pax_buf_t* buffer, gui_theme_t* theme,
 
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define MESSAGE_DIALOG_FOOTER_OK         ((gui_header_field_t[]){{NULL, "🅱"}, {NULL, "Ok"}}), 2
-#define MESSAGE_DIALOG_FOOTER_YES_NO     ((gui_header_field_t[]){{NULL, "🅱"}, {NULL, "Go back"}}), 2
-#define MESSAGE_DIALOG_FOOTER_GOBACK     ((gui_header_field_t[]){{NULL, "🅰"}, {NULL, "Yes"}, {NULL, "🅱"}, {NULL, "No"}}), 4
+#define MESSAGE_DIALOG_FOOTER_GOBACK     ((gui_header_field_t[]){{NULL, "🅱"}, {NULL, "Go back"}}), 2
+#define MESSAGE_DIALOG_FOOTER_YES_NO     ((gui_header_field_t[]){{NULL, "🅰"}, {NULL, "Yes"}, {NULL, "🅱"}, {NULL, "No"}}), 4
 #else
 #define MESSAGE_DIALOG_FOOTER_OK     NULL, 0
 #define MESSAGE_DIALOG_FOOTER_GOBACK NULL, 0
