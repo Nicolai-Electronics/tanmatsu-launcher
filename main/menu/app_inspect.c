@@ -125,7 +125,8 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                 bsp_input_navigation_key_t dia_result =
                                     message_dialog(buffer, theme, "Delete App", "Do you really want to delete the app?",
                                                    MESSAGE_DIALOG_FOOTER_YES_NO);
-                                if (dia_result == BSP_INPUT_NAVIGATION_KEY_F4) {
+                                if (dia_result == BSP_INPUT_NAVIGATION_KEY_F4 ||
+                                    dia_result == BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A) {
                                     appfsDeleteFile(app->slug);
                                     char text_buffer[256];
                                     snprintf(text_buffer, sizeof(text_buffer), "/sd/apps/%s", app->slug);

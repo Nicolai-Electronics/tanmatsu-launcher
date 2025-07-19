@@ -119,7 +119,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                 free_list_of_apps(apps, MAX_NUM_APPS);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_F2:
-			    case BSP_INPUT_NAVIGATION_KEY_MENU:
+                            case BSP_INPUT_NAVIGATION_KEY_MENU:
                                 void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                 app_t* app = (app_t*)arg;
                                 if (menu_app_inspect(buffer, theme, app)) {
