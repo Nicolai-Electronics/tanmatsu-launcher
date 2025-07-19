@@ -120,7 +120,7 @@ static esp_err_t scan_for_networks(pax_buf_t* buffer, gui_theme_t* theme, wifi_a
         }
     } else {
         message_dialog(buffer, theme, "WiFi stack not initialized",
-                       "The WiFi stack is not initialized. Please try again later.", "OK");
+                       "The WiFi stack is not initialized. Please try again later.", MESSAGE_DIALOG_FOOTER_OK);
         return ESP_ERR_NOT_FOUND;
     }
     return ESP_OK;
@@ -174,7 +174,8 @@ void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "WiFi scan failed (%d)", res);
         if (res != ESP_ERR_NOT_FOUND) {
-            message_dialog(buffer, theme, "An error occurred", "Scanning for WiFi networks failed", "OK");
+            message_dialog(buffer, theme, "An error occurred", "Scanning for WiFi networks failed",
+                           MESSAGE_DIALOG_FOOTER_OK);
         }
         return;
     }
@@ -236,7 +237,8 @@ void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
                                         }
                                     } else {
                                         message_dialog(buffer, theme, "Error",
-                                                       "No empty slot, can not add another network", "Go back");
+                                                       "No empty slot, can not add another network",
+                                                       MESSAGE_DIALOG_FOOTER_OK);
                                     }
                                     render(buffer, theme, &menu, position, false, false, false);
                                 }
