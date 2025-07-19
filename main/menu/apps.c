@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include "app_inspect.h"
 #include "app_metadata_parser.h"
 #include "appfs.h"
 #include "bsp/input.h"
@@ -11,6 +12,7 @@
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "menu/app_inspect.h"
 #include "menu/message_dialog.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
@@ -30,10 +32,10 @@ static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
 
 extern bool wifi_stack_get_task_done(void);
 
-static void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app_t* app) {
+void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app_t* app) {
 
     if (app == NULL) {
-        message_dialog(buffer, theme, "Error", "No app selected", "OK");
+        message_dialog(buffer, theme, "Error", "No app selected", MESSAGE_DIALOG_FOOTER_OK);
         return;
     }
 
@@ -54,13 +56,14 @@ static void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t positi
         usb_mode_set(USB_DEBUG);
         esp_restart();
     } else {
-        message_dialog(buffer, theme, "Error", "App not found", "OK");
+        message_dialog(buffer, theme, "Error", "App not found", MESSAGE_DIALOG_FOOTER_OK);
     }
 }
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
+#define FOOTER_LEFT \
+    ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}, {get_icon(ICON_F2), "Info"}}), 3
 #define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Start app"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define FOOTER_LEFT  NULL, 0
@@ -115,6 +118,19 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                 menu_free(&menu);
                                 free_list_of_apps(apps, MAX_NUM_APPS);
                                 return;
+                            case BSP_INPUT_NAVIGATION_KEY_F2:
+                                void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                app_t* app = (app_t*)arg;
+                                if (menu_app_inspect(buffer, theme, app)) {
+                                    app = NULL;
+                                    menu_free(&menu);
+                                    free_list_of_apps(apps, MAX_NUM_APPS);
+                                    number_of_apps = create_list_of_apps(apps, MAX_NUM_APPS);
+                                    menu_initialize(&menu);
+                                    populate_menu(&menu, apps, number_of_apps);
+                                }
+                                render(buffer, theme, &menu, position, false, true);
+                                break;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
                                 render(buffer, theme, &menu, position, true, false);

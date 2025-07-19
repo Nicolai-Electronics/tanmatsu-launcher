@@ -183,23 +183,13 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
                        header_right_count, footer_left, footer_left_count, footer_right, footer_right_count);
 }
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), (char*)action_text}}), 2
 #define FOOTER_RIGHT NULL, 0
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{NULL, "🅱"}, {NULL, (char*)action_text}}), 2
-#define FOOTER_RIGHT NULL, 0
-#else
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
-#endif
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, const char* title, const char* message,
-                   const char* action_text, bool partial, bool icons) {
+                   gui_header_field_t* headers, int header_count, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_ERROR), title}}), 1, FOOTER_LEFT,
+                                     ((gui_header_field_t[]){{get_icon(ICON_ERROR), title}}), 1, headers, header_count,
                                      FOOTER_RIGHT);
     }
     if (!partial) {
@@ -209,8 +199,8 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, c
     display_blit_buffer(buffer);
 }
 
-void message_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* title, const char* message,
-                    const char* action_text) {
+bsp_input_navigation_key_t message_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* title, const char* message,
+                                          gui_header_field_t* headers, int header_count) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
@@ -224,29 +214,20 @@ void message_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* title, co
         .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
     };
 
-    render(buffer, theme, position, title, message, action_text, false, true);
+    render(buffer, theme, position, title, message, headers, header_count, false, true);
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
             switch (event.type) {
                 case INPUT_EVENT_TYPE_NAVIGATION: {
-                    if (event.args_navigation.state) {
-                        switch (event.args_navigation.key) {
-                            case BSP_INPUT_NAVIGATION_KEY_ESC:
-                            case BSP_INPUT_NAVIGATION_KEY_F1:
-                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
-                                return;
-                            default:
-                                break;
-                        }
-                    }
+                    if (event.args_navigation.state) return event.args_navigation.key;
                     break;
                 }
                 default:
                     break;
             }
         } else {
-            render(buffer, theme, position, title, message, action_text, true, true);
+            render(buffer, theme, position, title, message, headers, header_count, true, true);
         }
     }
 }

@@ -17,6 +17,7 @@ idf_component_register(
 		"menu/wifi_edit.c"
 		"menu/wifi_scan.c"
 		"menu/apps.c"
+		"menu/app_inspect.c"
 		"menu/firmware_update.c"
 		"menu/message_dialog.c"
 		"menu/device_information.c"
