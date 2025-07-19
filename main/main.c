@@ -72,7 +72,7 @@ gui_theme_t theme = {
             .height             = 32,
             .vertical_margin    = 7,
             .horizontal_margin  = 20,
-            .text_height        = 16,
+            .text_height        = 24,
             .vertical_padding   = 20,
             .horizontal_padding = 0,
             .text_font          = &chakrapetchmedium,
@@ -82,7 +82,7 @@ gui_theme_t theme = {
             .height             = 32,
             .vertical_margin    = 7,
             .horizontal_margin  = 20,
-            .text_height        = 16,
+            .text_height        = 32,
             .vertical_padding   = 20,
             .horizontal_padding = 0,
             .text_font          = &chakrapetchmedium,
@@ -92,7 +92,7 @@ gui_theme_t theme = {
             .height                = 480 - 64,
             .vertical_margin       = 20,
             .horizontal_margin     = 30,
-            .text_height           = 16,
+            .text_height           = 32,
             .vertical_padding      = 6,
             .horizontal_padding    = 6,
             .text_font             = &chakrapetchmedium,
@@ -439,8 +439,6 @@ void app_main(void) {
         ESP_LOGE(TAG, "Failed to initialize BSP, bailing out.");
         return;
     }
-
-    bsp_led_initialize();
 
     startup_screen("Mounting FAT filesystem...");
 

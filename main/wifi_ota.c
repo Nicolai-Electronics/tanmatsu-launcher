@@ -108,8 +108,8 @@ static void get_sha256_of_partitions(void) {
     print_sha256(sha_256, "SHA-256 for current firmware: ");
 }*/
 
-static void default_ota_state_cb(const char* status_text) {
-    ESP_LOGI(TAG, "OTA status changed: %s", status_text);
+static void default_ota_state_cb(const char* status_text, uint8_t progress) {
+    ESP_LOGI(TAG, "OTA status changed [%u]: %s", progress, status_text);
 }
 
 extern bool wifi_stack_get_initialized(void);
@@ -121,22 +121,22 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
 
     if (!wifi_stack_get_initialized()) {
         ESP_LOGE(TAG, "WiFi stack not initialized, cannot perform OTA update");
-        status_cb("WiFi stack not initialized");
+        status_cb("WiFi stack not initialized", 0);
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         return;
     }
 
-    status_cb("Connecting to WiFi...");
+    status_cb("Connecting to WiFi...", 0);
 
     if (!wifi_connection_is_connected()) {
         if (wifi_connect_try_all() != ESP_OK) {
-            status_cb("Failed to connect to WiFi");
+            status_cb("Failed to connect to WiFi", 0);
             vTaskDelay(500 / portTICK_PERIOD_MS);
             return;
         }
     }
 
-    status_cb("Starting update...");
+    status_cb("Starting update...", 0);
     esp_wifi_set_ps(WIFI_PS_NONE);  // Disable any WiFi power save mode
 
     ESP_LOGI(TAG, "Starting OTA update");
@@ -158,13 +158,13 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
 
     ESP_LOGI(TAG, "Attempting to download update from %s", config.url);
 
-    status_cb("Starting download...");
+    status_cb("Starting download...", 0);
 
     esp_https_ota_handle_t https_ota_handle = NULL;
     esp_err_t              err              = esp_https_ota_begin(&ota_config, &https_ota_handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "ESP HTTPS OTA Begin failed");
-        status_cb("Failed to start download");
+        status_cb("Failed to start download", 0);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         return;
     }
@@ -174,14 +174,14 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "esp_https_ota_read_img_desc failed");
         esp_https_ota_abort(https_ota_handle);
-        status_cb("Failed to read image desc");
+        status_cb("Failed to read image desc", 0);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         return;
     }
     err = validate_image_header(&app_desc);
     if (err != ESP_OK) {
         esp_https_ota_abort(https_ota_handle);
-        status_cb("Already up-to-date!");
+        status_cb("Already up-to-date!", 100);
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         return;
     }
@@ -203,29 +203,29 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
             percent_shown = percent;
             char buffer[128];
             snprintf(buffer, sizeof(buffer), "Updating... %d%%", percent);
-            status_cb(buffer);
+            status_cb(buffer, percent);
         }
     }
 
     if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
         // the OTA image was not completely received and user can customise the response to this situation.
         ESP_LOGE(TAG, "Complete data was not received.");
-        status_cb("Download failed");
+        status_cb("Download failed", 0);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         esp_restart();
     } else {
         ota_finish_err = esp_https_ota_finish(https_ota_handle);
         if ((err == ESP_OK) && (ota_finish_err == ESP_OK)) {
             ESP_LOGI(TAG, "ESP_HTTPS_OTA upgrade successful. Rebooting ...");
-            status_cb("Update installed");
+            status_cb("Update installed", 0);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
             esp_restart();
         } else {
             if (ota_finish_err == ESP_ERR_OTA_VALIDATE_FAILED) {
                 ESP_LOGE(TAG, "Image validation failed, image is corrupted");
-                status_cb("Image validation failed");
+                status_cb("Image validation failed", 0);
             } else {
-                status_cb("Update failed");
+                status_cb("Update failed", 0);
             }
             ESP_LOGE(TAG, "ESP_HTTPS_OTA upgrade failed 0x%x", ota_finish_err);
             vTaskDelay(5000 / portTICK_PERIOD_MS);
