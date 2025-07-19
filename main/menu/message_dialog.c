@@ -231,3 +231,55 @@ bsp_input_navigation_key_t message_dialog(pax_buf_t* buffer, gui_theme_t* theme,
         }
     }
 }
+
+message_dialog_return_type_t message_dialog_ok(pax_buf_t* buffer, gui_theme_t* theme, const char* title, const char* message){
+  bsp_input_navigation_key_t key;
+  while(1){
+    key = message_dialog(buffer, theme, title, message, MESSAGE_DIALOG_FOOTER_OK);
+    switch(key){
+	case BSP_INPUT_NAVIGATION_KEY_ESC:
+	case BSP_INPUT_NAVIGATION_KEY_F1:
+	case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+	  return MSG_DIALOG_RETURN_OK;
+	default:
+    }
+  }
+}
+
+message_dialog_return_type_t message_dialog_yes_no(pax_buf_t* buffer, gui_theme_t* theme, const char* title, const char* message){
+  bsp_input_navigation_key_t key;
+  while(1){
+    key = message_dialog(buffer, theme, title, message, MESSAGE_DIALOG_FOOTER_YES_NO);
+    switch(key){
+	case BSP_INPUT_NAVIGATION_KEY_ESC:
+	case BSP_INPUT_NAVIGATION_KEY_F1:
+	case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+	  return MSG_DIALOG_RETURN_NO;
+	case BSP_INPUT_NAVIGATION_KEY_F4:
+	case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+	  return MSG_DIALOG_RETURN_OK;
+	default:
+    }
+  }
+}
+
+message_dialog_return_type_t message_dialog_yes_no_cancel(pax_buf_t* buffer, gui_theme_t* theme, const char* title, const char* message){
+  bsp_input_navigation_key_t key;
+  while(1){
+    key = message_dialog(buffer, theme, title, message, MESSAGE_DIALOG_FOOTER_YES_NO_CANCEL);
+    switch(key){
+	case BSP_INPUT_NAVIGATION_KEY_ESC:
+	case BSP_INPUT_NAVIGATION_KEY_F1:
+	case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+	  return MSG_DIALOG_RETURN_NO;
+	case BSP_INPUT_NAVIGATION_KEY_F4:
+	case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+	  return MSG_DIALOG_RETURN_OK;
+	case BSP_INPUT_NAVIGATION_KEY_F6:
+	case BSP_INPUT_NAVIGATION_KEY_MENU:
+	  return MSG_DIALOG_RETURN_CANCEL;
+	default:
+    }
+  }
+}
+
