@@ -1,5 +1,6 @@
 #include "nametag.h"
 #include "bsp/input.h"
+#include "bsp/led.h"
 #include "common/display.h"
 #include "esp_err.h"
 #include "esp_log.h"
@@ -13,7 +14,6 @@
 #include "pax_matrix.h"
 #include "pax_text.h"
 #include "pax_types.h"
-#include "bsp/led.h"
 
 static const char* TAG = "nametag";
 
@@ -66,9 +66,9 @@ static void render_nametag(pax_buf_t* buffer) {
 uint8_t led_buffer[6 * 3] = {0};
 
 static void set_led_color(uint8_t led, uint32_t color) {
-    led_buffer[led * 3 + 0] = (color >> 8) & 0xFF;  // G
-    led_buffer[led * 3 + 1] = (color >> 16) & 0xFF; // R
-    led_buffer[led * 3 + 2] = (color >> 0) & 0xFF;  // B
+    led_buffer[led * 3 + 0] = (color >> 8) & 0xFF;   // G
+    led_buffer[led * 3 + 1] = (color >> 16) & 0xFF;  // R
+    led_buffer[led * 3 + 2] = (color >> 0) & 0xFF;   // B
 }
 
 void menu_nametag(pax_buf_t* buffer, gui_theme_t* theme) {
