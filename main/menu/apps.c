@@ -35,7 +35,7 @@ extern bool wifi_stack_get_task_done(void);
 void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app_t* app) {
 
     if (app == NULL) {
-        message_dialog(buffer, theme, "Error", "No app selected", MESSAGE_DIALOG_FOOTER_OK);
+        message_dialog_ok(buffer, theme, "Error", "No app selected");
         return;
     }
 
@@ -56,7 +56,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
         usb_mode_set(USB_DEBUG);
         esp_restart();
     } else {
-        message_dialog(buffer, theme, "Error", "App not found", MESSAGE_DIALOG_FOOTER_OK);
+        message_dialog_ok(buffer, theme, "Error", "App not found");
     }
 }
 

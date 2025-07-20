@@ -334,7 +334,7 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
             snprintf(message, sizeof(message), "%s, failed to read WiFi settings at index %u", esp_err_to_name(res),
                      index);
             printf("%s\r\n", message);
-            message_dialog(buffer, theme, "An error occurred", message, MESSAGE_DIALOG_FOOTER_GOBACK);
+            message_dialog_ok(buffer, theme, "An error occurred", message);
             return false;
         }
     }
@@ -398,8 +398,7 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
                                 if (res == ESP_OK) {
                                     return true;
                                 } else {
-                                    message_dialog(buffer, theme, "Error", "Failed to save WiFi settings",
-                                                   MESSAGE_DIALOG_FOOTER_GOBACK);
+                                    message_dialog_ok(buffer, theme, "Error", "Failed to save WiFi settings");
                                 }
                             }
                             case BSP_INPUT_NAVIGATION_KEY_UP:

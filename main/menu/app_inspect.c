@@ -37,11 +37,6 @@
 #define TEXT_SIZE    9
 #endif
 
-// static void delete_app(app_t*app){
-//   appfsDeleteFile(app->slug);
-//
-// }
-
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, bool partial, bool icons, app_t* app) {
 
     char text_buffer[256];
@@ -122,11 +117,9 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                 render(buffer, theme, position, false, false, app);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F5:
-                                bsp_input_navigation_key_t dia_result =
-                                    message_dialog(buffer, theme, "Delete App", "Do you really want to delete the app?",
-                                                   MESSAGE_DIALOG_FOOTER_YES_NO);
-                                if (dia_result == BSP_INPUT_NAVIGATION_KEY_F4 ||
-                                    dia_result == BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A) {
+                                message_dialog_return_type_t msg_ret = message_dialog_yes_no(
+                                    buffer, theme, "Delete App", "Do you really want to delete the app?");
+                                if (msg_ret == MSG_DIALOG_RETURN_OK) {
                                     appfsDeleteFile(app->slug);
                                     char text_buffer[256];
                                     snprintf(text_buffer, sizeof(text_buffer), "/sd/apps/%s", app->slug);
