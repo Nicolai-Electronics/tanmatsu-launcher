@@ -59,7 +59,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
 static void add_manually(pax_buf_t* buffer, gui_theme_t* theme) {
     int index = wifi_settings_find_empty_slot();
     if (index == -1) {
-        message_dialog(buffer, theme, "Error", "No empty slot, can not add another network", "Go back");
+        message_dialog_ok(buffer, theme, "Error", "No empty slot, can not add another network");
     }
     menu_wifi_edit(buffer, theme, index, true, "", 0);
 }
