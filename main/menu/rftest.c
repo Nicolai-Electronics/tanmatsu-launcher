@@ -48,7 +48,17 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
     }
 }
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
+static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool partial, bool icons) {
+    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
+    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
+
+    pax_vec2_t position = {
+        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
+        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
+        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
+        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
+    };
+
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
                                      ((gui_header_field_t[]){{get_icon(ICON_SETTINGS), "Radio test"}}), 1,
@@ -74,17 +84,7 @@ void menu_rftest(pax_buf_t* buffer, gui_theme_t* theme) {
     menu_insert_item_icon(&menu, "Terminal for RF test local firmware", NULL, (void*)ACTION_TERMINAL, -1,
                           get_icon(ICON_DEVICE_INFO));
 
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-
-    pax_vec2_t position = {
-        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
-
-    render(buffer, theme, &menu, position, false, true);
+    render(buffer, theme, &menu, false, true);
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -99,18 +99,18 @@ void menu_rftest(pax_buf_t* buffer, gui_theme_t* theme) {
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, position, true, false);
+                                render(buffer, theme, &menu, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_DOWN:
                                 menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, position, true, false);
+                                render(buffer, theme, &menu, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                 execute_action(buffer, (menu_home_action_t)arg, theme);
-                                render(buffer, theme, &menu, position, false, true);
+                                render(buffer, theme, &menu, false, true);
                                 break;
                             }
                             default:
@@ -123,7 +123,7 @@ void menu_rftest(pax_buf_t* buffer, gui_theme_t* theme) {
                     break;
             }
         } else {
-            render(buffer, theme, &menu, position, true, true);
+            render(buffer, theme, &menu, true, true);
         }
     }
 }

@@ -19,7 +19,6 @@
 #include "esp_lcd_types.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
-#include "freertos/idf_additions.h"
 #include "gui_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
@@ -525,7 +524,6 @@ void app_main(void) {
 #if CONFIG_IDF_TARGET_ESP32P4
 // Only integrate Python into the launcher on ESP32-P4 targets
 #if 0
-    // Enabling Python currently causes crashes
     python_initialize();
 #endif
 #endif

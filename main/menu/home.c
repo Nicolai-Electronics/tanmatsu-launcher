@@ -24,6 +24,7 @@
 #include "icons.h"
 #include "menu/nametag.h"
 #include "menu/textedit.h"
+#include "repository_client.h"
 #include "sdcard.h"
 #include "terminal.h"
 #include "unistd.h"
@@ -52,6 +53,9 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             break;
         case ACTION_RFTEST:
             menu_rftest(fb, theme);
+            break;
+        case ACTION_REPOSITORY:
+            menu_repository_client(fb, theme);
             break;
         default:
             break;
@@ -121,7 +125,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
     if (access("/sd/nametag.png", F_OK) == 0) {
         menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_NAMETAG, -1, get_icon(ICON_TAG));
     }
-    // menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
+    menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
     menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
     if (access("/int/rftest_local.bin", F_OK) == 0) {
         menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_DEV));

@@ -38,6 +38,8 @@ idf_component_register(
 		"sdcard.c"
 		"app_metadata_parser.c"
 		"python.c"
+		"menu/repository_client.c"
+		"http_download.c"
 	PRIV_REQUIRES
 		esp_lcd
 		fatfs
