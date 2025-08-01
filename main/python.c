@@ -6,6 +6,7 @@
 #include "freertos/task.h"
 #include "pocketpy.h"
 #include "portmacro.h"
+#include "python_socket.h"
 #include "sdkconfig.h"
 
 #ifdef CONFIG_IDF_TARGET_ESP32P4
@@ -16,7 +17,7 @@
 static const char* TAG = "python";
 
 #define REPL_BUFFER_SIZE       (1024)
-#define PYTHON_TASK_STACK_SIZE (4096)
+#define PYTHON_TASK_STACK_SIZE (16384)
 
 char     input_buffer[64] = {0};
 uint32_t input_offset     = 0;
@@ -129,6 +130,8 @@ static void python_task(void* pvParameters) {
 
     // Initialize the Python runtime
     py_initialize();
+
+    pk__add_module_socket();
 
     while (true) {
         int size = python_repl(line_buffer, sizeof(line_buffer));
