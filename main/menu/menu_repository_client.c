@@ -1,4 +1,4 @@
-#include "repository_client.h"
+#include "menu_repository_client.h"
 #include <stdio.h>
 #include <string.h>
 #include "bsp/input.h"
@@ -10,17 +10,18 @@
 #include "http_download.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
+#include "menu_repository_client_project.h"
 #include "pax_codecs.h"
+#include "pax_text.h"
 #include "pax_types.h"
+#include "repository_client.h"
 #include "wifi_connection.h"
-
-#define MAX_PROJECTS 32
 
 extern bool wifi_stack_get_initialized(void);
 
 static const char* TAG = "Repository client";
 
-static pax_buf_t icons[MAX_PROJECTS] = {0};
+repository_json_data_t projects = {0};
 
 #if defined(CONFIG_BSP_TARGET_KAMI)
 #define ICON_WIDTH        32
@@ -34,71 +35,15 @@ static pax_buf_t icons[MAX_PROJECTS] = {0};
 #define ICON_COLOR_FORMAT PAX_BUF_32_8888ARGB
 #endif
 
-// Repository
-
-static char*  data_projects = NULL;
-static size_t size_projects = 0;
-static cJSON* json_projects = NULL;
-
-static char*  data_information = NULL;
-static size_t size_information = 0;
-static cJSON* json_information = NULL;
-
-static bool load_information(void) {
-    if (data_information == NULL) {
-        char url[128];
-        sprintf(url, "https://apps.tanmatsu.cloud/v1/information");
-        bool success = download_ram(url, (uint8_t**)&data_information, &size_information);
-        if (!success) return false;
-    }
-    if (data_information == NULL) return false;
-    json_information = cJSON_ParseWithLength(data_information, size_information);
-    if (json_information == NULL) return false;
-    return true;
-}
-
-static void free_information(void) {
-    if (json_information != NULL) {
-        cJSON_Delete(json_information);
-        json_information = NULL;
-    }
-    if (data_information != NULL) {
-        free(data_information);
-        data_information = NULL;
-        size_information = 0;
-    }
-}
-
-static bool load_projects(void) {
-    if (data_projects == NULL) {
-        char url[128];
-        sprintf(url, "https://apps.tanmatsu.cloud/v1/projects?amount=%u", MAX_PROJECTS);
-        bool success = download_ram(url, (uint8_t**)&data_projects, &size_projects);
-        if (!success) return false;
-    }
-    if (data_projects == NULL) return false;
-    json_projects = cJSON_ParseWithLength(data_projects, size_projects);
-    if (json_projects == NULL) return false;
-    return true;
-}
-
-static void free_projects(void) {
-    if (json_projects != NULL) {
-        cJSON_Delete(json_projects);
-        json_projects = NULL;
-    }
-    if (data_projects != NULL) {
-        free(data_projects);
-        data_projects = NULL;
-        size_projects = 0;
-    }
-}
-
-static void populate_project_list(menu_t* menu) {
+static void populate_project_list(menu_t* menu, cJSON* json_projects) {
     cJSON* entry_obj;
     int    i = 0;
     cJSON_ArrayForEach(entry_obj, json_projects) {
-        cJSON* slug_obj    = cJSON_GetObjectItem(entry_obj, "slug");
+        cJSON* slug_obj = cJSON_GetObjectItem(entry_obj, "slug");
+        if (slug_obj == NULL) {
+            ESP_LOGE(TAG, "Slug object is NULL for entry %d", i);
+            continue;
+        }
         cJSON* project_obj = cJSON_GetObjectItem(entry_obj, "project");
         if (project_obj == NULL) {
             ESP_LOGE(TAG, "Project object is NULL for entry %d", i);
@@ -110,24 +55,13 @@ static void populate_project_list(menu_t* menu) {
             continue;
         }
         printf("Project [%s]: %s\r\n", slug_obj->valuestring, name_obj->valuestring);
-        menu_insert_item_icon(menu, name_obj->valuestring, NULL, (void*)i, -1, get_icon(ICON_DOWNLOADING));
-
-        void* buffer = heap_caps_calloc(1, ICON_BUFFER_SIZE, MALLOC_CAP_SPIRAM);
-        if (buffer == NULL) {
-            ESP_LOGE(TAG, "Failed to allocate memory for icon for entry %u", i);
-            continue;
-        }
-        pax_buf_init(&icons[i], buffer, ICON_WIDTH, ICON_HEIGHT, ICON_COLOR_FORMAT);
-#if defined(CONFIG_BSP_TARGET_KAMI)
-        icons[i].palette      = palette;
-        icons[i].palette_size = sizeof(palette) / sizeof(pax_col_t);
-#endif
-        /*if (!pax_insert_png_buf(&icons[i], icon_buf, icon_size, 0, 0, 0)) {
-            ESP_LOGE(TAG, "Failed to decode icon for entry %u", i);
-        }*/
-
+        menu_insert_item(menu, name_obj->valuestring, NULL, (void*)i, -1);
         i++;
     }
+}
+
+static cJSON* get_project_by_index(cJSON* json_projects, int index) {
+    return cJSON_GetArrayItem(json_projects, index);
 }
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool partial, bool icons) {
@@ -151,37 +85,61 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
     display_blit_buffer(buffer);
 }
 
+static void render_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* message) {
+    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
+    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
+
+    pax_vec2_t position = {
+        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
+        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
+        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
+        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
+    };
+
+    render_base_screen_statusbar(buffer, theme, true, true, true,
+                                 ((gui_header_field_t[]){{get_icon(ICON_REPOSITORY), "Repository"}}), 1, NULL, 0, NULL,
+                                 0);
+
+    pax_center_text(buffer, 0xFF000000, theme->menu.text_font, 24, pax_buf_get_width(buffer) / 2.0f,
+                    (pax_buf_get_height(buffer) - 24) / 2.0f, message);
+
+    display_blit_buffer(buffer);
+}
+
 void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
+    render_dialog(buffer, theme, "Connecting to WiFi...");
+
     if (!wifi_stack_get_initialized()) {
         ESP_LOGE(TAG, "WiFi stack not initialized");
+        render_dialog(buffer, theme, "WiFi stack not initialized");
         return;
     }
 
     if (!wifi_connection_is_connected()) {
         if (wifi_connect_try_all() != ESP_OK) {
             ESP_LOGE(TAG, "Not connected to WiFi");
+            render_dialog(buffer, theme, "Not connected to WiFi");
             return;
         }
     }
 
-    bool success = load_information();
+    render_dialog(buffer, theme, "Downloading list of projects...");
+
+    bool success = load_projects("https://apps.tanmatsu.cloud", &projects, NULL);
     if (!success) {
-        ESP_LOGE(TAG, "Failed to load repository information");
+        ESP_LOGE(TAG, "Failed to load projects");
+        render_dialog(buffer, theme, "Failed to load projects");
         return;
     }
 
-    success = load_projects();
-    if (!success) {
-        ESP_LOGE(TAG, "Failed to load projects");
-        return;
-    }
+    render_dialog(buffer, theme, "Rendering list of projects...");
 
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
     menu_t menu = {0};
     menu_initialize(&menu);
-    populate_project_list(&menu);
+    populate_project_list(&menu, projects.json);
 
     render(buffer, theme, &menu, false, true);
     while (1) {
@@ -207,8 +165,13 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
-                                void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                // execute_action(buffer, (menu_home_action_t)arg, theme);
+                                void*  arg     = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                cJSON* wrapper = get_project_by_index(projects.json, (int)(arg));
+                                if (wrapper == NULL) {
+                                    ESP_LOGE(TAG, "Wrapper object is NULL");
+                                    break;
+                                }
+                                menu_repository_client_project(buffer, theme, wrapper);
                                 render(buffer, theme, &menu, false, true);
                                 break;
                             }
@@ -226,6 +189,5 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
         }
     }
 
-    free_projects();
-    free_information();
+    free_repository_data_json(&projects);
 }

@@ -24,7 +24,7 @@
 #include "icons.h"
 #include "menu/nametag.h"
 #include "menu/textedit.h"
-#include "repository_client.h"
+#include "menu_repository_client.h"
 #include "sdcard.h"
 #include "terminal.h"
 #include "unistd.h"

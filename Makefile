@@ -12,6 +12,7 @@ SHELL := /usr/bin/env bash
 
 DEVICE ?= tanmatsu # Default target device
 BUILD ?= build/$(DEVICE)
+FAT ?= 1
 
 export IDF_TOOLS_PATH
 export IDF_GITHUB_ASSETS
@@ -93,7 +94,7 @@ checkbuildenv:
 
 .PHONY: build
 build: icons checkbuildenv submodules
-	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py -B $(BUILD) build -DDEVICE=$(DEVICE)
+	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py -B $(BUILD) build -DDEVICE=$(DEVICE) -DFAT=$(FAT)
 
 # Hardware
 

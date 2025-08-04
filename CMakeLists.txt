@@ -6,6 +6,10 @@ if(DEVICE STREQUAL "")
 	set(DEVICE "$ENV{TARGET}")
 endif()
 
+if(FAT STREQUAL "")
+	set(FAT "$ENV{FAT}")
+endif()
+
 if(DEVICE STREQUAL "")
 	message(FATAL_ERROR "DEVICE not set")
 endif()

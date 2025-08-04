@@ -15,8 +15,8 @@
 #include "pax_matrix.h"
 #include "pax_types.h"
 // #include "shapes/pax_misc.h"
-#include "device_information.h"
 #include "firmware_update.h"
+#include "menu_device_information.h"
 #include "radio_update.h"
 #include "settings_clock.h"
 

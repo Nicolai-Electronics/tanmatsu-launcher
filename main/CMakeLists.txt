@@ -8,8 +8,11 @@ endif()
 
 idf_component_register(
 	SRCS
+		# Application
 		"main.c"
 		"common/display.c"
+		
+		# Menus
 		"menu/home.c"
 		"menu/settings.c"
 		"menu/about.c"
@@ -19,7 +22,7 @@ idf_component_register(
 		"menu/apps.c"
 		"menu/firmware_update.c"
 		"menu/message_dialog.c"
-		"menu/device_information.c"
+		"menu/menu_device_information.c"
 		"menu/settings_clock.c"
 		"menu/settings_clock_timezone.c"
 		"menu/charging_mode.c"
@@ -28,9 +31,14 @@ idf_component_register(
 		"menu/radio_update.c"
 		"menu/nametag.c"
 		"menu/rftest.c"
+		"menu/menu_repository_client.c"
+		"menu/menu_repository_client_project.c"
+
+		# Fonts
 		"chakrapetchmedium.c"
+
+		# Libraries
 		"coprocessor_management.c"
-		"wifi_remote.c"
 		"wifi_ota.c"
 		"icons.c"
 		"usb_device.c"
@@ -38,8 +46,11 @@ idf_component_register(
 		"sdcard.c"
 		"app_metadata_parser.c"
 		"python.c"
-		"menu/repository_client.c"
 		"http_download.c"
+		"repository_client.c"
+		"device_information.c"
+		"filesystem_utils.c"
+		"app_management.c"
 	PRIV_REQUIRES
 		esp_lcd
 		fatfs
@@ -60,6 +71,7 @@ idf_component_register(
 		json
 		freertos
 		badgelink
+		tanmatsu-wifi
 		${extra_requires}
 	INCLUDE_DIRS
 		"."
@@ -68,4 +80,6 @@ idf_component_register(
 		${files}
 )
 
+if (FAT STREQUAL "1")
 fatfs_create_spiflash_image(locfd ../fat/${DEVICE} FLASH_IN_PROJECT)
+endif()

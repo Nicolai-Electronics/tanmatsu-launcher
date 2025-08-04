@@ -101,17 +101,28 @@ app_t* create_app(const char* path, const char* slug) {
     }
 
     cJSON* icon_obj = cJSON_GetObjectItem(root, "icon");
-    if (icon_obj) {
+    if (icon_obj && cJSON_IsObject(icon_obj)) {
         cJSON* icon32_obj = cJSON_GetObjectItem(icon_obj, "32x32");
-        if (license_obj && (license_obj->valuestring != NULL)) {
+        if (icon32_obj && cJSON_IsString(icon32_obj)) {
             snprintf(path_buffer, sizeof(path_buffer), "%s/%s/%s", path, slug, icon32_obj->valuestring);
+            ESP_LOGI(TAG, "Icon for app %s: ", slug, path_buffer);
             FILE* icon_fd = fopen(path_buffer, "rb");
             app->icon     = calloc(1, sizeof(pax_buf_t));
             if (app->icon != NULL) {
-                pax_decode_png_fd(app->icon, icon_fd, PAX_BUF_32_8888ARGB, 0);
+                if (pax_decode_png_fd(app->icon, icon_fd, PAX_BUF_32_8888ARGB, 0)) {
+                    ESP_LOGI(TAG, "Successfully loaded icon for app %s", slug);
+                } else {
+                    ESP_LOGE(TAG, "Failed to decode icon for app %s", slug);
+                }
+            } else {
+                ESP_LOGE(TAG, "Failed to open icon file for app %s", slug);
             }
             fclose(icon_fd);
+        } else {
+            ESP_LOGE(TAG, "No 32x32 icon object for app %s", slug);
         }
+    } else {
+        ESP_LOGE(TAG, "No icon object for app %s", slug);
     }
 
     cJSON* version_obj = cJSON_GetObjectItem(root, "version");
@@ -123,6 +134,7 @@ app_t* create_app(const char* path, const char* slug) {
     free(json_data);
 
     if (app->icon == NULL) {
+        ESP_LOGE(TAG, "No icon found for app %s, using default icon", slug);
         app->icon = calloc(1, sizeof(pax_buf_t));
         if (app->icon != NULL) {
             pax_buf_init(app->icon, NULL, 32, 32, PAX_BUF_32_8888ARGB);

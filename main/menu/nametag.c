@@ -63,6 +63,26 @@ static void render_nametag(pax_buf_t* buffer) {
     display_blit_buffer(buffer);
 }
 
+static void render_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* message) {
+    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
+    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
+
+    pax_vec2_t position = {
+        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
+        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
+        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
+        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
+    };
+
+    render_base_screen_statusbar(buffer, theme, true, true, true,
+                                 ((gui_header_field_t[]){{get_icon(ICON_TAG), "Nametag"}}), 1, NULL, 0, NULL, 0);
+
+    pax_center_text(buffer, 0xFF000000, theme->menu.text_font, 24, pax_buf_get_width(buffer) / 2.0f,
+                    (pax_buf_get_height(buffer) - 24) / 2.0f, message);
+
+    display_blit_buffer(buffer);
+}
+
 uint8_t led_buffer[6 * 3] = {0};
 
 static void set_led_color(uint8_t led, uint32_t color) {
@@ -74,6 +94,8 @@ static void set_led_color(uint8_t led, uint32_t color) {
 void menu_nametag(pax_buf_t* buffer, gui_theme_t* theme) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
+
+    render_dialog(buffer, theme, "Rendering png image...");
 
     if (!load_nametag()) {
         return;

@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include "app_management.h"
 #include "app_metadata_parser.h"
 #include "appfs.h"
 #include "bsp/input.h"
@@ -60,7 +61,8 @@ static void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t positi
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
+#define FOOTER_LEFT \
+    ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}, {get_icon(ICON_F5), "Remove"}}), 3
 #define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Start app"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define FOOTER_LEFT  NULL, 0
@@ -84,65 +86,81 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
-    app_t* apps[MAX_NUM_APPS] = {0};
-    size_t number_of_apps     = create_list_of_apps(apps, MAX_NUM_APPS);
+    bool exit = false;
+    while (!exit) {
 
-    menu_t menu = {0};
-    menu_initialize(&menu);
-    populate_menu(&menu, apps, number_of_apps);
+        app_t* apps[MAX_NUM_APPS] = {0};
+        size_t number_of_apps     = create_list_of_apps(apps, MAX_NUM_APPS);
 
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
+        menu_t menu = {0};
+        menu_initialize(&menu);
+        populate_menu(&menu, apps, number_of_apps);
 
-    pax_vec2_t position = {
-        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
+        int header_height = theme->header.height + (theme->header.vertical_margin * 2);
+        int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
 
-    render(buffer, theme, &menu, position, false, true);
-    while (1) {
-        bsp_input_event_t event;
-        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
-            switch (event.type) {
-                case INPUT_EVENT_TYPE_NAVIGATION: {
-                    if (event.args_navigation.state) {
-                        switch (event.args_navigation.key) {
-                            case BSP_INPUT_NAVIGATION_KEY_ESC:
-                            case BSP_INPUT_NAVIGATION_KEY_F1:
-                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
-                                menu_free(&menu);
-                                free_list_of_apps(apps, MAX_NUM_APPS);
-                                return;
-                            case BSP_INPUT_NAVIGATION_KEY_UP:
-                                menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, position, true, false);
-                                break;
-                            case BSP_INPUT_NAVIGATION_KEY_DOWN:
-                                menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, position, true, false);
-                                break;
-                            case BSP_INPUT_NAVIGATION_KEY_RETURN:
-                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
-                            case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
-                                void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                app_t* app = (app_t*)arg;
-                                execute_app(buffer, theme, position, app);
-                                render(buffer, theme, &menu, position, false, false);
-                                break;
+        pax_vec2_t position = {
+            .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
+            .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
+            .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
+            .y1 =
+                pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
+        };
+
+        render(buffer, theme, &menu, position, false, true);
+        bool refresh = false;
+        while (!refresh) {
+            bsp_input_event_t event;
+            if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                switch (event.type) {
+                    case INPUT_EVENT_TYPE_NAVIGATION: {
+                        if (event.args_navigation.state) {
+                            switch (event.args_navigation.key) {
+                                case BSP_INPUT_NAVIGATION_KEY_ESC:
+                                case BSP_INPUT_NAVIGATION_KEY_F1:
+                                case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                                    menu_free(&menu);
+                                    free_list_of_apps(apps, MAX_NUM_APPS);
+                                    return;
+                                case BSP_INPUT_NAVIGATION_KEY_UP:
+                                    menu_navigate_previous(&menu);
+                                    render(buffer, theme, &menu, position, true, false);
+                                    break;
+                                case BSP_INPUT_NAVIGATION_KEY_DOWN:
+                                    menu_navigate_next(&menu);
+                                    render(buffer, theme, &menu, position, true, false);
+                                    break;
+                                case BSP_INPUT_NAVIGATION_KEY_RETURN:
+                                case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                                case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
+                                    void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                    app_t* app = (app_t*)arg;
+                                    execute_app(buffer, theme, position, app);
+                                    render(buffer, theme, &menu, position, false, false);
+                                    break;
+                                }
+                                case BSP_INPUT_NAVIGATION_KEY_F5:
+                                case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_Y:
+                                    void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                    app_t* app = (app_t*)arg;
+                                    app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_INTERNAL);
+                                    app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_SD);
+                                    refresh = true;
+                                    break;
+                                default:
+                                    break;
                             }
-                            default:
-                                break;
                         }
+                        break;
                     }
-                    break;
+                    default:
+                        break;
                 }
-                default:
-                    break;
+            } else {
+                render(buffer, theme, &menu, position, true, true);
             }
-        } else {
-            render(buffer, theme, &menu, position, true, true);
         }
+        menu_free(&menu);
+        free_list_of_apps(apps, MAX_NUM_APPS);
     }
 }
