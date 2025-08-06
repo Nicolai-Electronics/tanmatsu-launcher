@@ -122,7 +122,7 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
     menu_t menu = {0};
     menu_initialize(&menu);
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
-    if (access("/sd/nametag.png", F_OK) == 0) {
+    if (access("/sd/nametag.png", F_OK) == 0 || access("/int/nametag.png", F_OK) == 0) {
         menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_NAMETAG, -1, get_icon(ICON_TAG));
     }
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));

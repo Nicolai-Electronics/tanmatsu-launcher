@@ -42,10 +42,13 @@ static bool load_nametag(void) {
     }*/
     FILE* fd = fopen("/sd/nametag.png", "rb");
     if (fd == NULL) {
-        ESP_LOGE(TAG, "Failed to open file");
-        // free(nametag_buffer);
-        // nametag_buffer = NULL;
-        return false;
+        fd = fopen("/int/nametag.png", "rb");
+        if (fd == NULL) {
+            ESP_LOGE(TAG, "Failed to open file");
+            // free(nametag_buffer);
+            // nametag_buffer = NULL;
+            return false;
+        }
     }
     // pax_buf_init(&nametag_pax_buf, &nametag_buffer, 800, 480, PAX_BUF_32_8888ARGB);
     if (!pax_decode_png_fd(&nametag_pax_buf, fd, PAX_BUF_32_8888ARGB, 0)) {  // CODEC_FLAG_EXISTING)) {
