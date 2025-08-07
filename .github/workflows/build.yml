@@ -6,7 +6,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        device: ["tanmatsu", "konsool", "mch2022", "hackerhotel-2024", "hackerhotel-2026", "esp32-p4-function-ev-board", "kami"]
+        device:
+          [
+            "tanmatsu",
+            "kami",
+            "mch2022",
+            "hackerhotel-2024",
+            "esp32-p4-function-ev-board",
+          ]
     steps:
       - run: sudo apt-get install git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
       - name: Check out repository
