@@ -133,11 +133,19 @@ monitor:
 
 .PHONY: openocd
 openocd:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) openocd
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) openocd
 
 .PHONY: gdb
 gdb:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) gdb
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdb
+
+.PHONY: gdbgui
+gdbgui:
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbgui
+
+.PHONY: gdbtui
+gdbtui:
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbtui
 
 # Tools
 
@@ -198,20 +206,3 @@ buildall:
 flashall:
 	$(MAKE) flash DEVICE=tanmatsu PORT=/dev/ttyACM0
 	$(MAKE) flash DEVICE=mch2022 PORT=/dev/ttyACM2
-
-
-# Debugging
-.PHONY: openocd
-openocd:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) openocd
-
-.PHONY: gdb
-gdb:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdb
-.PHONY: gdbgui
-
-gdbgui:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbgui
-
-gdbtui:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbtui
