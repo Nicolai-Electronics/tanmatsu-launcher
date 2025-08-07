@@ -5,7 +5,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
@@ -21,7 +21,7 @@ static const char* TAG = "nametag";
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
+#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
 #define FOOTER_RIGHT NULL, 0
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define FOOTER_LEFT  NULL, 0
@@ -78,7 +78,7 @@ static void render_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* mes
     };
 
     render_base_screen_statusbar(buffer, theme, true, true, true,
-                                 ((gui_header_field_t[]){{get_icon(ICON_TAG), "Nametag"}}), 1, NULL, 0, NULL, 0);
+                                 ((gui_element_icontext_t[]){{get_icon(ICON_TAG), "Nametag"}}), 1, NULL, 0, NULL, 0);
 
     pax_center_text(buffer, 0xFF000000, theme->menu.text_font, 24, pax_buf_get_width(buffer) / 2.0f,
                     (pax_buf_get_height(buffer) - 24) / 2.0f, message);

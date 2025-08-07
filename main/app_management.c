@@ -23,7 +23,8 @@ static const char* app_mgmt_location_to_path(app_mgmt_location_t location) {
     }
 }
 
-esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgmt_location_t location) {
+esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgmt_location_t location,
+                           download_callback_t download_callback) {
     if (strlen(slug) < 1) {
         ESP_LOGE(TAG, "Slug is empty");
         return ESP_ERR_INVALID_ARG;
@@ -186,7 +187,9 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             char target_path[512] = {0};
             snprintf(target_path, sizeof(target_path), "%s/%s", app_path, target_file->valuestring);
 
-            if (!download_file(file_url, file_path)) {
+            char status_text[64] = {0};
+            snprintf(status_text, sizeof(status_text), "Downloading asset '%s'...", target_file->valuestring);
+            if (!download_file(file_url, file_path, download_callback, status_text)) {
                 free_repository_data_json(&metadata);
                 free_repository_data_json(&information);
                 app_mgmt_uninstall(slug, location);
@@ -225,7 +228,9 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             uint8_t* file_data = NULL;
             size_t   file_size = 0;
 
-            if (!download_ram(file_url, &file_data, &file_size)) {
+            char status_text[64] = {0};
+            snprintf(status_text, sizeof(status_text), "Downloading executable '%s'...", executable);
+            if (!download_ram(file_url, &file_data, &file_size, download_callback, status_text)) {
                 free_repository_data_json(&metadata);
                 free_repository_data_json(&information);
                 app_mgmt_uninstall(slug, location);
@@ -258,8 +263,23 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
                 free_repository_data_json(&metadata);
                 free_repository_data_json(&information);
                 app_mgmt_uninstall(slug, location);
-                ESP_LOGE(TAG, "Failed to write to appfs file: %s", slug);
+                ESP_LOGE(TAG, "Failed to install executable to AppFS: %s", slug);
                 return ESP_FAIL;
+            }
+
+            if (location == APP_MGMT_LOCATION_SD) {
+                snprintf(file_path, sizeof(file_path), "%s/%s", app_path, executable);
+                FILE* fd = fopen(file_path, "wb");
+                if (fd == NULL) {
+                    free(file_data);
+                    free_repository_data_json(&metadata);
+                    free_repository_data_json(&information);
+                    app_mgmt_uninstall(slug, location);
+                    ESP_LOGE(TAG, "Failed to write executable to SD card: %s", slug);
+                    return ESP_FAIL;
+                }
+                fwrite(file_data, 1, file_size, fd);
+                fclose(fd);
             }
 
             free(file_data);
@@ -276,7 +296,9 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
                      icon32_obj->valuestring);
             char icon_path[512];
             snprintf(icon_path, sizeof(icon_path), "%s/%s", app_path, icon32_obj->valuestring);
-            if (!download_file(icon_url, icon_path)) {
+            char status_text[64] = {0};
+            snprintf(status_text, sizeof(status_text), "Downloading icon '%s'...", icon32_obj->valuestring);
+            if (!download_file(icon_url, icon_path, download_callback, status_text)) {
                 ESP_LOGE(TAG, "Failed to download icon");
             }
         }

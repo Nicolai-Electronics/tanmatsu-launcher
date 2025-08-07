@@ -11,10 +11,10 @@
 #include "common/display.h"
 #include "esp_log.h"
 #include "esp_log_level.h"
-#include "esp_system.h"
 #include "esp_wifi.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
+#include "gui_element_header.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "pax_gfx.h"
@@ -41,9 +41,9 @@ void radio_update(pax_buf_t* buffer, gui_theme_t* theme, char* path, bool compre
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
     pax_background(buffer, theme->palette.color_background);
-    gui_render_header_adv(buffer, theme, ((gui_header_field_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Radio update"}}), 1,
-                          NULL, 0);
-    gui_render_footer_adv(buffer, theme, NULL, 0, NULL, 0);
+    gui_header_draw(buffer, theme, ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Radio update"}}), 1,
+                    NULL, 0);
+    gui_footer_draw(buffer, theme, NULL, 0, NULL, 0);
     display_blit_buffer(buffer);
 
     radio_update_callback("Stopping WiFi...");

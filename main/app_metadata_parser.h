@@ -25,7 +25,8 @@ typedef struct {
 app_t* create_app(const char* path, const char* slug);
 void   free_app(app_t* app);
 
-size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, const char* path);
+size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, const char* path, app_t** full_list,
+                                          size_t full_list_size);
 size_t create_list_of_apps_from_other_appfs_entries(app_t** out_list, size_t list_size, app_t** full_list,
                                                     size_t full_list_size);
 size_t create_list_of_apps(app_t** out_list, size_t list_size);

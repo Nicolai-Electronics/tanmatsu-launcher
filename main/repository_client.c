@@ -28,7 +28,7 @@ void free_repository_data_json(repository_json_data_t* data) {
 bool load_information(const char* base_url, repository_json_data_t* out_data) {
     char url[128];
     sprintf(url, "%s/v1/information", base_url);
-    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size);
+    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
     if (!success) return false;
     out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
     if (out_data->json == NULL) {
@@ -41,7 +41,7 @@ bool load_information(const char* base_url, repository_json_data_t* out_data) {
 bool load_categories(const char* base_url, repository_json_data_t* out_data) {
     char url[128];
     sprintf(url, "%s/v1/categories?device=%s", base_url, "tanmatsu");
-    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size);
+    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
     if (!success) return false;
     out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
     if (out_data->json == NULL) {
@@ -58,7 +58,7 @@ bool load_projects(const char* base_url, repository_json_data_t* out_data, const
     } else {
         sprintf(url, "%s/v1/projects?device=%s", base_url, "tanmatsu");
     }
-    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size);
+    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
     if (!success) return false;
     out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
     if (out_data->json == NULL) {
@@ -78,7 +78,7 @@ bool load_projects_paginated(const char* base_url, repository_json_data_t* out_d
         sprintf(url, "%s/v1/projects?device=%s&offset=%" PRIu32 "&amount=%" PRIu32, base_url, "tanmatsu", offset,
                 amount);
     }
-    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size);
+    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
     if (!success) return false;
     out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
     if (out_data->json == NULL) {
@@ -91,7 +91,7 @@ bool load_projects_paginated(const char* base_url, repository_json_data_t* out_d
 bool load_project(const char* base_url, repository_json_data_t* out_data, const char* project_slug) {
     char url[128];
     sprintf(url, "%s/v1/projects/%s", base_url, project_slug);
-    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size);
+    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
     if (!success) return false;
     out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
     if (out_data->json == NULL) {

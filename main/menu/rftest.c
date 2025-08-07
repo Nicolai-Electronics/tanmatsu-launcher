@@ -4,7 +4,7 @@
 #include "device_information.h"
 #include "firmware_update.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
@@ -60,10 +60,11 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
     };
 
     if (!partial || icons) {
-        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_SETTINGS), "Radio test"}}), 1,
-                                     ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}),
-                                     2, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
+        render_base_screen_statusbar(
+            buffer, theme, !partial, !partial || icons, !partial,
+            ((gui_element_icontext_t[]){{get_icon(ICON_SETTINGS), "Radio test"}}), 1,
+            ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
+            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);

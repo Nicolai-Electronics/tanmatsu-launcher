@@ -11,6 +11,7 @@ idf_component_register(
 		# Application
 		"main.c"
 		"common/display.c"
+		"common/theme.c"
 		
 		# Menus
 		"menu/home.c"

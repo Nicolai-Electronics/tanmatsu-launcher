@@ -3,10 +3,12 @@
 #include "bsp/input.h"
 #include "bsp/power.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "esp_wifi.h"
 #include "esp_wifi_types_generic.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
+#include "gui_element_header.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "pax_gfx.h"
@@ -17,7 +19,6 @@
 #include "sdkconfig.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
-// #include "shapes/pax_misc.h"
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
 #include "bsp/tanmatsu.h"
@@ -26,16 +27,16 @@
 
 static char clock_buffer[6] = {0};
 
-static gui_header_field_t clock_indicator(void) {
+static gui_element_icontext_t clock_indicator(void) {
     time_t     now      = time(NULL);
     struct tm* timeinfo = localtime(&now);
     strftime(clock_buffer, sizeof(clock_buffer), "%H:%M", timeinfo);
-    return (gui_header_field_t){NULL, clock_buffer};
+    return (gui_element_icontext_t){NULL, clock_buffer};
 }
 
 static char percentage_buffer[5] = {0};
 
-static gui_header_field_t battery_indicator(void) {
+static gui_element_icontext_t battery_indicator(void) {
     bsp_power_battery_information_t information = {0};
     bsp_power_get_battery_information(&information);
 
@@ -48,50 +49,50 @@ static gui_header_field_t battery_indicator(void) {
 #endif
 
     if (!information.battery_available) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_UNKNOWN), ""};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_UNKNOWN), ""};
     }
     if (information.battery_charging) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_CHARGING), ""};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_CHARGING), ""};
     }
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
     if (faults.watchdog || faults.chrg_input || faults.chrg_thermal || faults.chrg_safety || faults.batt_ovp ||
         faults.ntc_cold || faults.ntc_hot) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_ERROR), ""};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_ERROR), ""};
     }
 #endif
 
     // snprintf(percentage_buffer, sizeof(percentage_buffer), "%3u%%", (uint8_t)information.remaining_percentage);
     if (information.remaining_percentage >= 98) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_7), percentage_buffer};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_7), percentage_buffer};
     }
     if (information.remaining_percentage >= 84) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_6), percentage_buffer};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_6), percentage_buffer};
     }
     if (information.remaining_percentage >= 70) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_5), percentage_buffer};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_5), percentage_buffer};
     }
     if (information.remaining_percentage >= 56) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_4), percentage_buffer};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_4), percentage_buffer};
     }
     if (information.remaining_percentage >= 42) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_3), percentage_buffer};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_3), percentage_buffer};
     }
     if (information.remaining_percentage >= 28) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_2), percentage_buffer};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_2), percentage_buffer};
     }
     if (information.remaining_percentage >= 14) {
-        return (gui_header_field_t){get_icon(ICON_BATTERY_1), percentage_buffer};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_1), percentage_buffer};
     }
-    return (gui_header_field_t){get_icon(ICON_BATTERY_0), percentage_buffer};
+    return (gui_element_icontext_t){get_icon(ICON_BATTERY_0), percentage_buffer};
 }
 
-static gui_header_field_t usb_indicator(void) {
+static gui_element_icontext_t usb_indicator(void) {
     if (usb_mode_get() == USB_DEVICE) {
-        return (gui_header_field_t){get_icon(ICON_USB), ""};
+        return (gui_element_icontext_t){get_icon(ICON_USB), ""};
     } else {
-        return (gui_header_field_t){get_icon(ICON_DEV), ""};
+        return (gui_element_icontext_t){get_icon(ICON_DEV), ""};
     }
 }
 
@@ -99,7 +100,7 @@ extern bool wifi_stack_get_initialized(void);
 
 static wifi_ap_record_t connected_ap = {0};
 
-static gui_header_field_t wifi_indicator(void) {
+static gui_element_icontext_t wifi_indicator(void) {
     bool        radio_initialized = wifi_stack_get_initialized();
     wifi_mode_t mode              = WIFI_MODE_NULL;
     if (radio_initialized && esp_wifi_get_mode(&mode) == ESP_OK) {
@@ -115,36 +116,37 @@ static gui_header_field_t wifi_indicator(void) {
                 } else if (connected_ap.rssi > -80) {
                     icon = get_icon(ICON_WIFI_1);
                 }
-                return (gui_header_field_t){icon, (char*)connected_ap.ssid};
+                return (gui_element_icontext_t){icon, (char*)connected_ap.ssid};
             } else {
-                return (gui_header_field_t){get_icon(ICON_WIFI_OFF), "Disconnected"};
+                return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), "Disconnected"};
             }
         } else if (mode == WIFI_MODE_AP) {
-            return (gui_header_field_t){get_icon(ICON_WIFI_OFF), ""};  // AP mode is currently unused
+            return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), ""};  // AP mode is currently unused
             // The device will be in AP mode by default until connection to a network is
         } else {
-            return (gui_header_field_t){get_icon(ICON_WIFI_UNKNOWN), "Other"};
+            return (gui_element_icontext_t){get_icon(ICON_WIFI_UNKNOWN), "Other"};
         }
     } else {
-        return (gui_header_field_t){get_icon(ICON_WIFI_ERROR), ""};
+        return (gui_element_icontext_t){get_icon(ICON_WIFI_ERROR), ""};
     }
 }
 
-static gui_header_field_t sdcard_indicator(void) {
+static gui_element_icontext_t sdcard_indicator(void) {
     switch (sd_status()) {
         case SD_STATUS_OK:
-            return (gui_header_field_t){get_icon(ICON_SD), ""};
+            return (gui_element_icontext_t){get_icon(ICON_SD), ""};
         case SD_STATUS_ERROR:
-            return (gui_header_field_t){get_icon(ICON_SD_ERROR), ""};
+            return (gui_element_icontext_t){get_icon(ICON_SD_ERROR), ""};
         default:
-            return (gui_header_field_t){NULL, ""};
+            return (gui_element_icontext_t){NULL, ""};
     }
 }
 
 void render_base_screen(pax_buf_t* buffer, gui_theme_t* theme, bool background, bool header, bool footer,
-                        gui_header_field_t* header_left, size_t header_left_count, gui_header_field_t* header_right,
-                        size_t header_right_count, gui_header_field_t* footer_left, size_t footer_left_count,
-                        gui_header_field_t* footer_right, size_t footer_right_count) {
+                        gui_element_icontext_t* header_left, size_t header_left_count,
+                        gui_element_icontext_t* header_right, size_t header_right_count,
+                        gui_element_icontext_t* footer_left, size_t footer_left_count,
+                        gui_element_icontext_t* footer_right, size_t footer_right_count) {
     if (background) {
         pax_background(buffer, theme->palette.color_background);
     }
@@ -153,7 +155,7 @@ void render_base_screen(pax_buf_t* buffer, gui_theme_t* theme, bool background, 
             pax_simple_rect(buffer, theme->palette.color_background, 0, 0, pax_buf_get_width(buffer),
                             theme->header.height + (theme->header.vertical_margin * 2));
         }
-        gui_render_header_adv(buffer, theme, header_left, header_left_count, header_right, header_right_count);
+        gui_header_draw(buffer, theme, header_left, header_left_count, header_right, header_right_count);
     }
     if (footer) {
         if (!background) {
@@ -161,16 +163,16 @@ void render_base_screen(pax_buf_t* buffer, gui_theme_t* theme, bool background, 
                             pax_buf_get_height(buffer) - theme->footer.height - (theme->footer.vertical_margin * 2),
                             pax_buf_get_width(buffer), theme->footer.height + (theme->footer.vertical_margin * 2));
         }
-        gui_render_footer_adv(buffer, theme, footer_left, footer_left_count, footer_right, footer_right_count);
+        gui_footer_draw(buffer, theme, footer_left, footer_left_count, footer_right, footer_right_count);
     }
 }
 
 void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool background, bool header, bool footer,
-                                  gui_header_field_t* header_left, size_t header_left_count,
-                                  gui_header_field_t* footer_left, size_t footer_left_count,
-                                  gui_header_field_t* footer_right, size_t footer_right_count) {
-    gui_header_field_t header_right[5]    = {0};
-    size_t             header_right_count = 0;
+                                  gui_element_icontext_t* header_left, size_t header_left_count,
+                                  gui_element_icontext_t* footer_left, size_t footer_left_count,
+                                  gui_element_icontext_t* footer_right, size_t footer_right_count) {
+    gui_element_icontext_t header_right[5]    = {0};
+    size_t                 header_right_count = 0;
     if (header) {
         header_right[0]    = clock_indicator();
         header_right[1]    = battery_indicator();
@@ -185,22 +187,21 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), (char*)action_text}}), 2
+#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), (char*)action_text}}), 2
 #define FOOTER_RIGHT NULL, 0
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{NULL, "🅱"}, {NULL, (char*)action_text}}), 2
+#define FOOTER_LEFT  ((gui_element_icontext_t[]){{NULL, "🅱"}, {NULL, (char*)action_text}}), 2
 #define FOOTER_RIGHT NULL, 0
 #else
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT NULL, 0
 #endif
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, const char* title, const char* message,
-                   const char* action_text, bool partial, bool icons) {
+static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, pax_buf_t* icon, const char* title,
+                   const char* message, const char* action_text, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_ERROR), title}}), 1, FOOTER_LEFT,
-                                     FOOTER_RIGHT);
+                                     ((gui_element_icontext_t[]){{icon, title}}), 1, FOOTER_LEFT, FOOTER_RIGHT);
     }
     if (!partial) {
         pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, 16, position.x0,
@@ -209,8 +210,9 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, c
     display_blit_buffer(buffer);
 }
 
-void message_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* title, const char* message,
-                    const char* action_text) {
+void message_dialog(pax_buf_t* icon, const char* title, const char* message, const char* action_text) {
+    pax_buf_t*    buffer            = display_get_buffer();
+    gui_theme_t*  theme             = get_theme();
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
@@ -224,7 +226,7 @@ void message_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* title, co
         .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
     };
 
-    render(buffer, theme, position, title, message, action_text, false, true);
+    render(buffer, theme, position, icon, title, message, action_text, false, true);
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -246,7 +248,20 @@ void message_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* title, co
                     break;
             }
         } else {
-            render(buffer, theme, position, title, message, action_text, true, true);
+            render(buffer, theme, position, icon, title, message, action_text, true, true);
         }
     }
+}
+
+void busy_dialog(pax_buf_t* icon, const char* title, const char* message) {
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
+
+    render_base_screen_statusbar(buffer, theme, true, true, true, ((gui_element_icontext_t[]){{icon, (char*)title}}), 1,
+                                 NULL, 0, NULL, 0);
+
+    pax_center_text(buffer, 0xFF000000, theme->menu.text_font, 24, pax_buf_get_width(buffer) / 2.0f,
+                    (pax_buf_get_height(buffer) - 24) / 2.0f, message);
+
+    display_blit_buffer(buffer);
 }

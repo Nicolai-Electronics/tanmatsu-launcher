@@ -9,15 +9,11 @@
 #include "esp_log.h"
 #include "gui_menu.h"
 #include "gui_style.h"
-#include "http_download.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
-#include "pax_codecs.h"
 #include "pax_fonts.h"
 #include "pax_text.h"
 #include "pax_types.h"
-#include "repository_client.h"
-#include "wifi_connection.h"
 
 static const char* TAG = "Repository client: project";
 
@@ -38,19 +34,19 @@ static void render_project(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t pos
 
     char text_buffer[256];
     sprintf(text_buffer, "Name: %s", name_obj ? name_obj->valuestring : "Unknown");
-    pax_draw_text(buffer, theme->palette.color_foreground, pax_font_sky_mono, font_size, position.x0,
+    pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 0, text_buffer);
     sprintf(text_buffer, "Description: %s", description_obj ? description_obj->valuestring : "Unknown");
-    pax_draw_text(buffer, theme->palette.color_foreground, pax_font_sky_mono, font_size, position.x0,
+    pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 1, text_buffer);
     sprintf(text_buffer, "Version: %s", version_obj ? version_obj->valuestring : "Unknown");
-    pax_draw_text(buffer, theme->palette.color_foreground, pax_font_sky_mono, font_size, position.x0,
+    pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 2, text_buffer);
     sprintf(text_buffer, "Author: %s", author_obj ? author_obj->valuestring : "Unknown");
-    pax_draw_text(buffer, theme->palette.color_foreground, pax_font_sky_mono, font_size, position.x0,
+    pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 3, text_buffer);
     sprintf(text_buffer, "License: %s", license_type_obj ? license_type_obj->valuestring : "Unknown");
-    pax_draw_text(buffer, theme->palette.color_foreground, pax_font_sky_mono, font_size, position.x0,
+    pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 4, text_buffer);
 }
 
@@ -59,10 +55,11 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
 
     if (!partial || icons) {
-        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_REPOSITORY), "Repository"}}), 1,
-                                     ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}),
-                                     2, ((gui_header_field_t[]){{NULL, "← / → Navigate ⏎ Select"}}), 1);
+        render_base_screen_statusbar(
+            buffer, theme, !partial, !partial || icons, !partial,
+            ((gui_element_icontext_t[]){{get_icon(ICON_REPOSITORY), "Repository"}}), 1,
+            ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
+            ((gui_element_icontext_t[]){{NULL, "← / → Navigate ⏎ Select"}}), 1);
     }
 
     // Description
@@ -93,14 +90,17 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
     display_blit_buffer(buffer);
 }
 
-static void render_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* message) {
-    render_base_screen_statusbar(buffer, theme, true, true, true,
-                                 ((gui_header_field_t[]){{get_icon(ICON_REPOSITORY), "Repository"}}), 1, NULL, 0, NULL,
-                                 0);
-    pax_center_text(buffer, 0xFF000000, theme->menu.text_font, 24, pax_buf_get_width(buffer) / 2.0f,
-                    (pax_buf_get_height(buffer) - 24) / 2.0f, message);
-    display_blit_buffer(buffer);
-}
+static void download_callback(size_t download_position, size_t file_size, const char* status_text) {
+    uint8_t        percentage      = 100 * download_position / file_size;
+    static uint8_t last_percentage = 0;
+    if (percentage == last_percentage) {
+        return;  // No change, no need to update
+    }
+    last_percentage = percentage;
+    char text[64];
+    sprintf(text, "%s (%u%%)", status_text, percentage);
+    busy_dialog(get_icon(ICON_DOWNLOADING), "Downloading", text);
+};
 
 static void execute_action(pax_buf_t* buffer, menu_repository_client_project_action_t action, gui_theme_t* theme,
                            cJSON* wrapper) {
@@ -108,22 +108,22 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
     cJSON* slug_obj = cJSON_GetObjectItem(wrapper, "slug");
     switch (action) {
         case ACTION_INSTALL: {
-            render_dialog(buffer, theme, "Installing on internal memory...");
-            if (app_mgmt_install("https://apps.tanmatsu.cloud", slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL) !=
-                ESP_OK) {
-                render_dialog(buffer, theme, "Installation failed!");
+            busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Installing on internal memory...");
+            if (app_mgmt_install("https://apps.tanmatsu.cloud", slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL,
+                                 download_callback) != ESP_OK) {
+                message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK");
             } else {
-                render_dialog(buffer, theme, "Installation successful!");
+                message_dialog(get_icon(ICON_REPOSITORY), "Repository", "App successfully installed", "OK");
             }
             break;
         }
         case ACTION_INSTALL_SD: {
-            render_dialog(buffer, theme, "Installing on SD card...");
-            if (app_mgmt_install("https://apps.tanmatsu.cloud", slug_obj->valuestring, APP_MGMT_LOCATION_SD) !=
-                ESP_OK) {
-                render_dialog(buffer, theme, "Installation failed!");
+            busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Installing on SD card...");
+            if (app_mgmt_install("https://apps.tanmatsu.cloud", slug_obj->valuestring, APP_MGMT_LOCATION_SD,
+                                 download_callback) != ESP_OK) {
+                message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK, download_callback");
             } else {
-                render_dialog(buffer, theme, "Installation successful!");
+                message_dialog(get_icon(ICON_REPOSITORY), "Repository", "App successfully installed", "OK");
             }
             break;
         }
@@ -133,7 +133,7 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
 }
 
 void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON* wrapper) {
-    render_dialog(buffer, theme, "Rendering project...");
+    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Rendering project...");
 
     cJSON* project = cJSON_GetObjectItem(wrapper, "project");
     if (project == NULL) {

@@ -105,13 +105,10 @@ app_t* create_app(const char* path, const char* slug) {
         cJSON* icon32_obj = cJSON_GetObjectItem(icon_obj, "32x32");
         if (icon32_obj && cJSON_IsString(icon32_obj)) {
             snprintf(path_buffer, sizeof(path_buffer), "%s/%s/%s", path, slug, icon32_obj->valuestring);
-            ESP_LOGI(TAG, "Icon for app %s: ", slug, path_buffer);
             FILE* icon_fd = fopen(path_buffer, "rb");
             app->icon     = calloc(1, sizeof(pax_buf_t));
             if (app->icon != NULL) {
-                if (pax_decode_png_fd(app->icon, icon_fd, PAX_BUF_32_8888ARGB, 0)) {
-                    ESP_LOGI(TAG, "Successfully loaded icon for app %s", slug);
-                } else {
+                if (!pax_decode_png_fd(app->icon, icon_fd, PAX_BUF_32_8888ARGB, 0)) {
                     ESP_LOGE(TAG, "Failed to decode icon for app %s", slug);
                 }
             } else {
@@ -162,7 +159,8 @@ void free_app(app_t* app) {
     free(app);
 }
 
-size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, const char* path) {
+size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, const char* path, app_t** full_list,
+                                          size_t full_list_size) {
     DIR* dir = opendir(path);
     if (dir == NULL) {
         return 0;
@@ -174,9 +172,19 @@ size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, co
             break;
         }
         if (entry->d_type == DT_DIR) {
-            app_t* app = create_app(path, entry->d_name);
-            if (app != NULL && count < list_size) {
-                out_list[count++] = app;
+            bool already_in_list = false;
+            for (size_t i = 0; i < full_list_size; i++) {
+                if (full_list[i] != NULL && full_list[i]->slug != NULL &&
+                    strcmp(full_list[i]->slug, entry->d_name) == 0) {
+                    already_in_list = true;
+                    break;
+                }
+            }
+            if (!already_in_list) {
+                app_t* app = create_app(path, entry->d_name);
+                if (app != NULL && count < list_size) {
+                    out_list[count++] = app;
+                }
             }
         }
     }
@@ -228,8 +236,8 @@ size_t create_list_of_apps_from_other_appfs_entries(app_t** out_list, size_t lis
 size_t create_list_of_apps(app_t** out_list, size_t list_size) {
     size_t count = 0;
 
-    count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/int/apps");
-    count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/sd/apps");
+    count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/sd/apps", out_list, list_size);
+    count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/int/apps", out_list, list_size);
     count += create_list_of_apps_from_other_appfs_entries(&out_list[count], list_size - count, out_list, list_size);
     return count;
 }

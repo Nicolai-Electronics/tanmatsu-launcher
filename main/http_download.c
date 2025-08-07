@@ -1,3 +1,4 @@
+#include "http_download.h"
 #include "esp_event.h"
 #include "esp_http_client.h"
 #include "esp_system.h"
@@ -8,6 +9,9 @@
 #include "freertos/task.h"
 
 static const char* TAG = "HTTP download";
+
+const char*                global_callback_text = NULL;
+static download_callback_t global_callback      = NULL;
 
 typedef struct {
     FILE*     fd;      // For downloading directly to file on filesystem
@@ -56,18 +60,17 @@ static esp_err_t _event_handler(esp_http_client_event_t* evt) {
             break;
         }
         case HTTP_EVENT_ON_DATA:
+            if (global_callback != NULL) {
+                global_callback(info->received + evt->data_len, info->size, global_callback_text);
+            }
             if (info->fd != NULL) {  // Write directly to file on filesystem
-                ESP_LOGI(TAG, "Writing to file @ %p (%u bytes): %u of %u bytes.", info->fd, evt->data_len,
-                         info->received + evt->data_len, info->size);
                 fwrite(evt->data, 1, evt->data_len, info->fd);
             } else if (info->buffer != NULL && *info->buffer != NULL) {
                 if (info->received + evt->data_len <= info->size) {
                     uint8_t* dest = &((*info->buffer)[info->received]);
-                    ESP_LOGI(TAG, "Writing to RAM @ %p (%u bytes): %u of %u bytes.", dest, evt->data_len,
-                             info->received + evt->data_len, info->size);
                     memcpy(dest, evt->data, evt->data_len);
                 } else {
-                    ESP_LOGI(TAG, "Downloaded too much? %u with %u in content-length header",
+                    ESP_LOGE(TAG, "Downloaded too much?! %u with %u in content-length header",
                              info->received + evt->data_len, info->size);
                     info->out_of_allocated = true;
                     return ESP_ERR_NO_MEM;
@@ -117,8 +120,10 @@ static bool _download_file(const char* url, const char* path) {
     return download_success(err, &info);
 }
 
-bool download_file(const char* url, const char* path) {
-    int retry = 3;
+bool download_file(const char* url, const char* path, download_callback_t callback, const char* callback_text) {
+    global_callback      = callback;
+    global_callback_text = callback_text;
+    int retry            = 3;
     while (retry--) {
         if (_download_file(url, path)) return true;
         ESP_LOGI(TAG, "Download waiting to retry ...");
@@ -145,8 +150,11 @@ static bool _download_ram(const char* url, uint8_t** ptr, size_t* size) {
     return success;
 }
 
-bool download_ram(const char* url, uint8_t** ptr, size_t* size) {
-    int retry = 3;
+bool download_ram(const char* url, uint8_t** ptr, size_t* size, download_callback_t callback,
+                  const char* callback_text) {
+    global_callback      = callback;
+    global_callback_text = callback_text;
+    int retry            = 3;
     while (retry--) {
         if (_download_ram(url, ptr, size)) return true;
         ESP_LOGI(TAG, "Download waiting to retry ...");

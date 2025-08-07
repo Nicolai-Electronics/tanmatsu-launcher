@@ -8,7 +8,7 @@
 #include "bsp/input.h"
 #include "common/display.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
@@ -34,12 +34,12 @@ extern bool wifi_stack_get_task_done(void);
 static void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app_t* app) {
 
     if (app == NULL) {
-        message_dialog(buffer, theme, "Error", "No app selected", "OK");
+        message_dialog(get_icon(ICON_ERROR), "Error", "No app selected", "OK");
         return;
     }
 
     render_base_screen_statusbar(buffer, theme, true, true, true,
-                                 ((gui_header_field_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, NULL, 0, NULL, 0);
+                                 ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, NULL, 0, NULL, 0);
     char message[64] = {0};
     snprintf(message, sizeof(message), "Starting %s...", app->name);
     pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, theme->footer.text_height,
@@ -55,18 +55,20 @@ static void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t positi
         usb_mode_set(USB_DEBUG);
         esp_restart();
     } else {
-        message_dialog(buffer, theme, "Error", "App not found", "OK");
+        message_dialog(get_icon(ICON_ERROR), "Error", "App not found", "OK");
     }
 }
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT \
-    ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}, {get_icon(ICON_F5), "Remove"}}), 3
-#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Start app"}}), 1
+#define FOOTER_LEFT                                                                              \
+    ((gui_element_icontext_t[]){                                                                 \
+        {get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}, {get_icon(ICON_F5), "Remove"}}), \
+        3
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Start app"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "🅰 Start app"}}), 1
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅰 Start app"}}), 1
 #else
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT NULL, 0
@@ -75,7 +77,7 @@ static void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t positi
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, FOOTER_LEFT,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, FOOTER_LEFT,
                                      FOOTER_RIGHT);
     }
     menu_render(buffer, menu, position, theme, partial);
@@ -145,6 +147,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     app_t* app = (app_t*)arg;
                                     app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_INTERNAL);
                                     app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_SD);
+                                    message_dialog(get_icon(ICON_APPS), "Success", "App removed successfully", "OK");
                                     refresh = true;
                                     break;
                                 default:
