@@ -1,32 +1,29 @@
 #include "home.h"
 #include <string.h>
+#include <sys/unistd.h>
 #include <time.h>
+#include "apps.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
 #include "bsp/power.h"
+#include "charging_mode.h"
 #include "common/display.h"
+#include "common/theme.h"
+#include "coprocessor_management.h"
 #include "freertos/idf_additions.h"
 #include "freertos/projdefs.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
+#include "menu/nametag.h"
 #include "menu/rftest.h"
+#include "menu_repository_client.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
 #include "settings.h"
-// #include "shapes/pax_misc.h"
-#include "apps.h"
-#include "charging_mode.h"
-#include "coprocessor_management.h"
-#include "icons.h"
-#include "menu/nametag.h"
-#include "menu/textedit.h"
-#include "sdcard.h"
-#include "terminal.h"
-#include "unistd.h"
 #include "usb_device.h"
 
 typedef enum {
@@ -53,6 +50,9 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
         case ACTION_RFTEST:
             menu_rftest(fb, theme);
             break;
+        case ACTION_REPOSITORY:
+            menu_repository_client(fb, theme);
+            break;
         default:
             break;
     }
@@ -60,11 +60,11 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2
-#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "↑ / ↓ / ← / → Navigate ⏎ Select"}}), 1
+#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ / ← / → Navigate ⏎ Select"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "🅰 Select"}}), 1
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅰 Select"}}), 1
 #else
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT NULL, 0
@@ -73,7 +73,7 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_HOME), "Home"}}), 1, FOOTER_LEFT,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_HOME), "Home"}}), 1, FOOTER_LEFT,
                                      FOOTER_RIGHT);
     }
     menu_render_grid(buffer, menu, position, theme, partial);
@@ -111,17 +111,20 @@ static void toggle_usb_mode(void) {
     }
 }
 
-void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
+void menu_home(void) {
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
+
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
     menu_t menu = {0};
     menu_initialize(&menu);
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
-    if (access("/sd/nametag.png", F_OK) == 0) {
+    if (access("/sd/nametag.png", F_OK) == 0 || access("/int/nametag.png", F_OK) == 0) {
         menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_NAMETAG, -1, get_icon(ICON_TAG));
     }
-    // menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
+    menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
     menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
     if (access("/int/rftest_local.bin", F_OK) == 0) {
         menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_DEV));

@@ -12,6 +12,7 @@ SHELL := /usr/bin/env bash
 
 DEVICE ?= tanmatsu # Default target device
 BUILD ?= build/$(DEVICE)
+FAT ?= 1
 
 export IDF_TOOLS_PATH
 export IDF_GITHUB_ASSETS
@@ -93,7 +94,7 @@ checkbuildenv:
 
 .PHONY: build
 build: icons checkbuildenv submodules
-	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py -B $(BUILD) build -DDEVICE=$(DEVICE)
+	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py -B $(BUILD) build -DDEVICE=$(DEVICE) -DFAT=$(FAT)
 
 # Hardware
 
@@ -132,11 +133,19 @@ monitor:
 
 .PHONY: openocd
 openocd:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) openocd
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) openocd
 
 .PHONY: gdb
 gdb:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) gdb
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdb
+
+.PHONY: gdbgui
+gdbgui:
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbgui
+
+.PHONY: gdbtui
+gdbtui:
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbtui
 
 # Tools
 
@@ -197,20 +206,3 @@ buildall:
 flashall:
 	$(MAKE) flash DEVICE=tanmatsu PORT=/dev/ttyACM0
 	$(MAKE) flash DEVICE=mch2022 PORT=/dev/ttyACM2
-
-
-# Debugging
-.PHONY: openocd
-openocd:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) openocd
-
-.PHONY: gdb
-gdb:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdb
-.PHONY: gdbgui
-
-gdbgui:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbgui
-
-gdbtui:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbtui

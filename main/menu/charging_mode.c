@@ -4,7 +4,7 @@
 #include "bsp/power.h"
 #include "common/display.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"

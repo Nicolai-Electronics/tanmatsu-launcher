@@ -1,10 +1,10 @@
 
 #include "app_inspect.h"
 #include <string.h>
-#include "appfs.h"
+#include "app_management.h"
 #include "bsp/input.h"
 #include "common/display.h"
-#include "gui_footer.h"
+#include "gui_element_icontext.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/apps.h"
@@ -16,17 +16,17 @@
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT                                              \
-    ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"},           \
-                            {get_icon(ICON_F1), "Back"},         \
-                            {get_icon(ICON_F2), "Start"},        \
-                            {get_icon(ICON_F5), "Delete App"}}), \
+#define FOOTER_LEFT                                                  \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},           \
+                                {get_icon(ICON_F1), "Back"},         \
+                                {get_icon(ICON_F2), "Start"},        \
+                                {get_icon(ICON_F5), "Delete App"}}), \
         4
 #define FOOTER_RIGHT NULL, 0
 #define TEXT_FONT    pax_font_sky_mono
 #define TEXT_SIZE    18
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{NULL, "🅱 Back"}}), 1
+#define FOOTER_LEFT  ((gui_element_icontext_t[]){{NULL, "🅱 Back"}}), 1
 #define FOOTER_RIGHT NULL, 0
 #define TEXT_FONT    pax_font_sky_mono
 #define TEXT_SIZE    9
@@ -45,7 +45,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
     if (!partial || icons) {
         snprintf(text_buffer, sizeof(text_buffer), "App Info: %s", app->name);
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_DEVICE_INFO), text_buffer}}), 1,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_DEVICE_INFO), text_buffer}}), 1,
                                      FOOTER_LEFT, FOOTER_RIGHT);
     }
 
@@ -70,7 +70,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
         }
 
         if (app->version) {
-            snprintf(text_buffer, sizeof(text_buffer), "Version: %ld", app->version);
+            snprintf(text_buffer, sizeof(text_buffer), "Version: %" PRIu32, app->version);
             pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                           position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
         }
@@ -116,20 +116,23 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                 execute_app(buffer, theme, position, app);
                                 render(buffer, theme, position, false, false, app);
                                 break;
-                            case BSP_INPUT_NAVIGATION_KEY_F5:
-                                message_dialog_return_type_t msg_ret = message_dialog_yes_no(
-                                    buffer, theme, "Delete App", "Do you really want to delete the app?");
+                            case BSP_INPUT_NAVIGATION_KEY_F5: {
+                                message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
+                                    get_icon(ICON_HELP), "Delete App", "Do you really want to delete the app?");
                                 if (msg_ret == MSG_DIALOG_RETURN_OK) {
-                                    appfsDeleteFile(app->slug);
-                                    char text_buffer[256];
-                                    snprintf(text_buffer, sizeof(text_buffer), "/sd/apps/%s", app->slug);
-                                    remove(text_buffer);
-                                    snprintf(text_buffer, sizeof(text_buffer), "/int/apps/%s", app->slug);
-                                    remove(text_buffer);
+                                    esp_err_t res_int = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_INTERNAL);
+                                    esp_err_t res_sd  = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_SD);
+                                    if (res_int == ESP_OK || res_sd == ESP_OK) {
+                                        message_dialog(get_icon(ICON_INFO), "Success", "App removed successfully",
+                                                       "OK");
+                                    } else {
+                                        message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to remove app", "OK");
+                                    }
                                     return true;
                                 }
                                 render(buffer, theme, position, false, false, app);
                                 break;
+                            }
                             default:
                                 break;
                         }

@@ -26,6 +26,9 @@
 #include <malloc.h>
 #include <string.h>
 #include "esp_timer.h"
+#include "pax_fonts.h"
+#include "pax_gfx.h"
+#include "pax_shapes.h"
 
 // Initialise the context with default settings.
 void gui_osk_init(pax_buf_t* buf, gui_osk_ctx_t* ctx, size_t buffer_cap) {

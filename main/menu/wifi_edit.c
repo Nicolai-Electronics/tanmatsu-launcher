@@ -5,7 +5,7 @@
 #include "esp_err.h"
 #include "esp_wifi_types_generic.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
@@ -33,11 +33,11 @@ typedef enum {
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_WIFI), "Edit WiFi network"}}), 1,
-                                     ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"},
-                                                             {get_icon(ICON_F1), "Exit without saving"},
-                                                             {get_icon(ICON_F4), "Save and exit"}}),
-                                     3, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Edit setting"}}), 1);
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_WIFI), "Edit WiFi network"}}), 1,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},
+                                                                 {get_icon(ICON_F1), "Exit without saving"},
+                                                                 {get_icon(ICON_F4), "Save and exit"}}),
+                                     3, ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Edit setting"}}), 1);
     }
 
     menu_render(buffer, menu, position, theme, partial);
@@ -181,9 +181,9 @@ static void edit_authmode(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, m
     bool partial = false;
     while (1) {
         render_base_screen_statusbar(
-            buffer, theme, !partial, true, !partial, ((gui_header_field_t[]){{get_icon(ICON_WIFI), "Security"}}), 1,
-            ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Go back"}}), 2,
-            ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
+            buffer, theme, !partial, true, !partial, ((gui_element_icontext_t[]){{get_icon(ICON_WIFI), "Security"}}), 1,
+            ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Go back"}}), 2,
+            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
         menu_render(buffer, menu_authmode, position, theme, partial);
         display_blit_buffer(buffer);
         partial = true;
@@ -274,9 +274,9 @@ static void edit_phase2(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, men
     bool partial = false;
     while (1) {
         render_base_screen_statusbar(
-            buffer, theme, !partial, true, !partial, ((gui_header_field_t[]){{get_icon(ICON_WIFI), "Phase 2"}}), 1,
-            ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Go back"}}), 2,
-            ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
+            buffer, theme, !partial, true, !partial, ((gui_element_icontext_t[]){{get_icon(ICON_WIFI), "Phase 2"}}), 1,
+            ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Go back"}}), 2,
+            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
         menu_render(buffer, menu_phase2, position, theme, partial);
         display_blit_buffer(buffer);
         partial = true;
@@ -334,7 +334,7 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
             snprintf(message, sizeof(message), "%s, failed to read WiFi settings at index %u", esp_err_to_name(res),
                      index);
             printf("%s\r\n", message);
-            message_dialog_ok(buffer, theme, "An error occurred", message);
+            message_dialog(get_icon(ICON_ERROR), "An error occurred", message, "Go back");
             return false;
         }
     }
@@ -398,7 +398,8 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
                                 if (res == ESP_OK) {
                                     return true;
                                 } else {
-                                    message_dialog_ok(buffer, theme, "Error", "Failed to save WiFi settings");
+                                    message_dialog(get_icon(ICON_ERROR), "Error", "Failed to save WiFi settings",
+                                                   "Go back");
                                 }
                             }
                             case BSP_INPUT_NAVIGATION_KEY_UP:

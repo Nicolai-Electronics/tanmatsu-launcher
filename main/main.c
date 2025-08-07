@@ -12,6 +12,7 @@
 #include "bsp/rtc.h"
 #include "chakrapetchmedium.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "coprocessor_management.h"
 #include "custom_certificates.h"
 #include "driver/gpio.h"
@@ -19,8 +20,8 @@
 #include "esp_lcd_types.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
-#include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
+#include "gui_element_header.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "hal/lcd_types.h"
@@ -54,241 +55,6 @@ static wl_handle_t   wl_handle              = WL_INVALID_HANDLE;
 static bool          wifi_stack_initialized = false;
 static bool          wifi_stack_task_done   = false;
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-gui_theme_t theme = {
-    .palette =
-        {
-            .color_foreground          = 0xFF340132,  // #340132
-            .color_background          = 0xFFEEEAEE,  // #EEEAEE
-            .color_active_foreground   = 0xFF340132,  // #340132
-            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
-            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
-            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
-            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
-        },
-    .footer =
-        {
-            .height             = 32,
-            .vertical_margin    = 7,
-            .horizontal_margin  = 20,
-            .text_height        = 24,
-            .vertical_padding   = 20,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .header =
-        {
-            .height             = 32,
-            .vertical_margin    = 7,
-            .horizontal_margin  = 20,
-            .text_height        = 32,
-            .vertical_padding   = 20,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .menu =
-        {
-            .height                = 480 - 64,
-            .vertical_margin       = 20,
-            .horizontal_margin     = 30,
-            .text_height           = 32,
-            .vertical_padding      = 6,
-            .horizontal_padding    = 6,
-            .text_font             = &chakrapetchmedium,
-            .list_entry_height     = 32,
-            .grid_horizontal_count = 4,
-            .grid_vertical_count   = 3,
-        },
-};
-#elif defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
-gui_theme_t theme = {
-    .palette =
-        {
-            .color_foreground          = 0xFF340132,  // #340132
-            .color_background          = 0xFFEEEAEE,  // #EEEAEE
-            .color_active_foreground   = 0xFF340132,  // #340132
-            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
-            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
-            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
-            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
-        },
-    .footer =
-        {
-            .height             = 32,
-            .vertical_margin    = 7,
-            .horizontal_margin  = 20,
-            .text_height        = 16,
-            .vertical_padding   = 20,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .header =
-        {
-            .height             = 32,
-            .vertical_margin    = 7,
-            .horizontal_margin  = 20,
-            .text_height        = 16,
-            .vertical_padding   = 20,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .menu =
-        {
-            .height                = 480 - 64,
-            .vertical_margin       = 20,
-            .horizontal_margin     = 30,
-            .text_height           = 16,
-            .vertical_padding      = 6,
-            .horizontal_padding    = 6,
-            .text_font             = &chakrapetchmedium,
-            .list_entry_height     = 32,
-            .grid_horizontal_count = 4,
-            .grid_vertical_count   = 3,
-        },
-};
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
-gui_theme_t theme = {
-    .palette =
-        {
-            .color_foreground          = 0xFFA72872,  // #A72872
-            .color_background          = 0xFFFFFFFF,  // #FFFFFF
-            .color_active_foreground   = 0xFFFFFFFF,  // #FFFFFF
-            .color_active_background   = 0xFFA72872,  // #a72872
-            .color_highlight_primary   = 0xFF6A0080,  // #6a0080
-            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
-            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
-        },
-    .footer =
-        {
-            .height             = 24,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 0,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .header =
-        {
-            .height             = 32,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 0,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .menu =
-        {
-            .height                = 240 - 32 - 16,
-            .vertical_margin       = 0,
-            .horizontal_margin     = 0,
-            .text_height           = 16,
-            .vertical_padding      = 3,
-            .horizontal_padding    = 3,
-            .text_font             = &chakrapetchmedium,
-            .list_entry_height     = 32,
-            .grid_horizontal_count = 3,
-            .grid_vertical_count   = 3,
-        },
-};
-#elif defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
-gui_theme_t theme = {
-    .palette =
-        {
-            .color_foreground          = 0xFF340132,  // #340132
-            .color_background          = 0xFFEEEAEE,  // #EEEAEE
-            .color_active_foreground   = 0xFF340132,  // #340132
-            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
-            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
-            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
-            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
-        },
-    .footer =
-        {
-            .height             = 16,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 5,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .header =
-        {
-            .height             = 32,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 0,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .menu =
-        {
-            .height                = 240 - 32 - 16,
-            .vertical_margin       = 0,
-            .horizontal_margin     = 0,
-            .text_height           = 16,
-            .vertical_padding      = 3,
-            .horizontal_padding    = 3,
-            .text_font             = &chakrapetchmedium,
-            .list_entry_height     = 32,
-            .grid_horizontal_count = 3,
-            .grid_vertical_count   = 3,
-        },
-};
-#elif defined(CONFIG_BSP_TARGET_KAMI)
-gui_theme_t theme = {
-    .palette =
-        {
-            .color_foreground          = 1,
-            .color_background          = 0,
-            .color_active_foreground   = 2,
-            .color_active_background   = 0,
-            .color_highlight_primary   = 2,
-            .color_highlight_secondary = 2,
-            .color_highlight_tertiary  = 2,
-        },
-    .footer =
-        {
-            .height             = 16,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 5,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .header =
-        {
-            .height             = 32,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 0,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .menu =
-        {
-            .height                = 240 - 32 - 16,
-            .vertical_margin       = 0,
-            .horizontal_margin     = 0,
-            .text_height           = 16,
-            .vertical_padding      = 3,
-            .horizontal_padding    = 3,
-            .text_font             = &chakrapetchmedium,
-            .list_entry_height     = 32,
-            .grid_horizontal_count = 3,
-            .grid_vertical_count   = 3,
-        },
-};
-#else
-#error "Unsupported target"
-#endif
-
 static void fix_rtc_out_of_bounds(void) {
     time_t rtc_time = time(NULL);
 
@@ -316,10 +82,11 @@ static void fix_rtc_out_of_bounds(void) {
 }
 
 void startup_screen(const char* text) {
-    pax_buf_t* fb = display_get_buffer();
-    pax_background(fb, theme.palette.color_background);
-    gui_render_header_adv(fb, &theme, ((gui_header_field_t[]){{NULL, (char*)text}}), 1, NULL, 0);
-    gui_render_footer_adv(fb, &theme, NULL, 0, NULL, 0);
+    gui_theme_t* theme = get_theme();
+    pax_buf_t*   fb    = display_get_buffer();
+    pax_background(fb, theme->palette.color_background);
+    gui_header_draw(fb, theme, ((gui_element_icontext_t[]){{NULL, (char*)text}}), 1, NULL, 0);
+    gui_footer_draw(fb, theme, NULL, 0, NULL, 0);
     display_blit_buffer(fb);
 }
 
@@ -525,7 +292,6 @@ void app_main(void) {
 #if CONFIG_IDF_TARGET_ESP32P4
 // Only integrate Python into the launcher on ESP32-P4 targets
 #if 0
-    // Enabling Python currently causes crashes
     python_initialize();
 #endif
 #endif
@@ -541,5 +307,5 @@ void app_main(void) {
     bsp_power_set_usb_host_boost_enabled(true);
 
     pax_buf_t* buffer = display_get_buffer();
-    menu_home(buffer, &theme);
+    menu_home();
 }

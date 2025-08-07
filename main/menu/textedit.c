@@ -1,7 +1,7 @@
 #include "bsp/input.h"
 #include "common/display.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
@@ -18,11 +18,11 @@
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
-#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "⏎ Accept"}}), 1
+#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "⏎ Accept"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "🅰 Accept"}}), 1
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅰 Accept"}}), 1
 #else
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT NULL, 0
@@ -30,7 +30,7 @@
 
 void render(pax_buf_t* buffer, gui_theme_t* theme, bool partial, bool icons, char* title) {
     render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                 ((gui_header_field_t[]){{get_icon(ICON_EXTENSION), title}}), 1, FOOTER_LEFT,
+                                 ((gui_element_icontext_t[]){{get_icon(ICON_EXTENSION), title}}), 1, FOOTER_LEFT,
                                  FOOTER_RIGHT);
 }
 

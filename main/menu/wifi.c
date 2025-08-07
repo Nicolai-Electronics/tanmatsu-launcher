@@ -2,7 +2,7 @@
 #include "bsp/input.h"
 #include "common/display.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
@@ -35,13 +35,14 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                    bool loading) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_WIFI), "WiFi networks"}}), 1,
-                                     ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"},
-                                                             {get_icon(ICON_F1), "Back"},
-                                                             {get_icon(ICON_F2), "Scan"},
-                                                             {get_icon(ICON_F3), "Add manually"},
-                                                             {get_icon(ICON_F5), "Remove"}}),
-                                     5, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Edit"}}), 1);
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_WIFI), "WiFi networks"}}), 1,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},
+                                                                 {get_icon(ICON_F1), "Back"},
+                                                                 {get_icon(ICON_F2), "Scan"},
+                                                                 {get_icon(ICON_F3), "Add manually"},
+                                                                 {get_icon(ICON_F4), "Test"},
+                                                                 {get_icon(ICON_F5), "Remove"}}),
+                                     6, ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Edit"}}), 1);
     }
     menu_render(buffer, menu, position, theme, partial);
     if (menu_find_item(menu, 0) == NULL) {
@@ -59,7 +60,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
 static void add_manually(pax_buf_t* buffer, gui_theme_t* theme) {
     int index = wifi_settings_find_empty_slot();
     if (index == -1) {
-        message_dialog_ok(buffer, theme, "Error", "No empty slot, can not add another network");
+        message_dialog(get_icon(ICON_ERROR), "Error", "No empty slot, can not add another network", "Go back");
     }
     menu_wifi_edit(buffer, theme, index, true, "", 0);
 }
@@ -103,6 +104,20 @@ static bool _menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
                                 add_manually(buffer, theme);
                                 return true;
                                 break;
+                            case BSP_INPUT_NAVIGATION_KEY_F4: {
+                                uint8_t index = (uint32_t)menu_get_callback_args(&menu, menu_get_position(&menu));
+                                busy_dialog(get_icon(ICON_WIFI), "WiFi", "Testing connection...");
+                                if (wifi_connection_connect(index, 1) == ESP_OK) {
+                                    if (wifi_connection_await(1000)) {
+                                        message_dialog(get_icon(ICON_WIFI), "WiFi", "Connected successfully", "OK");
+                                    } else {
+                                        message_dialog(get_icon(ICON_ERROR), "WiFi", "Failed to connect to network",
+                                                       "OK");
+                                    }
+                                }
+                                return true;
+                                break;
+                            }
                             case BSP_INPUT_NAVIGATION_KEY_F5: {
                                 uint8_t index = (uint32_t)menu_get_callback_args(&menu, menu_get_position(&menu));
                                 wifi_settings_erase(index);

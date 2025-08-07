@@ -4,7 +4,7 @@
 #include "chakrapetchmedium.h"
 #include "common/display.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
@@ -15,8 +15,8 @@
 #include "pax_matrix.h"
 #include "pax_types.h"
 // #include "shapes/pax_misc.h"
-#include "device_information.h"
 #include "firmware_update.h"
+#include "menu_device_information.h"
 #include "radio_update.h"
 #include "settings_clock.h"
 
@@ -58,10 +58,11 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {
-        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_SETTINGS), "Settings"}}), 1,
-                                     ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}),
-                                     2, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
+        render_base_screen_statusbar(
+            buffer, theme, !partial, !partial || icons, !partial,
+            ((gui_element_icontext_t[]){{get_icon(ICON_SETTINGS), "Settings"}}), 1,
+            ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
+            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);

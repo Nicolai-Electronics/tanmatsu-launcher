@@ -2,7 +2,6 @@
 #include "bsp/input.h"
 #include "common/display.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
@@ -15,7 +14,7 @@
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
+#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
 #define FOOTER_RIGHT NULL, 0
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define FOOTER_LEFT  NULL, 0
@@ -28,7 +27,7 @@
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_INFO), "About"}}), 1, FOOTER_LEFT,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "About"}}), 1, FOOTER_LEFT,
                                      FOOTER_RIGHT);
     }
     if (!partial) {

@@ -5,7 +5,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
@@ -119,8 +119,8 @@ static esp_err_t scan_for_networks(pax_buf_t* buffer, gui_theme_t* theme, wifi_a
             free(aps);
         }
     } else {
-        message_dialog_ok(buffer, theme, "WiFi stack not initialized",
-                          "The WiFi stack is not initialized. Please try again later.");
+        message_dialog(get_icon(ICON_ERROR), "WiFi stack not initialized",
+                       "The WiFi stack is not initialized. Please try again later.", "OK");
         return ESP_ERR_NOT_FOUND;
     }
     return ESP_OK;
@@ -130,12 +130,12 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                    bool loading) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_WIFI), "WiFi network scan"}}), 1,
-                                     ((gui_header_field_t[]){
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_WIFI), "WiFi network scan"}}), 1,
+                                     ((gui_element_icontext_t[]){
                                          {get_icon(ICON_ESC), "/"},
                                          {get_icon(ICON_F1), "Back"},
                                      }),
-                                     2, ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Add network"}}), 1);
+                                     2, ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Add network"}}), 1);
     }
     menu_render(buffer, menu, position, theme, partial);
     if (menu_find_item(menu, 0) == NULL) {
@@ -174,7 +174,7 @@ void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "WiFi scan failed (%d)", res);
         if (res != ESP_ERR_NOT_FOUND) {
-            message_dialog_ok(buffer, theme, "An error occurred", "Scanning for WiFi networks failed");
+            message_dialog(get_icon(ICON_ERROR), "An error occurred", "Scanning for WiFi networks failed", "OK");
         }
         return;
     }
@@ -235,8 +235,8 @@ void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
                                             return;
                                         }
                                     } else {
-                                        message_dialog_ok(buffer, theme, "Error",
-                                                          "No empty slot, can not add another network");
+                                        message_dialog(get_icon(ICON_ERROR), "Error",
+                                                       "No empty slot, can not add another network", "Go back");
                                     }
                                     render(buffer, theme, &menu, position, false, false, false);
                                 }
