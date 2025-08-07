@@ -9,6 +9,7 @@
 #include "freertos/idf_additions.h"
 #include "gui_element_footer.h"
 #include "gui_element_header.h"
+#include "gui_element_icontext.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "pax_gfx.h"
@@ -185,23 +186,12 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
                        header_right_count, footer_left, footer_left_count, footer_right, footer_right_count);
 }
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), (char*)action_text}}), 2
-#define FOOTER_RIGHT NULL, 0
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
-#define FOOTER_LEFT  ((gui_element_icontext_t[]){{NULL, "🅱"}, {NULL, (char*)action_text}}), 2
-#define FOOTER_RIGHT NULL, 0
-#else
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
-#endif
-
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, pax_buf_t* icon, const char* title,
-                   const char* message, const char* action_text, bool partial, bool icons) {
+                   const char* message, gui_element_icontext_t* footer, int footer_count, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{icon, title}}), 1, FOOTER_LEFT, FOOTER_RIGHT);
+                                     ((gui_element_icontext_t[]){{icon, (char*)title}}), 1, footer, footer_count, NULL,
+                                     0);
     }
     if (!partial) {
         pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, 16, position.x0,
@@ -226,7 +216,7 @@ void message_dialog(pax_buf_t* icon, const char* title, const char* message, con
         .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
     };
 
-    render(buffer, theme, position, icon, title, message, action_text, false, true);
+    render(buffer, theme, position, icon, title, message, ADV_DIALOG_FOOTER_OK_TEXT((char*)action_text), false, true);
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -248,7 +238,94 @@ void message_dialog(pax_buf_t* icon, const char* title, const char* message, con
                     break;
             }
         } else {
-            render(buffer, theme, position, icon, title, message, action_text, true, true);
+            render(buffer, theme, position, icon, title, message, ADV_DIALOG_FOOTER_OK_TEXT((char*)action_text), true,
+                   true);
+        }
+    }
+}
+
+bsp_input_navigation_key_t adv_dialog(pax_buf_t* icon, const char* title, const char* message,
+                                      gui_element_icontext_t* footer, int footer_count) {
+    pax_buf_t*    buffer            = display_get_buffer();
+    gui_theme_t*  theme             = get_theme();
+    QueueHandle_t input_event_queue = NULL;
+    ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
+
+    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
+    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
+
+    pax_vec2_t position = {
+        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
+        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
+        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
+        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
+    };
+
+    render(buffer, theme, position, icon, title, message, footer, footer_count, false, true);
+    while (1) {
+        bsp_input_event_t event;
+        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            switch (event.type) {
+                case INPUT_EVENT_TYPE_NAVIGATION: {
+                    if (event.args_navigation.state) return event.args_navigation.key;
+                    break;
+                }
+                default:
+                    break;
+            }
+        } else {
+            render(buffer, theme, position, icon, title, message, footer, footer_count, true, true);
+        }
+    }
+}
+
+message_dialog_return_type_t adv_dialog_ok(pax_buf_t* icon, const char* title, const char* message) {
+    bsp_input_navigation_key_t key;
+    while (1) {
+        key = adv_dialog(icon, title, message, ADV_DIALOG_FOOTER_OK);
+        switch (key) {
+            case BSP_INPUT_NAVIGATION_KEY_ESC:
+            case BSP_INPUT_NAVIGATION_KEY_F1:
+            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                return MSG_DIALOG_RETURN_OK;
+            default:
+        }
+    }
+}
+
+message_dialog_return_type_t adv_dialog_yes_no(pax_buf_t* icon, const char* title, const char* message) {
+    bsp_input_navigation_key_t key;
+    while (1) {
+        key = adv_dialog(icon, title, message, ADV_DIALOG_FOOTER_YES_NO);
+        switch (key) {
+            case BSP_INPUT_NAVIGATION_KEY_ESC:
+            case BSP_INPUT_NAVIGATION_KEY_F1:
+            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                return MSG_DIALOG_RETURN_NO;
+            case BSP_INPUT_NAVIGATION_KEY_F4:
+            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                return MSG_DIALOG_RETURN_OK;
+            default:
+        }
+    }
+}
+
+message_dialog_return_type_t adv_dialog_yes_no_cancel(pax_buf_t* icon, const char* title, const char* message) {
+    bsp_input_navigation_key_t key;
+    while (1) {
+        key = adv_dialog(icon, title, message, ADV_DIALOG_FOOTER_YES_NO_CANCEL);
+        switch (key) {
+            case BSP_INPUT_NAVIGATION_KEY_ESC:
+            case BSP_INPUT_NAVIGATION_KEY_F1:
+            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                return MSG_DIALOG_RETURN_NO;
+            case BSP_INPUT_NAVIGATION_KEY_F4:
+            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                return MSG_DIALOG_RETURN_OK;
+            case BSP_INPUT_NAVIGATION_KEY_F6:
+            case BSP_INPUT_NAVIGATION_KEY_MENU:
+                return MSG_DIALOG_RETURN_CANCEL;
+            default:
         }
     }
 }
