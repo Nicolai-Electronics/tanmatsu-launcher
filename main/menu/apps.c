@@ -69,7 +69,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                                 {get_icon(ICON_F2), "Details"},  \
                                 {get_icon(ICON_F5), "Remove"}}), \
         4
-#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Start app"}}), 1
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Start app"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅰 Start app"}}), 1

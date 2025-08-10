@@ -35,6 +35,7 @@ idf_component_register(
 		"menu/rftest.c"
 		"menu/menu_repository_client.c"
 		"menu/menu_repository_client_project.c"
+		"menu/menu_wifi_info.c"
 
 		# Fonts
 		"chakrapetchmedium.c"

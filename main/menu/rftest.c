@@ -64,7 +64,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
             buffer, theme, !partial, !partial || icons, !partial,
             ((gui_element_icontext_t[]){{get_icon(ICON_SETTINGS), "Radio test"}}), 1,
             ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
-            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
+            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1);
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
