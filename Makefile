@@ -12,7 +12,7 @@ SHELL := /usr/bin/env bash
 
 DEVICE ?= tanmatsu # Default target device
 BUILD ?= build/$(DEVICE)
-FAT ?= 1
+FAT ?= 0 # Don't build and/or flash FAT partition by default
 
 export IDF_TOOLS_PATH
 export IDF_GITHUB_ASSETS

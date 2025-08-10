@@ -135,7 +135,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                                          {get_icon(ICON_ESC), "/"},
                                          {get_icon(ICON_F1), "Back"},
                                      }),
-                                     2, ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Add network"}}), 1);
+                                     2, ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Add network"}}), 1);
     }
     menu_render(buffer, menu, position, theme, partial);
     if (menu_find_item(menu, 0) == NULL) {

@@ -37,7 +37,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                                      ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},
                                                                  {get_icon(ICON_F1), "Exit without saving"},
                                                                  {get_icon(ICON_F4), "Save and exit"}}),
-                                     3, ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Edit setting"}}), 1);
+                                     3, ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Edit setting"}}), 1);
     }
 
     menu_render(buffer, menu, position, theme, partial);
@@ -183,7 +183,7 @@ static void edit_authmode(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, m
         render_base_screen_statusbar(
             buffer, theme, !partial, true, !partial, ((gui_element_icontext_t[]){{get_icon(ICON_WIFI), "Security"}}), 1,
             ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Go back"}}), 2,
-            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
+            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1);
         menu_render(buffer, menu_authmode, position, theme, partial);
         display_blit_buffer(buffer);
         partial = true;
@@ -276,7 +276,7 @@ static void edit_phase2(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, men
         render_base_screen_statusbar(
             buffer, theme, !partial, true, !partial, ((gui_element_icontext_t[]){{get_icon(ICON_WIFI), "Phase 2"}}), 1,
             ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Go back"}}), 2,
-            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ Navigate ⏎ Select"}}), 1);
+            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1);
         menu_render(buffer, menu_phase2, position, theme, partial);
         display_blit_buffer(buffer);
         partial = true;
