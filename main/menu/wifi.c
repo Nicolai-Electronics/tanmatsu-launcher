@@ -128,6 +128,7 @@ static bool _menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
                                 menu_free(&menu);
                                 return false;
                             case BSP_INPUT_NAVIGATION_KEY_F2:
+                            case BSP_INPUT_NAVIGATION_KEY_START:
                                 menu_wifi_scan(buffer, theme);
                                 return true;
                                 break;
@@ -135,7 +136,8 @@ static bool _menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
                                 add_manually(buffer, theme);
                                 return true;
                                 break;
-                            case BSP_INPUT_NAVIGATION_KEY_F4: {
+                            case BSP_INPUT_NAVIGATION_KEY_F4:
+                            case BSP_INPUT_NAVIGATION_KEY_HOME: {
                                 uint8_t index  = (uint32_t)menu_get_callback_args(&menu, menu_get_position(&menu));
                                 prev_connected = connected;
                                 connected      = update_connected(index);
@@ -165,7 +167,8 @@ static bool _menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
                                 return true;
                                 break;
                             }
-                            case BSP_INPUT_NAVIGATION_KEY_F5: {
+                            case BSP_INPUT_NAVIGATION_KEY_F5:
+                            case BSP_INPUT_NAVIGATION_KEY_SELECT: {
                                 uint8_t index = (uint32_t)menu_get_callback_args(&menu, menu_get_position(&menu));
                                 wifi_settings_t settings = {0};
                                 if (wifi_settings_get(index, &settings) == ESP_OK) {
@@ -183,6 +186,7 @@ static bool _menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
                                 return true;
                             }
                             case BSP_INPUT_NAVIGATION_KEY_F6:
+                            case BSP_INPUT_NAVIGATION_KEY_MENU:
                                 menu_wifi_info();
                                 return true;
                             case BSP_INPUT_NAVIGATION_KEY_UP:

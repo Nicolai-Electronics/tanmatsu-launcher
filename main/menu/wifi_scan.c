@@ -150,6 +150,14 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
     display_blit_buffer(buffer);
 }
 
+static void add_manually(pax_buf_t* buffer, gui_theme_t* theme) {
+    int index = wifi_settings_find_empty_slot();
+    if (index == -1) {
+        message_dialog(get_icon(ICON_ERROR), "Error", "No empty slot, can not add another network", "Go back");
+    }
+    menu_wifi_edit(buffer, theme, index, true, "", 0);
+}
+
 void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
@@ -211,6 +219,10 @@ void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 menu_free(&menu);
+                                return;
+                            case BSP_INPUT_NAVIGATION_KEY_F2:
+                            case BSP_INPUT_NAVIGATION_KEY_START:
+                                add_manually(buffer, theme);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
