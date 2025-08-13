@@ -9,6 +9,7 @@
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/about.h"
+#include "menu/menu_power_information.h"
 #include "menu/message_dialog.h"
 #include "menu/wifi.h"
 #include "pax_gfx.h"
@@ -29,6 +30,7 @@ typedef enum {
     ACTION_ABOUT,
     ACTION_LAST,
     ACTION_RADIO_UPDATE,
+    ACTION_POWER_INFORMATION,
 } menu_home_action_t;
 
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
@@ -50,6 +52,9 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             break;
         case ACTION_RADIO_UPDATE:
             radio_update(fb, theme, "/sd/firmware/radio/esp-hosted.zz", true, 1093760);
+            break;
+        case ACTION_POWER_INFORMATION:
+            menu_power_information();
             break;
         default:
             break;
@@ -79,6 +84,8 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
     menu_insert_item_icon(&menu, "Firmware update", NULL, (void*)ACTION_FIRMWARE_UPDATE, -1,
                           get_icon(ICON_SYSTEM_UPDATE));
     menu_insert_item_icon(&menu, "Device information", NULL, (void*)ACTION_DEVICE_INFO, -1, get_icon(ICON_DEVICE_INFO));
+    menu_insert_item_icon(&menu, "Power information", NULL, (void*)ACTION_POWER_INFORMATION, -1,
+                          get_icon(ICON_BATTERY_UNKNOWN));
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
     /*#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
         defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
