@@ -124,6 +124,7 @@ static void render(void) {
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
     }
 
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
     res = temperature_sensor_enable(temp_handle);
     if (res == ESP_OK) {
         float tsens_out;
@@ -136,6 +137,7 @@ static void render(void) {
         };
         temperature_sensor_disable(temp_handle);
     }
+#endif
 
     display_blit_buffer(buffer);
 }
@@ -144,10 +146,12 @@ void menu_power_information(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
     if (temp_handle == NULL) {
         temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(20, 50);
         ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_handle));
     }
+#endif
 
     render();
     while (1) {
