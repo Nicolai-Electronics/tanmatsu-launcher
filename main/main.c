@@ -114,6 +114,8 @@ static void wifi_task(void* pvParameters) {
 esp_err_t check_i2c_bus(void) {
     i2c_master_bus_handle_t i2c_bus_handle_internal;
     ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal));
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
     esp_err_t ret_codec  = i2c_master_probe(i2c_bus_handle_internal, 0x08, 50);
     esp_err_t ret_bmi270 = i2c_master_probe(i2c_bus_handle_internal, 0x68, 50);
 
@@ -175,7 +177,7 @@ esp_err_t check_i2c_bus(void) {
         display_blit_buffer(buffer);
         vTaskDelay(pdMS_TO_TICKS(3000));
     }
-
+#endif
     return ESP_OK;
 }
 
@@ -306,6 +308,5 @@ void app_main(void) {
 
     bsp_power_set_usb_host_boost_enabled(true);
 
-    pax_buf_t* buffer = display_get_buffer();
     menu_home();
 }

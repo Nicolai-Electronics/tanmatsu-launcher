@@ -393,7 +393,8 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
                                 menu_free(&menu_authmode);
                                 menu_free(&menu_phase2);
                                 return false;
-                            case BSP_INPUT_NAVIGATION_KEY_F4: {
+                            case BSP_INPUT_NAVIGATION_KEY_F4:
+                            case BSP_INPUT_NAVIGATION_KEY_START: {
                                 esp_err_t res = wifi_settings_set(index, &settings);
                                 if (res == ESP_OK) {
                                     return true;
@@ -401,6 +402,7 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
                                     message_dialog(get_icon(ICON_ERROR), "Error", "Failed to save WiFi settings",
                                                    "Go back");
                                 }
+                                break;
                             }
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
