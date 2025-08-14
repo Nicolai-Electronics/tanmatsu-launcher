@@ -1,20 +1,13 @@
 #include "bsp/input.h"
 #include "common/display.h"
 #include "freertos/idf_additions.h"
-#include "gui_element_footer.h"
-#include "gui_menu.h"
+#include "gui_edit.h"
+#include "gui_osk_edit.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "message_dialog.h"
 #include "pax_gfx.h"
-#include "pax_matrix.h"
 #include "pax_types.h"
-#include "wifi.h"
-#include "wifi_connection.h"
-#include "wifi_settings.h"
-// #include "shapes/pax_misc.h"
-#include "gui_edit.h"
-#include "gui_osk_edit.h"
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)

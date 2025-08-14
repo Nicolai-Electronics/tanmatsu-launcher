@@ -1,10 +1,10 @@
-#include "settings.h"
+#include "menu_settings.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
-#include "chakrapetchmedium.h"
 #include "common/display.h"
+#include "common/theme.h"
+#include "firmware_update.h"
 #include "freertos/idf_additions.h"
-#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
@@ -12,12 +12,11 @@
 #include "menu/menu_power_information.h"
 #include "menu/message_dialog.h"
 #include "menu/wifi.h"
+#include "menu_device_information.h"
+#include "menu_filebrowser.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
-// #include "shapes/pax_misc.h"
-#include "firmware_update.h"
-#include "menu_device_information.h"
 #include "radio_update.h"
 #include "settings_clock.h"
 
@@ -33,6 +32,15 @@ typedef enum {
     ACTION_POWER_INFORMATION,
 } menu_home_action_t;
 
+static void radio_update_v2(void) {
+    char filename[260] = "";
+    bool result =
+        menu_filebrowser("/sd", (const char*[]){"trf"}, 1, filename, sizeof(filename), "Select radio firmware");
+    if (result) {
+        radio_install(filename);
+    }
+}
+
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
     switch (action) {
         case ACTION_WIFI:
@@ -47,11 +55,12 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
         case ACTION_DEVICE_INFO:
             menu_device_information(fb, theme);
             break;
-        case ACTION_ABOUT:
+        case ACTION_ABOUT: {
             menu_about(fb, theme);
             break;
+        }
         case ACTION_RADIO_UPDATE:
-            radio_update(fb, theme, "/sd/firmware/radio/esp-hosted.zz", true, 1093760);
+            radio_update_v2();
             break;
         case ACTION_POWER_INFORMATION:
             menu_power_information();
@@ -61,7 +70,10 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
     }
 }
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
+static void render(menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
+
     if (!partial || icons) {
         render_base_screen_statusbar(
             buffer, theme, !partial, !partial || icons, !partial,
@@ -73,7 +85,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
     display_blit_buffer(buffer);
 }
 
-void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
+void menu_settings(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
@@ -87,11 +99,14 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
     menu_insert_item_icon(&menu, "Power information", NULL, (void*)ACTION_POWER_INFORMATION, -1,
                           get_icon(ICON_BATTERY_UNKNOWN));
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
-    /*#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-        defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-        menu_insert_item_icon(&menu, "Update radio from SD card", NULL, (void*)ACTION_RADIO_UPDATE, -1,
-                              get_icon(ICON_RELEASE_ALERT));
-    #endif*/
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+    menu_insert_item_icon(&menu, "Install radio firmware from SD card", NULL, (void*)ACTION_RADIO_UPDATE, -1,
+                          get_icon(ICON_RELEASE_ALERT));
+#endif
+
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
@@ -103,7 +118,7 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
         .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
     };
 
-    render(buffer, theme, &menu, position, false, true);
+    render(&menu, position, false, true);
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -118,18 +133,18 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, position, true, false);
+                                render(&menu, position, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_DOWN:
                                 menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, position, true, false);
+                                render(&menu, position, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                 execute_action(buffer, (menu_home_action_t)arg, theme);
-                                render(buffer, theme, &menu, position, false, true);
+                                render(&menu, position, false, true);
                                 break;
                             }
                             default:
@@ -142,7 +157,7 @@ void menu_settings(pax_buf_t* buffer, gui_theme_t* theme) {
                     break;
             }
         } else {
-            render(buffer, theme, &menu, position, true, true);
+            render(&menu, position, true, true);
         }
     }
 }

@@ -20,10 +20,10 @@
 #include "menu/nametag.h"
 #include "menu/rftest.h"
 #include "menu_repository_client.h"
+#include "menu_settings.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
-#include "settings.h"
 #include "usb_device.h"
 
 typedef enum {
@@ -45,7 +45,7 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             menu_nametag(fb, theme);
             break;
         case ACTION_SETTINGS:
-            menu_settings(fb, theme);
+            menu_settings();
             break;
         case ACTION_RFTEST:
             menu_rftest(fb, theme);
@@ -173,14 +173,11 @@ void menu_home(void) {
                                 }
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_MENU:
-                                menu_settings(buffer, theme);
-                                render(buffer, theme, &menu, position, false, true);
-                                break;
                             case BSP_INPUT_NAVIGATION_KEY_F5:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     display_backlight();
                                 } else {
-                                    menu_settings(buffer, theme);
+                                    menu_settings();
                                     render(buffer, theme, &menu, position, false, true);
                                 }
                                 break;
