@@ -36,6 +36,7 @@ idf_component_register(
 		"menu/menu_repository_client.c"
 		"menu/menu_repository_client_project.c"
 		"menu/menu_wifi_info.c"
+		"menu/menu_power_information.c"
 
 		# Fonts
 		"chakrapetchmedium.c"
