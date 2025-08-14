@@ -16,6 +16,7 @@
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "menu/file_explorer.h"
 #include "menu/message_dialog.h"
 #include "menu/nametag.h"
 #include "menu/rftest.h"
@@ -29,6 +30,7 @@
 typedef enum {
     ACTION_NONE,
     ACTION_APPS,
+    ACTION_FILES,
     ACTION_NAMETAG,
     ACTION_REPOSITORY,
     ACTION_SETTINGS,
@@ -53,6 +55,8 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
         case ACTION_REPOSITORY:
             menu_repository_client(fb, theme);
             break;
+	case ACTION_FILES:
+	    menu_file_explorer(fb, theme);
         default:
             break;
     }
@@ -121,6 +125,7 @@ void menu_home(void) {
     menu_t menu = {0};
     menu_initialize(&menu);
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
+	menu_insert_item_icon(&menu, "Files", NULL, (void*)ACTION_FILES, -1, get_icon(ICON_SD));
     if (access("/sd/nametag.png", F_OK) == 0 || access("/int/nametag.png", F_OK) == 0) {
         menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_NAMETAG, -1, get_icon(ICON_TAG));
     }
