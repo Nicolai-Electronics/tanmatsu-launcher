@@ -40,6 +40,7 @@ static void radio_update_callback(const char* status_text) {
 }
 
 static bool radio_prepare(void) {
+#ifdef CONFIG_IDF_TARGET_ESP32P4
     radio_update_callback("Stopping WiFi...");
 
     esp_wifi_stop();
@@ -96,9 +97,15 @@ static bool radio_prepare(void) {
     }
 
     return true;
+#else
+    radio_update_callback("Radio update not supported on this platform");
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    return false;
+#endif
 }
 
 static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_size, size_t offset) {
+#ifdef CONFIG_IDF_TARGET_ESP32P4
     radio_update_callback("Opening update file...");
 
     FILE* fd = fopen(path, "rb");
@@ -169,9 +176,15 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
     fclose(fd);
 
     return res;
+#else
+    radio_update_callback("Radio update not supported on this platform");
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    return ESP_FAIL;
+#endif
 }
 
 static esp_err_t radio_install_raw(const char* path, size_t offset) {
+#ifdef CONFIG_IDF_TARGET_ESP32P4
     radio_update_callback("Opening update file...");
     printf("Opening update file...\r\n");
 
@@ -245,6 +258,11 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
     fclose(fd);
 
     return res;
+#else
+    radio_update_callback("Radio update not supported on this platform");
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    return ESP_FAIL;
+#endif
 }
 
 void radio_update(char* path, bool compressed, uint32_t uncompressed_size) {
