@@ -1,6 +1,7 @@
 #pragma once
 
-#include "gui_style.h"
-#include "pax_types.h"
+#include <stdbool.h>
+#include <stdint.h>
 
-void radio_update(pax_buf_t* buffer, gui_theme_t* theme, char* path, bool compressed, uint32_t uncompressed_size);
+void radio_update(char* path, bool compressed, uint32_t uncompressed_size);
+void radio_install(const char* instructions_filename);

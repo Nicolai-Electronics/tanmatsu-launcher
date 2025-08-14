@@ -7,8 +7,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "bsp/power.h"
+#include "cJSON.h"
 #include "chakrapetchmedium.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "esp_log.h"
 #include "esp_log_level.h"
 #include "esp_wifi.h"
@@ -37,15 +39,7 @@ static void radio_update_callback(const char* status_text) {
     display_blit_buffer(fb);
 }
 
-void radio_update(pax_buf_t* buffer, gui_theme_t* theme, char* path, bool compressed, uint32_t uncompressed_size) {
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-    pax_background(buffer, theme->palette.color_background);
-    gui_header_draw(buffer, theme, ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Radio update"}}), 1,
-                    NULL, 0);
-    gui_footer_draw(buffer, theme, NULL, 0, NULL, 0);
-    display_blit_buffer(buffer);
-
+static bool radio_prepare(void) {
     radio_update_callback("Stopping WiFi...");
 
     esp_wifi_stop();
@@ -75,7 +69,7 @@ void radio_update(pax_buf_t* buffer, gui_theme_t* theme, char* path, bool compre
         printf("Failed to sync with radio: %s\r\n", esp_err_to_name(res));
         radio_update_callback("Failed to sync with radio");
         vTaskDelay(pdMS_TO_TICKS(2000));
-        return;
+        return false;
     }
 
     radio_update_callback("Detecting radio...");
@@ -87,7 +81,7 @@ void radio_update(pax_buf_t* buffer, gui_theme_t* theme, char* path, bool compre
         printf("Failed to detect radio chip: %s\r\n", esp_err_to_name(res));
         radio_update_callback("Failed to detect radio chip");
         vTaskDelay(pdMS_TO_TICKS(2000));
-        return;
+        return false;
     }
     radio_update_callback("Detected radio chip, starting stub...");
     printf("Detected chip id: 0x%08" PRIx32 "\r\n", chip_id);
@@ -98,6 +92,24 @@ void radio_update(pax_buf_t* buffer, gui_theme_t* theme, char* path, bool compre
         printf("Failed to run flashing stub: %s\r\n", esp_err_to_name(res));
         radio_update_callback("Failed to run flashing stub");
         vTaskDelay(pdMS_TO_TICKS(2000));
+        return false;
+    }
+
+    return true;
+}
+
+void radio_update(char* path, bool compressed, uint32_t uncompressed_size) {
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+    pax_background(buffer, theme->palette.color_background);
+    gui_header_draw(buffer, theme, ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Radio update"}}), 1,
+                    NULL, 0);
+    gui_footer_draw(buffer, theme, NULL, 0, NULL, 0);
+    display_blit_buffer(buffer);
+
+    if (!radio_prepare()) {
         return;
     }
 
@@ -150,7 +162,7 @@ void radio_update(pax_buf_t* buffer, gui_theme_t* theme, char* path, bool compre
                      seq);
             fputs(buffer, stdout);
             radio_update_callback(buffer);
-            res = et2_cmd_deflate_data(data, block_length, seq);
+            esp_err_t res = et2_cmd_deflate_data(data, block_length, seq);
             if (res != ESP_OK) {
                 ESP_LOGE(TAG, "Failed to write data to radio: %s", esp_err_to_name(res));
                 radio_update_callback("Failed to write data to radio");
@@ -188,7 +200,7 @@ void radio_update(pax_buf_t* buffer, gui_theme_t* theme, char* path, bool compre
                      seq);
             fputs(buffer, stdout);
             radio_update_callback(buffer);
-            res = et2_cmd_flash_data(data, block_length, seq);
+            esp_err_t res = et2_cmd_flash_data(data, block_length, seq);
             if (res != ESP_OK) {
                 ESP_LOGE(TAG, "Failed to write data to radio: %s", esp_err_to_name(res));
                 radio_update_callback("Failed to write data to radio");
@@ -205,5 +217,76 @@ void radio_update(pax_buf_t* buffer, gui_theme_t* theme, char* path, bool compre
 
     free(data);
     fclose(fd);
+#endif
+}
+
+void radio_install(const char* instructions_filename) {
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+    pax_background(buffer, theme->palette.color_background);
+    gui_header_draw(buffer, theme,
+                    ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Radio firmware installation"}}), 1,
+                    NULL, 0);
+    gui_footer_draw(buffer, theme, NULL, 0, NULL, 0);
+    display_blit_buffer(buffer);
+
+    if (!radio_prepare()) {
+        return;
+    }
+
+    radio_update_callback("Opening update file...");
+    printf("Opening update file...\r\n");
+
+    FILE* fd = fopen(instructions_filename, "rb");
+    if (fd == NULL) {
+        ESP_LOGE(TAG, "Failed to open file: %s", strerror(errno));
+        radio_update_callback("Failed to open instructions");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        return;
+    }
+
+    fseek(fd, 0, SEEK_END);
+    size_t instructions_size = ftell(fd);
+    fseek(fd, 0, SEEK_SET);
+    char* instructions_data = heap_caps_malloc(instructions_size, MALLOC_CAP_SPIRAM);
+    if (instructions_data == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for instructions");
+        radio_update_callback("Failed to allocate memory");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        fclose(fd);
+        return;
+    }
+    size_t read_bytes = fread(instructions_data, 1, instructions_size, fd);
+    if (read_bytes != instructions_size) {
+        ESP_LOGE(TAG, "Failed to read instructions data: %s", strerror(errno));
+        radio_update_callback("Failed to read instructions data");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        free(instructions_data);
+        fclose(fd);
+        return;
+    }
+    fclose(fd);
+
+    cJSON* instructions_json = cJSON_ParseWithLength(instructions_data, instructions_size);
+
+    cJSON* information = cJSON_GetObjectItem(instructions_json, "information");
+    if (information == NULL || !cJSON_IsObject(information)) {
+        ESP_LOGE(TAG, "No information found in instructions");
+        cJSON_Delete(instructions_json);
+        free(instructions_data);
+        return;
+    }
+
+    cJSON* steps = cJSON_GetObjectItem(instructions_json, "steps");
+    if (steps == NULL || !cJSON_IsArray(steps)) {
+        ESP_LOGE(TAG, "No steps found in instructions");
+        cJSON_Delete(instructions_json);
+        free(instructions_data);
+    }
+
+    cJSON_Delete(instructions_json);
+    free(instructions_data);
 #endif
 }

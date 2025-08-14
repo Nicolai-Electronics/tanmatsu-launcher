@@ -55,6 +55,7 @@ void*        menu_get_callback_args(menu_t* menu, size_t position);
 pax_buf_t*   menu_get_icon(menu_t* menu, size_t position);
 const char*  menu_get_value(menu_t* menu, size_t position);
 void         menu_set_value(menu_t* menu, size_t position, const char* value);
+const char*  menu_get_label(menu_t* menu, size_t position);
 
 void menu_render(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, gui_theme_t* theme, bool partial);
 void menu_render_grid(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, gui_theme_t* theme, bool partial);
