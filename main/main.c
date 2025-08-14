@@ -142,6 +142,11 @@ esp_err_t check_i2c_bus(void) {
             pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 2,
                           "devices and wires and power cycle the device.");
             display_blit_buffer(buffer);
+
+            vTaskDelay(pdMS_TO_TICKS(10000));
+
+            startup_screen("Initializing coprocessor...");
+            coprocessor_flash(true);
             return ESP_FAIL;
         } else {
             pax_buf_t* buffer = display_get_buffer();
