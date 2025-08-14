@@ -29,15 +29,15 @@ typedef enum {
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
     switch (action) {
         case ACTION_INSTALL_NORMAL_FIRMWARE:
-            radio_update(fb, theme, "/int/tanmatsu-radio.bin", false, 0);
+            radio_update("/int/tanmatsu-radio.bin", false, 0);
             esp_restart();
             break;
         case ACTION_INSTALL_RFTEST_REMOTE_FIRMWARE:
-            radio_update(fb, theme, "/int/rftest_usb.bin", false, 0);
+            radio_update("/int/rftest_usb.bin", false, 0);
             esp_restart();
             break;
         case ACTION_INSTALL_RFTEST_LOCAL_FIRMWARE:
-            radio_update(fb, theme, "/int/rftest_local.bin", false, 0);
+            radio_update("/int/rftest_local.bin", false, 0);
             esp_restart();
             break;
         case ACTION_TERMINAL:

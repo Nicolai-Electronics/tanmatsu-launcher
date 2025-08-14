@@ -15,7 +15,7 @@ idf_component_register(
 		
 		# Menus
 		"menu/home.c"
-		"menu/settings.c"
+		"menu/menu_settings.c"
 		"menu/about.c"
 		"menu/wifi.c"
 		"menu/wifi_edit.c"
@@ -38,6 +38,7 @@ idf_component_register(
 		"menu/menu_repository_client_project.c"
 		"menu/menu_wifi_info.c"
 		"menu/menu_power_information.c"
+		"menu/menu_filebrowser.c"
 
 		# Fonts
 		"chakrapetchmedium.c"
