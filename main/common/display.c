@@ -29,6 +29,11 @@ static pax_buf_t                    fb                   = {0};
 static pax_col_t palette[] = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
 #endif
 
+// Display framebuffer returned by `asp_disp_get_fb`.
+extern uint8_t*   asp_disp_fb;
+// PAX buffer returned by `asp_disp_get_pax_buf`.
+extern pax_buf_t* asp_disp_pax_buf;
+
 void display_init(void) {
     ESP_ERROR_CHECK(
         bsp_display_get_parameters(&display_h_res, &display_v_res, &display_color_format, &display_data_endian));
@@ -76,6 +81,9 @@ void display_init(void) {
             break;
     }
     pax_buf_set_orientation(&fb, orientation);
+
+    asp_disp_fb      = pax_buf_get_pixels_rw(&fb);
+    asp_disp_pax_buf = &fb;
 }
 
 pax_buf_t* display_get_buffer(void) {
