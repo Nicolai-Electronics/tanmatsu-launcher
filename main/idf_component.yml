@@ -4,7 +4,7 @@ dependencies:
   badgeteam/badge-bsp:
     version: ">=0.3.2"
   robotman2412/pax-gfx:
-    version: '^2.0.0'
+    version: ">=1.1.2"
   badgeteam/appfs:
     version: ">=1.0.1"
   nicolaielectronics/rvswd:
