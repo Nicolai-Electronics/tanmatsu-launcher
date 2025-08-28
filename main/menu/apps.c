@@ -7,7 +7,9 @@
 #include "app_management.h"
 #include "app_metadata_parser.h"
 #include "appfs.h"
+#if CONFIG_IDF_TARGET_ESP32P4
 #include "badge_elf.h"
+#endif
 #include "bsp/input.h"
 #include "common/display.h"
 #include "filesystem_utils.h"
@@ -52,6 +54,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
     display_blit_buffer(buffer);
     printf("Starting %s (from %s)...\n", app->slug, app->path);
     if (!strcmp(app->interpreter, "BadgeELF")) {
+#if CONFIG_IDF_TARGET_ESP32P4
         size_t req = snprintf(NULL, 0, "%s/%s/%s", app->path, app->slug, app->main);
         if (req > PATH_MAX) {
             message_dialog(get_icon(ICON_ERROR), "Error", "Applet path is too long", "OK");
@@ -65,6 +68,9 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
             }
             free(path);
         }
+#else
+        message_dialog(get_icon(ICON_ERROR), "Error", "BadgeELF applets not supported on this platform", "OK");
+#endif
     } else if (app->appfs_fd != APPFS_INVALID_FD) {
         appfsBootSelect(app->appfs_fd, NULL);
         while (wifi_stack_get_task_done() == false) {

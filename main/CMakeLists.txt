@@ -2,8 +2,10 @@ if (CONFIG_BSP_TARGET_TANMATSU OR CONFIG_BSP_TARGET_KONSOOL OR CONFIG_BSP_TARGET
 list(APPEND files "tanmatsu_coprocessor.bin")
 endif()
 
-if (CONFIG_IDF_TARGET_ESP32P4)
-list(APPEND extra_requires esp-hosted-tanmatsu)
+# No, CONFIG_IDF_TARGET_ESP32P4 doesn't work. This does.
+idf_build_get_property(idf_target IDF_TARGET)
+if("${idf_target}" STREQUAL "esp32p4")
+list(APPEND extra_requires esp-hosted-tanmatsu badge-elf)
 endif()
 
 idf_component_register(
@@ -61,7 +63,6 @@ idf_component_register(
 		fatfs
 		nvs_flash
 		badge-bsp
-		badge-elf
 		gui
 		wpa_supplicant
 		esp_https_ota
