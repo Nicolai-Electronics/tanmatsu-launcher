@@ -152,7 +152,9 @@ void menu_home(void) {
                     if (event.args_navigation.state) {
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
-                                bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
+                                    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+                                }
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F2:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
