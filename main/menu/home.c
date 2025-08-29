@@ -12,6 +12,7 @@
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
+#include "menu/texteditor.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
@@ -175,7 +176,12 @@ void menu_home(pax_buf_t* buffer, gui_theme_t* theme) {
                                 }
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F6:
-                                toggle_usb_mode();
+                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
+                                    menu_texteditor(buffer, theme, "dummy file");
+                                    render(buffer, theme, &menu, position, false, false);
+                                } else {
+                                    toggle_usb_mode();
+                                }
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_LEFT:
                                 menu_navigate_previous(&menu);

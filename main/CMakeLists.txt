@@ -2,8 +2,10 @@ if (CONFIG_BSP_TARGET_TANMATSU OR CONFIG_BSP_TARGET_KONSOOL OR CONFIG_BSP_TARGET
 list(APPEND files "tanmatsu_coprocessor.bin")
 endif()
 
-if (CONFIG_IDF_TARGET_ESP32P4)
+if (IDF_TARGET STREQUAL "esp32p4")
 list(APPEND extra_requires esp-hosted-tanmatsu)
+list(APPEND extra_requires esp_driver_ppa)
+list(APPEND extra_requires esp_mm)
 endif()
 
 idf_component_register(
@@ -27,6 +29,10 @@ idf_component_register(
 		"menu/radio_update.c"
 		"menu/nametag.c"
 		"menu/textbox.c"
+		"menu/texteditor/editing.c"
+		"menu/texteditor/rendering.c"
+		"menu/texteditor/menu.c"
+		"menu/texteditor/saving.c"
 		"chakrapetchmedium.c"
 		"coprocessor_management.c"
 		"wifi_remote.c"
@@ -66,4 +72,4 @@ idf_component_register(
 		${files}
 )
 
-fatfs_create_spiflash_image(locfd ../fat/${DEVICE} FLASH_IN_PROJECT)
+# fatfs_create_spiflash_image(locfd ../fat/${DEVICE} FLASH_IN_PROJECT)
