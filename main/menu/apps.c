@@ -2,12 +2,17 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/syslimits.h>
 #include "app_inspect.h"
 #include "app_management.h"
 #include "app_metadata_parser.h"
 #include "appfs.h"
+#if CONFIG_IDF_TARGET_ESP32P4
+#include "badge_elf.h"
+#endif
 #include "bsp/input.h"
 #include "common/display.h"
+#include "filesystem_utils.h"
 #include "freertos/idf_additions.h"
 #include "gui_element_footer.h"
 #include "gui_menu.h"
@@ -47,8 +52,26 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
     pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, theme->footer.text_height,
                   position.x0, position.y0, message);
     display_blit_buffer(buffer);
-    printf("Starting %s...\n", app->slug);
-    if (app->appfs_fd != APPFS_INVALID_FD) {
+    printf("Starting %s (from %s)...\n", app->slug, app->path);
+    if (!strcmp(app->interpreter, "BadgeELF")) {
+#if CONFIG_IDF_TARGET_ESP32P4
+        size_t req = snprintf(NULL, 0, "%s/%s/%s", app->path, app->slug, app->main);
+        if (req > PATH_MAX) {
+            message_dialog(get_icon(ICON_ERROR), "Error", "Applet path is too long", "OK");
+        } else {
+            char* path = malloc(req + 1);
+            snprintf(path, req + 1, "%s/%s/%s", app->path, app->slug, app->main);
+            if (!fs_utils_exists(path)) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "Applet not found", "OK");
+            } else if (!badge_elf_start(path)) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "Failed to start app", "OK");
+            }
+            free(path);
+        }
+#else
+        message_dialog(get_icon(ICON_ERROR), "Error", "BadgeELF applets not supported on this platform", "OK");
+#endif
+    } else if (app->appfs_fd != APPFS_INVALID_FD) {
         appfsBootSelect(app->appfs_fd, NULL);
         while (wifi_stack_get_task_done() == false) {
             printf("Waiting for wifi stack task to finish...\n");
