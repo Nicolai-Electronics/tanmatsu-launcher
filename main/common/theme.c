@@ -225,6 +225,76 @@ const gui_theme_t theme = {
                 },
         },
 };
+#elif defined(CONFIG_BSP_TARGET_WHY2025)
+const gui_theme_t theme = {
+    .palette =
+        {
+            .color_foreground          = 0xFF340132,  // #340132
+            .color_background          = 0xFFEEEAEE,  // #EEEAEE
+            .color_active_foreground   = 0xFF340132,  // #340132
+            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
+            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
+            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
+            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
+        },
+    .footer =
+        {
+            .height             = 32,
+            .vertical_margin    = 7,
+            .horizontal_margin  = 20,
+            .text_height        = 16,
+            .vertical_padding   = 20,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+            .palette =
+                {
+                    .color_foreground        = 0xFF340132,  // #340132
+                    .color_background        = 0xFFEEEAEE,  // #EEEAEE
+                    .color_active_foreground = 0xFF340132,  // #340132
+                    .color_active_background = 0xFFFFFFFF,  // #FFFFFF
+                },
+        },
+    .header =
+        {
+            .height             = 32,
+            .vertical_margin    = 7,
+            .horizontal_margin  = 20,
+            .text_height        = 16,
+            .vertical_padding   = 20,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+            .palette =
+                {
+                    .color_foreground        = 0xFF340132,  // #340132
+                    .color_background        = 0xFFEEEAEE,  // #EEEAEE
+                    .color_active_foreground = 0xFF340132,  // #340132
+                    .color_active_background = 0xFFFFFFFF,  // #FFFFFF
+                },
+        },
+    .menu =
+        {
+            .height                = 480 - 64,
+            .vertical_margin       = 20,
+            .horizontal_margin     = 30,
+            .text_height           = 16,
+            .vertical_padding      = 6,
+            .horizontal_padding    = 6,
+            .text_font             = &chakrapetchmedium,
+            .list_entry_height     = 32,
+            .grid_horizontal_count = 4,
+            .grid_vertical_count   = 3,
+            .palette =
+                {
+                    .color_foreground          = 0xFF340132,  // #340132
+                    .color_background          = 0xFFEEEAEE,  // #EEEAEE
+                    .color_active_foreground   = 0xFF340132,  // #340132
+                    .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
+                    .color_highlight_primary   = 0xFF01BC99,  // #01BC99
+                    .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
+                    .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
+                },
+        },
+};
 #else
 #error "Unsupported target"
 #endif

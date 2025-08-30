@@ -26,6 +26,8 @@
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/hackerhotel-2024-"
 #elif defined(CONFIG_BSP_TARGET_KAMI)
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/kami-"
+#elif defined(CONFIG_BSP_TARGET_WHY2025)
+#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/why2025-"
 #else
 #error "Unsupported target for firmware update"
 #endif
