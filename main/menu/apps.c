@@ -53,34 +53,81 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                   position.x0, position.y0, message);
     display_blit_buffer(buffer);
     printf("Starting %s (from %s)...\n", app->slug, app->path);
-    if (!strcmp(app->interpreter, "BadgeELF")) {
-#if CONFIG_IDF_TARGET_ESP32P4
-        size_t req = snprintf(NULL, 0, "%s/%s/%s", app->path, app->slug, app->main);
-        if (req > PATH_MAX) {
-            message_dialog(get_icon(ICON_ERROR), "Error", "Applet path is too long", "OK");
-        } else {
-            char* path = malloc(req + 1);
-            snprintf(path, req + 1, "%s/%s/%s", app->path, app->slug, app->main);
-            if (!fs_utils_exists(path)) {
-                message_dialog(get_icon(ICON_ERROR), "Error", "Applet not found", "OK");
-            } else if (!badge_elf_start(path)) {
-                message_dialog(get_icon(ICON_ERROR), "Error", "Failed to start app", "OK");
+
+    switch (app->executable_type) {
+        case EXECUTABLE_TYPE_APPFS:
+            if (app->executable_appfs_fd == APPFS_INVALID_FD) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "App not found in AppFS", "OK");
+                return;
             }
-            free(path);
-        }
+            appfsBootSelect(app->executable_appfs_fd, NULL);
+            while (wifi_stack_get_task_done() == false) {
+                printf("Waiting for wifi stack task to finish...\n");
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+            usb_mode_set(USB_DEBUG);
+            esp_restart();
+            break;
+        case EXECUTABLE_TYPE_ELF: {
+#if CONFIG_IDF_TARGET_ESP32P4
+            size_t req = snprintf(NULL, 0, "%s/%s/%s", app->path, app->slug, app->executable_filename);
+            if (req > PATH_MAX) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "Applet path is too long", "OK");
+            } else {
+                char* path = malloc(req + 1);
+                snprintf(path, req + 1, "%s/%s/%s", app->path, app->slug, app->executable_filename);
+                if (!fs_utils_exists(path)) {
+                    message_dialog(get_icon(ICON_ERROR), "Error", "Applet not found", "OK");
+                } else if (!badge_elf_start(path)) {
+                    message_dialog(get_icon(ICON_ERROR), "Error", "Failed to start app", "OK");
+                }
+                free(path);
+            }
 #else
-        message_dialog(get_icon(ICON_ERROR), "Error", "BadgeELF applets not supported on this platform", "OK");
+            message_dialog(get_icon(ICON_ERROR), "Error", "Applets are not supported on this platform", "OK");
 #endif
-    } else if (app->appfs_fd != APPFS_INVALID_FD) {
-        appfsBootSelect(app->appfs_fd, NULL);
-        while (wifi_stack_get_task_done() == false) {
-            printf("Waiting for wifi stack task to finish...\n");
-            vTaskDelay(pdMS_TO_TICKS(100));
+            break;
         }
-        usb_mode_set(USB_DEBUG);
-        esp_restart();
-    } else {
-        message_dialog(get_icon(ICON_ERROR), "Error", "App not found", "OK");
+        case EXECUTABLE_TYPE_SCRIPT: {
+            if (app->executable_interpreter_slug == NULL) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "No interpreter specified for script", "OK");
+                return;
+            }
+
+            // TODO: properly parse app entry for interpreter, for now just assume it's in AppFS
+            appfs_handle_t interpreter_fd = find_appfs_handle_for_slug(app->executable_interpreter_slug);
+            if (interpreter_fd == APPFS_INVALID_FD) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "Interpreter not found in AppFS", "OK");
+                return;
+            }
+
+            size_t req = snprintf(NULL, 0, "%s/%s/%s", app->path, app->slug, app->executable_filename);
+            if (req > PATH_MAX) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "Script path is too long", "OK");
+                return;
+            }
+
+            char* path = malloc(req + 1);
+            snprintf(path, req + 1, "%s/%s/%s", app->path, app->slug, app->executable_filename);
+            if (!fs_utils_exists(path)) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "Script file not found", "OK");
+                free(path);
+                return;
+            }
+
+            appfsBootSelect(app->executable_appfs_fd, path);
+            while (wifi_stack_get_task_done() == false) {
+                printf("Waiting for wifi stack task to finish...\n");
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+            usb_mode_set(USB_DEBUG);
+            esp_restart();
+            free(path);  // Not reached
+            break;
+        }
+        default:
+            message_dialog(get_icon(ICON_ERROR), "Error", "Unknown executable type", "OK");
+            return;
     }
 }
 
