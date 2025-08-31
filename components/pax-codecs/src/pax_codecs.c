@@ -77,7 +77,11 @@ bool pax_encode_png_fd(const pax_buf_t *buf, FILE *fd, int x, int y, int width, 
 	if (err) {
 		PAX_LOGE(TAG, "%s", spng_strerror(err));
 		spng_ctx_free(ctx);
+		#if PAX_VERSION_MAJOR >= 2
+		pax_set_err(PAX_ERR_ENCODE);
+		#else
 		pax_last_error = PAX_ERR_ENCODE;
+		#endif
 		return false;
 	}
 	bool ret = png_encode(buf, ctx, x, y, width, height);
@@ -93,7 +97,11 @@ bool pax_encode_png_buf(const pax_buf_t *buf, void **outbuf, size_t *len, int x,
 	bool ret = png_encode(buf, ctx, x, y, width, height);
 	if (!ret) {
 		spng_ctx_free(ctx);
+		#if PAX_VERSION_MAJOR >= 2
+		pax_set_err(PAX_ERR_ENCODE);
+		#else
 		pax_last_error = PAX_ERR_ENCODE;
+		#endif
 		return 0;
 	}
 	
@@ -102,7 +110,11 @@ bool pax_encode_png_buf(const pax_buf_t *buf, void **outbuf, size_t *len, int x,
 	spng_ctx_free(ctx);
 	if (err) {
 		PAX_LOGE(TAG, "%s", spng_strerror(err));
+		#if PAX_VERSION_MAJOR >= 2
+		pax_set_err(PAX_ERR_ENCODE);
+		#else
 		pax_last_error = PAX_ERR_ENCODE;
+		#endif
 		*outbuf = NULL;
 		*len = 0;
 	}
@@ -195,7 +207,11 @@ static bool png_encode(const pax_buf_t *framebuffer, spng_ctx *ctx, int dx, int 
 	}
 	if (dx > pax_buf_get_width(framebuffer)) {
 		// Out of bounds error.
+		#if PAX_VERSION_MAJOR >= 2
+		pax_set_err(PAX_ERR_BOUNDS);
+		#else
 		pax_last_error = PAX_ERR_BOUNDS;
+		#endif
 		return 0;
 	}
 	if (dx + width > pax_buf_get_width(framebuffer)) {
@@ -209,7 +225,11 @@ static bool png_encode(const pax_buf_t *framebuffer, spng_ctx *ctx, int dx, int 
 	}
 	if (dy > pax_buf_get_height(framebuffer)) {
 		// Out of bounds error.
+		#if PAX_VERSION_MAJOR >= 2
+		pax_set_err(PAX_ERR_BOUNDS);
+		#else
 		pax_last_error = PAX_ERR_BOUNDS;
+		#endif
 		return 0;
 	}
 	if (dy + height > pax_buf_get_height(framebuffer)) {
@@ -231,7 +251,11 @@ static bool png_encode(const pax_buf_t *framebuffer, spng_ctx *ctx, int dx, int 
 	size_t   rowbufcap = sizeof(uint8_t) * 4 * width;
 	uint8_t *rowbuf    = malloc(rowbufcap);
 	if (!rowbuf) {
+		#if PAX_VERSION_MAJOR >= 2
+		pax_set_err(PAX_ERR_NOMEM);
+		#else
 		pax_last_error = PAX_ERR_NOMEM;
+		#endif
 		return 0;
 	}
 	
@@ -253,7 +277,11 @@ static bool png_encode(const pax_buf_t *framebuffer, spng_ctx *ctx, int dx, int 
 	
 	if (err != SPNG_EOI) {
 		PAX_LOGE(TAG, "%s", spng_strerror(err));
+		#if PAX_VERSION_MAJOR >= 2
+		pax_set_err(PAX_ERR_ENCODE);
+		#else
 		pax_last_error = PAX_ERR_ENCODE;
+		#endif
 		return 0;
 	}
 	
@@ -288,10 +316,20 @@ static bool png_decode(pax_buf_t *framebuffer, spng_ctx *ctx, pax_buf_type_t buf
 		pax_mark_dirty2(framebuffer, x_offset, y_offset, width, height);
 	}
 	
+#if PAX_VERSION_MAJOR >= 2
+	bool is_palette = pax_buf_type_info(buf_type).fmt_type == PAX_BUF_SUBTYPE_PALETTE;
+#else
+	bool is_palette = PAX_IS_PALETTE(buf_type);
+#endif
+	
 	// Select a good buffer type.
-	if (do_alloc && PAX_IS_PALETTE(buf_type) && ihdr.color_type != 3) {
+	if (do_alloc && is_palette && ihdr.color_type != 3) {
 		// This is not a palleted image, change the output type.
+		#if PAX_VERSION_MAJOR >= 2
+		int bpp = pax_buf_type_info(buf_type).bpp;
+		#else
 		int bpp = PAX_GET_BPP(buf_type);
+		#endif
 		if (bpp == 1) {
 			// For 1BPP, the only option is greyscale.
 			buf_type = PAX_BUF_1_GREY;
@@ -336,8 +374,12 @@ static bool png_decode(pax_buf_t *framebuffer, spng_ctx *ctx, pax_buf_type_t buf
 	if (do_alloc) {
 		// Allocate some funny.
 		PAX_LOGD(TAG, "Decoding PNG %dx%d to %08x", (int) width, (int) height, buf_type);
+		#if PAX_VERSION_MAJOR >= 2
+		if (!pax_buf_init(framebuffer, NULL, width, height, buf_type)) return false;
+		#else
 		pax_buf_init(framebuffer, NULL, width, height, buf_type);
 		if (pax_last_error) return false;
+		#endif
 	}
 	
 	// Decd.
@@ -389,6 +431,12 @@ static bool png_decode_progressive(pax_buf_t *framebuffer, spng_ctx *ctx, struct
 	uint8_t          *row  = NULL;
 	struct spng_plte *plte = NULL;
 	struct spng_trns *trns = NULL;
+	
+#if PAX_VERSION_MAJOR >= 2
+bool is_palette = pax_buf_type_info(buf_type).fmt_type == PAX_BUF_SUBTYPE_PALETTE;
+#else
+bool is_palette = PAX_IS_PALETTE(buf_type);
+#endif
 	
 	PAX_LOGD(TAG, "Decode with flags 0x%08x", flags);
 	
@@ -473,9 +521,6 @@ static bool png_decode_progressive(pax_buf_t *framebuffer, spng_ctx *ctx, struct
 		if (err == SPNG_ECHUNKAVAIL) has_trns = false;
 		else if (err) goto error;
 	}
-	if (PAX_IS_PALETTE(buf_type)) {
-		PAX_LOGD(TAG, "Buf has palette");
-	}
 	
 	// Set the image to decode progressive.
 	err = spng_decode_image(ctx, NULL, 0, png_fmt, SPNG_DECODE_PROGRESSIVE);
@@ -517,7 +562,7 @@ static bool png_decode_progressive(pax_buf_t *framebuffer, spng_ctx *ctx, struct
 			
 			// Decode color information.
 			pax_col_t color = 0;
-			if (has_palette && PAX_IS_PALETTE(buf_type)) {
+			if (has_palette && is_palette) {
 				color = raw;
 			} else if (has_palette) {
 				if (raw >= plte->n_entries) raw = 0;
@@ -545,10 +590,10 @@ static bool png_decode_progressive(pax_buf_t *framebuffer, spng_ctx *ctx, struct
 			}
 			
 			// Output the pixel to the right spot.
-			if (!has_palette && PAX_IS_PALETTE(buf_type)) {
+			if (!has_palette && is_palette) {
 				color = closest_palette_index(framebuffer, color, true);
 				pax_set_pixel(framebuffer, color, x_offset + x, y_offset + info.row_num);
-			} else if (flags & CODEC_FLAG_EXISTING && !(has_palette && PAX_IS_PALETTE(buf_type))) {
+			} else if (flags & CODEC_FLAG_EXISTING && !(has_palette && is_palette)) {
 				pax_merge_pixel(framebuffer, color, x_offset + x, y_offset + info.row_num);
 			} else {
 				pax_set_pixel(framebuffer, color, x_offset + x, y_offset + info.row_num);
@@ -573,7 +618,7 @@ static bool png_decode_progressive(pax_buf_t *framebuffer, spng_ctx *ctx, struct
 		}
 		
 		// Re-map palette written from IDAT.
-		if (PAX_IS_PALETTE(buf_type) && (flags & CODEC_FLAG_EXISTING) && !(flags & CODEC_FLAG_KEEP_PAL)) {
+		if (is_palette && (flags & CODEC_FLAG_EXISTING) && !(flags & CODEC_FLAG_KEEP_PAL)) {
 			// Search for closest fitting palette.
 			uint16_t *remap = malloc(sizeof(uint16_t) * plte->n_entries);
 			PAX_LOGD(TAG, "Remapping palette");
@@ -603,7 +648,7 @@ static bool png_decode_progressive(pax_buf_t *framebuffer, spng_ctx *ctx, struct
 		}
 	}
 	
-	if (has_palette && PAX_IS_PALETTE(buf_type) && !(flags & CODEC_FLAG_EXISTING)) {
+	if (has_palette && is_palette && !(flags & CODEC_FLAG_EXISTING)) {
 		// Copy over the palette.
 		pax_col_t *palette = malloc(sizeof(pax_col_t) * plte->n_entries);
 		for (size_t i = 0; i < plte->n_entries; i++) {
