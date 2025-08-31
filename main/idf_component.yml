@@ -4,7 +4,7 @@ dependencies:
   badgeteam/badge-bsp:
     version: ">=0.3.2"
   robotman2412/pax-gfx:
-    version: ">=1.1.2"
+    version: ">=2.0.3"
   badgeteam/appfs:
     version: ">=1.0.1"
   nicolaielectronics/rvswd:
@@ -16,11 +16,11 @@ dependencies:
   nicolaielectronics/wifi-manager:
     version: ">=0.2.0"
   badgeteam/badge-elf:
-    version: ">=0.0.1"
+    version: ">=0.1.0"
     rules:
       - if: target == esp32p4
   badgeteam/badge-elf-api:
-    version: ">=0.0.1"
+    version: ">=0.1.0"
     rules:
       - if: target == esp32p4
   espressif/esp_tinyusb:
@@ -35,5 +35,5 @@ dependencies:
     version: ">=1.0.1"
   nicolaielectronics/pocketpy:
     version: ">=2.0.0"
-  badgeteam/terminal-emulator: ^0.0.3
+  badgeteam/terminal-emulator: ^0.0.4
   badgeteam/badgelink: ">=0.0.3"
