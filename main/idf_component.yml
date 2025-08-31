@@ -35,5 +35,5 @@ dependencies:
     version: ">=1.0.1"
   nicolaielectronics/pocketpy:
     version: ">=2.0.0"
-  badgeteam/terminal-emulator: ^0.0.4
+  badgeteam/terminal-emulator: ">=0.0.4"
   badgeteam/badgelink: ">=0.0.3"
