@@ -16,6 +16,7 @@
 #include "coprocessor_management.h"
 #include "custom_certificates.h"
 #include "driver/gpio.h"
+#include "esp_err.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
 #include "esp_log.h"
@@ -27,6 +28,7 @@
 #include "hal/lcd_types.h"
 #include "icons.h"
 #include "menu/home.h"
+#include "ntp.h"
 #include "nvs_flash.h"
 #include "pax_fonts.h"
 #include "pax_gfx.h"
@@ -108,6 +110,27 @@ static void wifi_task(void* pvParameters) {
         ESP_LOGE(TAG, "WiFi radio not responding, did you flash ESP-HOSTED firmware?");
     }
     wifi_stack_task_done = true;
+
+    if (ntp_get_enabled()) {
+        if (wifi_connect_try_all() == ESP_OK) {
+            esp_err_t res = ntp_start_service("pool.ntp.org");
+            if (res == ESP_OK) {
+                res = ntp_sync_wait();
+                if (res != ESP_OK) {
+                    ESP_LOGW(TAG, "NTP time sync failed: %s", esp_err_to_name(res));
+                } else {
+                    time_t rtc_time = time(NULL);
+                    bsp_rtc_set_time(rtc_time);
+                    ESP_LOGI(TAG, "NTP time sync succesful, RTC updated");
+                }
+            } else {
+                ESP_LOGE(TAG, "Failed to initialize NTP service: %s", esp_err_to_name(res));
+            }
+        } else {
+            ESP_LOGW(TAG, "Could not connect to network for NTP");
+        }
+    }
+
     vTaskDelete(NULL);
 }
 

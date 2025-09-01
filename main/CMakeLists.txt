@@ -57,6 +57,7 @@ idf_component_register(
 		"device_information.c"
 		"filesystem_utils.c"
 		"app_management.c"
+		"ntp.c"
 	PRIV_REQUIRES
 		esp_lcd
 		fatfs
@@ -78,6 +79,7 @@ idf_component_register(
 		freertos
 		badgelink
 		tanmatsu-wifi
+		lwip
 		${extra_requires}
 	INCLUDE_DIRS
 		"."
