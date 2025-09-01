@@ -10,6 +10,7 @@
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
+#include "ntp.h"
 #include "nvs.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
@@ -18,7 +19,6 @@
 #include "sdkconfig.h"
 #include "settings_clock_timezone.h"
 #include "timezone.h"
-// #include "shapes/pax_misc.h"
 
 static const char* TAG = "clock";
 
@@ -163,48 +163,6 @@ void adjust_date_time(uint8_t selection, int8_t delta) {
     bsp_rtc_set_time(new_time);
 }
 
-static bool get_ntp(void) {
-    nvs_handle_t nvs_handle;
-    esp_err_t    res = nvs_open("system", NVS_READWRITE, &nvs_handle);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to open NVS namespace");
-        return false;
-    }
-    uint8_t enabled = false;
-    res             = nvs_get_u8(nvs_handle, "ntp", &enabled);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get NVS entry");
-        nvs_close(nvs_handle);
-        return false;
-    }
-    res = nvs_commit(nvs_handle);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to commit to NVS");
-    }
-    nvs_close(nvs_handle);
-    return (enabled & 1);
-}
-
-static void set_ntp(bool enabled) {
-    nvs_handle_t nvs_handle;
-    esp_err_t    res = nvs_open("system", NVS_READWRITE, &nvs_handle);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to open NVS namespace");
-        return;
-    }
-    res = nvs_set_u8(nvs_handle, "ntp", enabled ? 1 : 0);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to set NVS entry");
-        nvs_close(nvs_handle);
-        return;
-    }
-    res = nvs_commit(nvs_handle);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to commit to NVS");
-    }
-    nvs_close(nvs_handle);
-}
-
 static void get_timezone(const timezone_t** zone) {
     char timezone_name[32] = {0};
     timezone_nvs_get("system", "timezone", timezone_name, sizeof(timezone_name));
@@ -229,7 +187,7 @@ void menu_settings_clock(pax_buf_t* buffer, gui_theme_t* theme) {
 
     get_timezone(&zone);
 
-    bool ntp = get_ntp();
+    bool ntp = ntp_get_enabled();
 
     uint8_t selection = 0;
     render(buffer, theme, position, zone, ntp, false, true, selection);
@@ -275,7 +233,7 @@ void menu_settings_clock(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_SELECT:
                                 // Toggle NTP
                                 ntp = !ntp;
-                                set_ntp(ntp);
+                                ntp_set_enabled(ntp);
                                 render(buffer, theme, position, zone, ntp, false, true, selection);
                                 break;
                             default:
