@@ -302,11 +302,13 @@ size_t create_list_of_apps_from_other_appfs_entries(app_t** out_list, size_t lis
         }
 
         if (!already_in_list) {
-            app_t* app   = calloc(1, sizeof(app_t));
-            app->slug    = strdup(slug);
-            app->name    = strdup(name);
-            app->version = version;
-            app->icon    = calloc(1, sizeof(pax_buf_t));
+            app_t* app           = calloc(1, sizeof(app_t));
+            app->slug            = strdup(slug);
+            app->name            = strdup(name);
+            app->path            = strdup("");
+            app->version         = version;
+            app->icon            = calloc(1, sizeof(pax_buf_t));
+            app->executable_type = EXECUTABLE_TYPE_APPFS;
             if (app->icon != NULL) {
                 pax_buf_init(app->icon, NULL, 32, 32, PAX_BUF_32_8888ARGB);
                 pax_draw_image(app->icon, get_icon(ICON_APP), 0, 0);
