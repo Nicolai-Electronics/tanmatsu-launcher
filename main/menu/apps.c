@@ -127,7 +127,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
         }
         default:
             message_dialog(get_icon(ICON_ERROR), "Error", "Unknown executable type", "OK");
-            return;
+            break;
     }
 }
 
