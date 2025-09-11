@@ -92,6 +92,11 @@ static esp_err_t scan_for_networks(pax_buf_t* buffer, gui_theme_t* theme, wifi_a
         }
 
         printf("Found %u APs\r\n", num_ap);
+        if (num_ap == 0) {
+            message_dialog(get_icon(ICON_ERROR), "No access points found", "No access points found, please scan again.",
+                           "OK");
+            return ESP_OK;
+        }
 
         wifi_ap_record_t* aps = malloc(sizeof(wifi_ap_record_t) * num_ap);
         if (!aps) {
