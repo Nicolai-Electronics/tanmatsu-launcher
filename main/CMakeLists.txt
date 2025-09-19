@@ -33,12 +33,13 @@ idf_component_register(
 		"menu/textedit.c"
 		"menu/radio_update.c"
 		"menu/nametag.c"
-		"menu/rftest.c"
+		"menu/menu_rftest.c"
 		"menu/menu_repository_client.c"
 		"menu/menu_repository_client_project.c"
 		"menu/menu_wifi_info.c"
 		"menu/menu_power_information.c"
 		"menu/menu_filebrowser.c"
+		"menu/menu_hardware_test.c"
 
 		# Fonts
 		"chakrapetchmedium.c"

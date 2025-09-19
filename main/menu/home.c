@@ -16,9 +16,9 @@
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "menu/menu_rftest.h"
 #include "menu/message_dialog.h"
 #include "menu/nametag.h"
-#include "menu/rftest.h"
 #include "menu_repository_client.h"
 #include "menu_settings.h"
 #include "pax_gfx.h"
@@ -48,7 +48,7 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             menu_settings();
             break;
         case ACTION_RFTEST:
-            menu_rftest(fb, theme);
+            menu_rftest();
             break;
         case ACTION_REPOSITORY:
             menu_repository_client(fb, theme);

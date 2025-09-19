@@ -14,6 +14,7 @@
 #include "menu/wifi.h"
 #include "menu_device_information.h"
 #include "menu_filebrowser.h"
+#include "menu_hardware_test.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
@@ -30,6 +31,7 @@ typedef enum {
     ACTION_LAST,
     ACTION_RADIO_UPDATE,
     ACTION_POWER_INFORMATION,
+    ACTION_HARDWARE_TEST,
 } menu_home_action_t;
 
 static void radio_update_v2(void) {
@@ -65,6 +67,8 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
         case ACTION_POWER_INFORMATION:
             menu_power_information();
             break;
+        case ACTION_HARDWARE_TEST:
+            menu_hardware_test();
         default:
             break;
     }
@@ -104,6 +108,7 @@ void menu_settings(void) {
     menu_insert_item_icon(&menu, "Install radio firmware from SD card", NULL, (void*)ACTION_RADIO_UPDATE, -1,
                           get_icon(ICON_RELEASE_ALERT));
 #endif
+    menu_insert_item_icon(&menu, "Hardware test", NULL, (void*)ACTION_HARDWARE_TEST, -1, get_icon(ICON_DEV));
 
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
