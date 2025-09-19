@@ -34,6 +34,9 @@ typedef struct {
     // Grid properties
     int grid_horizontal_count;
     int grid_vertical_count;
+
+    // Colors
+    gui_palette_t palette;
 } gui_element_style_t;
 
 typedef struct {
@@ -42,7 +45,7 @@ typedef struct {
 } gui_scrollbar_style_t;
 
 typedef struct {
-    gui_palette_t         palette;  // Color palette
+    gui_palette_t         palette;  // General color palette
     gui_element_style_t   footer;
     gui_element_style_t   header;
     gui_element_style_t   menu;

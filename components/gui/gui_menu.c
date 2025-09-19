@@ -234,6 +234,12 @@ const char* menu_get_value(menu_t* menu, size_t position) {
     return item->value;
 }
 
+const char* menu_get_label(menu_t* menu, size_t position) {
+    menu_item_t* item = menu_find_item(menu, position);
+    if (item == NULL) return NULL;
+    return item->label;
+}
+
 void menu_set_value(menu_t* menu, size_t position, const char* value) {
     menu_item_t* item = menu_find_item(menu, position);
     if (item == NULL) {

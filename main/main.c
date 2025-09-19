@@ -5,26 +5,30 @@
 #include "badgelink.h"
 #include "bsp/device.h"
 #include "bsp/display.h"
+#include "bsp/i2c.h"
 #include "bsp/input.h"
 #include "bsp/led.h"
 #include "bsp/power.h"
 #include "bsp/rtc.h"
 #include "chakrapetchmedium.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "coprocessor_management.h"
 #include "custom_certificates.h"
 #include "driver/gpio.h"
+#include "esp_err.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
-#include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
+#include "gui_element_header.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "hal/lcd_types.h"
 #include "icons.h"
 #include "menu/home.h"
+#include "ntp.h"
 #include "nvs_flash.h"
 #include "pax_fonts.h"
 #include "pax_gfx.h"
@@ -53,241 +57,6 @@ static wl_handle_t   wl_handle              = WL_INVALID_HANDLE;
 static bool          wifi_stack_initialized = false;
 static bool          wifi_stack_task_done   = false;
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-gui_theme_t theme = {
-    .palette =
-        {
-            .color_foreground          = 0xFF340132,  // #340132
-            .color_background          = 0xFFEEEAEE,  // #EEEAEE
-            .color_active_foreground   = 0xFF340132,  // #340132
-            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
-            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
-            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
-            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
-        },
-    .footer =
-        {
-            .height             = 32,
-            .vertical_margin    = 7,
-            .horizontal_margin  = 20,
-            .text_height        = 16,
-            .vertical_padding   = 20,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .header =
-        {
-            .height             = 32,
-            .vertical_margin    = 7,
-            .horizontal_margin  = 20,
-            .text_height        = 16,
-            .vertical_padding   = 20,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .menu =
-        {
-            .height                = 480 - 64,
-            .vertical_margin       = 20,
-            .horizontal_margin     = 30,
-            .text_height           = 16,
-            .vertical_padding      = 6,
-            .horizontal_padding    = 6,
-            .text_font             = &chakrapetchmedium,
-            .list_entry_height     = 32,
-            .grid_horizontal_count = 4,
-            .grid_vertical_count   = 3,
-        },
-};
-#elif defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
-gui_theme_t theme = {
-    .palette =
-        {
-            .color_foreground          = 0xFF340132,  // #340132
-            .color_background          = 0xFFEEEAEE,  // #EEEAEE
-            .color_active_foreground   = 0xFF340132,  // #340132
-            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
-            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
-            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
-            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
-        },
-    .footer =
-        {
-            .height             = 32,
-            .vertical_margin    = 7,
-            .horizontal_margin  = 20,
-            .text_height        = 16,
-            .vertical_padding   = 20,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .header =
-        {
-            .height             = 32,
-            .vertical_margin    = 7,
-            .horizontal_margin  = 20,
-            .text_height        = 16,
-            .vertical_padding   = 20,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .menu =
-        {
-            .height                = 480 - 64,
-            .vertical_margin       = 20,
-            .horizontal_margin     = 30,
-            .text_height           = 16,
-            .vertical_padding      = 6,
-            .horizontal_padding    = 6,
-            .text_font             = &chakrapetchmedium,
-            .list_entry_height     = 32,
-            .grid_horizontal_count = 4,
-            .grid_vertical_count   = 3,
-        },
-};
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
-gui_theme_t theme = {
-    .palette =
-        {
-            .color_foreground          = 0xFFA72872,  // #A72872
-            .color_background          = 0xFFFFFFFF,  // #FFFFFF
-            .color_active_foreground   = 0xFFFFFFFF,  // #FFFFFF
-            .color_active_background   = 0xFFA72872,  // #a72872
-            .color_highlight_primary   = 0xFF6A0080,  // #6a0080
-            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
-            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
-        },
-    .footer =
-        {
-            .height             = 24,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 0,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .header =
-        {
-            .height             = 32,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 0,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .menu =
-        {
-            .height                = 240 - 32 - 16,
-            .vertical_margin       = 0,
-            .horizontal_margin     = 0,
-            .text_height           = 16,
-            .vertical_padding      = 3,
-            .horizontal_padding    = 3,
-            .text_font             = &chakrapetchmedium,
-            .list_entry_height     = 32,
-            .grid_horizontal_count = 3,
-            .grid_vertical_count   = 3,
-        },
-};
-#elif defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
-gui_theme_t theme = {
-    .palette =
-        {
-            .color_foreground          = 0xFF340132,  // #340132
-            .color_background          = 0xFFEEEAEE,  // #EEEAEE
-            .color_active_foreground   = 0xFF340132,  // #340132
-            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
-            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
-            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
-            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
-        },
-    .footer =
-        {
-            .height             = 16,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 5,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .header =
-        {
-            .height             = 32,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 0,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .menu =
-        {
-            .height                = 240 - 32 - 16,
-            .vertical_margin       = 0,
-            .horizontal_margin     = 0,
-            .text_height           = 16,
-            .vertical_padding      = 3,
-            .horizontal_padding    = 3,
-            .text_font             = &chakrapetchmedium,
-            .list_entry_height     = 32,
-            .grid_horizontal_count = 3,
-            .grid_vertical_count   = 3,
-        },
-};
-#elif defined(CONFIG_BSP_TARGET_KAMI)
-gui_theme_t theme = {
-    .palette =
-        {
-            .color_foreground          = 1,
-            .color_background          = 0,
-            .color_active_foreground   = 2,
-            .color_active_background   = 0,
-            .color_highlight_primary   = 2,
-            .color_highlight_secondary = 2,
-            .color_highlight_tertiary  = 2,
-        },
-    .footer =
-        {
-            .height             = 16,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 5,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .header =
-        {
-            .height             = 32,
-            .vertical_margin    = 0,
-            .horizontal_margin  = 0,
-            .text_height        = 16,
-            .vertical_padding   = 0,
-            .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
-        },
-    .menu =
-        {
-            .height                = 240 - 32 - 16,
-            .vertical_margin       = 0,
-            .horizontal_margin     = 0,
-            .text_height           = 16,
-            .vertical_padding      = 3,
-            .horizontal_padding    = 3,
-            .text_font             = &chakrapetchmedium,
-            .list_entry_height     = 32,
-            .grid_horizontal_count = 3,
-            .grid_vertical_count   = 3,
-        },
-};
-#else
-#error "Unsupported target"
-#endif
-
 static void fix_rtc_out_of_bounds(void) {
     time_t rtc_time = time(NULL);
 
@@ -315,10 +84,11 @@ static void fix_rtc_out_of_bounds(void) {
 }
 
 void startup_screen(const char* text) {
-    pax_buf_t* fb = display_get_buffer();
-    pax_background(fb, theme.palette.color_background);
-    gui_render_header_adv(fb, &theme, ((gui_header_field_t[]){{NULL, (char*)text}}), 1, NULL, 0);
-    gui_render_footer_adv(fb, &theme, NULL, 0, NULL, 0);
+    gui_theme_t* theme = get_theme();
+    pax_buf_t*   fb    = display_get_buffer();
+    pax_background(fb, theme->palette.color_background);
+    gui_header_draw(fb, theme, ((gui_element_icontext_t[]){{NULL, (char*)text}}), 1, NULL, 0);
+    gui_footer_draw(fb, theme, NULL, 0, NULL, 0);
     display_blit_buffer(fb);
 }
 
@@ -334,13 +104,109 @@ static void wifi_task(void* pvParameters) {
     if (wifi_remote_initialize() == ESP_OK) {
         wifi_connection_init_stack();
         wifi_stack_initialized = true;
-        wifi_connect_try_all();
+        // wifi_connect_try_all();
     } else {
-        bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+        // bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
         ESP_LOGE(TAG, "WiFi radio not responding, did you flash ESP-HOSTED firmware?");
     }
     wifi_stack_task_done = true;
+
+    if (ntp_get_enabled()) {
+        if (wifi_connect_try_all() == ESP_OK) {
+            esp_err_t res = ntp_start_service("pool.ntp.org");
+            if (res == ESP_OK) {
+                res = ntp_sync_wait();
+                if (res != ESP_OK) {
+                    ESP_LOGW(TAG, "NTP time sync failed: %s", esp_err_to_name(res));
+                } else {
+                    time_t rtc_time = time(NULL);
+                    bsp_rtc_set_time(rtc_time);
+                    ESP_LOGI(TAG, "NTP time sync succesful, RTC updated");
+                }
+            } else {
+                ESP_LOGE(TAG, "Failed to initialize NTP service: %s", esp_err_to_name(res));
+            }
+        } else {
+            ESP_LOGW(TAG, "Could not connect to network for NTP");
+        }
+    }
+
     vTaskDelete(NULL);
+}
+
+esp_err_t check_i2c_bus(void) {
+    i2c_master_bus_handle_t i2c_bus_handle_internal;
+    ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal));
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+    esp_err_t ret_codec  = i2c_master_probe(i2c_bus_handle_internal, 0x08, 50);
+    esp_err_t ret_bmi270 = i2c_master_probe(i2c_bus_handle_internal, 0x68, 50);
+
+    if (ret_codec) {
+        ESP_LOGE(TAG, "Audio codec not found on I2C bus");
+    }
+
+    if (ret_bmi270) {
+        ESP_LOGE(TAG, "BMI270 not found on I2C bus");
+    }
+
+    if (ret_codec != ESP_OK && ret_bmi270 != ESP_OK) {
+        // Neither the audio codec nor the BMI270 sensor were found on the I2C bus.
+        // This probably means something is wrong with the I2C bus, we check if the coprocessor is present
+        // to determine if the I2C bus is working at all
+        esp_err_t ret_coprocessor = i2c_master_probe(i2c_bus_handle_internal, 0x5F, 50);
+        if (ret_coprocessor != ESP_OK) {
+            ESP_LOGE(TAG, "Coprocessor not found on I2C bus");
+            pax_buf_t* buffer = display_get_buffer();
+            pax_background(buffer, 0xFFFF0000);
+            pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 0, "The internal I2C bus is not working!");
+            pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 1,
+                          "Please remove add-on board, modifications and other plugged in");
+            pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 2,
+                          "devices and wires and power cycle the device.");
+            display_blit_buffer(buffer);
+
+            vTaskDelay(pdMS_TO_TICKS(10000));
+
+            startup_screen("Initializing coprocessor...");
+            coprocessor_flash(true);
+            return ESP_FAIL;
+        } else {
+            pax_buf_t* buffer = display_get_buffer();
+            pax_background(buffer, 0xFFFF0000);
+            pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 0,
+                          "Audio codec and orientation sensor do not respond");
+            pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 1,
+                          "This could indicate a hardware issue.");
+            pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 2,
+                          "Please power cycle the device, if that does not");
+            pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 3, "help please contact support.");
+            display_blit_buffer(buffer);
+            vTaskDelay(pdMS_TO_TICKS(3000));
+        }
+    } else if (ret_codec != ESP_OK) {
+        pax_buf_t* buffer = display_get_buffer();
+        pax_background(buffer, 0xFFFF0000);
+        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 0, "Audio codec does not respond");
+        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 1, "This could indicate a hardware issue.");
+        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 2,
+                      "Please power cycle the device, if that does not");
+        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 3, "help please contact support.");
+        display_blit_buffer(buffer);
+        vTaskDelay(pdMS_TO_TICKS(3000));
+    } else if (ret_bmi270 != ESP_OK) {
+        pax_buf_t* buffer = display_get_buffer();
+        pax_background(buffer, 0xFFFF0000);
+        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 0, "Orientation sensor does not respond");
+        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 1, "This could indicate a hardware issue.");
+        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 2,
+                      "Please power cycle the device, if that does not");
+        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18 * 3, "help please contact support.");
+        display_blit_buffer(buffer);
+        vTaskDelay(pdMS_TO_TICKS(3000));
+    }
+#endif
+    return ESP_OK;
 }
 
 void app_main(void) {
@@ -371,8 +237,6 @@ void app_main(void) {
         return;
     }
 
-    bsp_led_initialize();
-
     startup_screen("Mounting FAT filesystem...");
 
     esp_vfs_fat_mount_config_t fat_mount_config = {
@@ -394,8 +258,13 @@ void app_main(void) {
         return;
     }
 
+    startup_screen("Checking I2C bus...");
+    if (check_i2c_bus() != ESP_OK) {
+        return;
+    }
+
     startup_screen("Initializing coprocessor...");
-    coprocessor_flash();
+    coprocessor_flash(false);
 
     if (bsp_init_result != ESP_OK || bsp_device_get_initialized_without_coprocessor()) {
         pax_buf_t* buffer = display_get_buffer();
@@ -453,7 +322,6 @@ void app_main(void) {
 #if CONFIG_IDF_TARGET_ESP32P4
 // Only integrate Python into the launcher on ESP32-P4 targets
 #if 0
-    // Enabling Python currently causes crashes
     python_initialize();
 #endif
 #endif
@@ -468,6 +336,5 @@ void app_main(void) {
 
     bsp_power_set_usb_host_boost_enabled(true);
 
-    pax_buf_t* buffer = display_get_buffer();
-    menu_home(buffer, &theme);
+    menu_home();
 }

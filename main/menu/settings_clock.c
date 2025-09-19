@@ -6,10 +6,11 @@
 #include "common/display.h"
 #include "esp_log.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
+#include "ntp.h"
 #include "nvs.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
@@ -18,24 +19,23 @@
 #include "sdkconfig.h"
 #include "settings_clock_timezone.h"
 #include "timezone.h"
-// #include "shapes/pax_misc.h"
 
 static const char* TAG = "clock";
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT                                              \
-    ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"},           \
-                            {get_icon(ICON_F1), "Back"},         \
-                            {get_icon(ICON_F2), "Set timezone"}, \
-                            {get_icon(ICON_F3), "Toggle NTP"}}), \
+#define FOOTER_LEFT                                                  \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},           \
+                                {get_icon(ICON_F1), "Back"},         \
+                                {get_icon(ICON_F2), "Set timezone"}, \
+                                {get_icon(ICON_F3), "Toggle NTP"}}), \
         4
-#define FOOTER_RIGHT   ((gui_header_field_t[]){{NULL, " ← / → Navigate ↑ / ↓ Modify value"}}), 1
+#define FOOTER_RIGHT   ((gui_element_icontext_t[]){{NULL, " ← / → Navigate ↑ / ↓ Modify value"}}), 1
 #define DATE_TEXT_SIZE 45
 #define TIME_TEXT_SIZE 90
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
-#define FOOTER_LEFT    ((gui_header_field_t[]){{NULL, "🅱Back"}}), 1
-#define FOOTER_RIGHT   ((gui_header_field_t[]){{NULL, "🆂Set timezone"}, {NULL, "🅴Toggle NTP"}}), 2
+#define FOOTER_LEFT    ((gui_element_icontext_t[]){{NULL, "🅱Back"}}), 1
+#define FOOTER_RIGHT   ((gui_element_icontext_t[]){{NULL, "🆂Set timezone"}, {NULL, "🅴Toggle NTP"}}), 2
 #define DATE_TEXT_SIZE 32
 #define TIME_TEXT_SIZE 32
 #else
@@ -49,7 +49,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, c
                    bool partial, bool icons, uint8_t selection) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_CLOCK), "Clock configuration"}}), 1,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_CLOCK), "Clock configuration"}}), 1,
                                      FOOTER_LEFT, FOOTER_RIGHT);
     }
 
@@ -163,48 +163,6 @@ void adjust_date_time(uint8_t selection, int8_t delta) {
     bsp_rtc_set_time(new_time);
 }
 
-static bool get_ntp(void) {
-    nvs_handle_t nvs_handle;
-    esp_err_t    res = nvs_open("system", NVS_READWRITE, &nvs_handle);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to open NVS namespace");
-        return false;
-    }
-    uint8_t enabled = false;
-    res             = nvs_get_u8(nvs_handle, "ntp", &enabled);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get NVS entry");
-        nvs_close(nvs_handle);
-        return false;
-    }
-    res = nvs_commit(nvs_handle);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to commit to NVS");
-    }
-    nvs_close(nvs_handle);
-    return (enabled & 1);
-}
-
-static void set_ntp(bool enabled) {
-    nvs_handle_t nvs_handle;
-    esp_err_t    res = nvs_open("system", NVS_READWRITE, &nvs_handle);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to open NVS namespace");
-        return;
-    }
-    res = nvs_set_u8(nvs_handle, "ntp", enabled ? 1 : 0);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to set NVS entry");
-        nvs_close(nvs_handle);
-        return;
-    }
-    res = nvs_commit(nvs_handle);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to commit to NVS");
-    }
-    nvs_close(nvs_handle);
-}
-
 static void get_timezone(const timezone_t** zone) {
     char timezone_name[32] = {0};
     timezone_nvs_get("system", "timezone", timezone_name, sizeof(timezone_name));
@@ -229,7 +187,7 @@ void menu_settings_clock(pax_buf_t* buffer, gui_theme_t* theme) {
 
     get_timezone(&zone);
 
-    bool ntp = get_ntp();
+    bool ntp = ntp_get_enabled();
 
     uint8_t selection = 0;
     render(buffer, theme, position, zone, ntp, false, true, selection);
@@ -275,7 +233,7 @@ void menu_settings_clock(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_SELECT:
                                 // Toggle NTP
                                 ntp = !ntp;
-                                set_ntp(ntp);
+                                ntp_set_enabled(ntp);
                                 render(buffer, theme, position, zone, ntp, false, true, selection);
                                 break;
                             default:

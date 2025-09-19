@@ -1,20 +1,15 @@
 #include "firmware_update.h"
+#include <stdint.h>
 #include <string.h>
-#include "appfs.h"
-#include "bsp/display.h"
 #include "bsp/input.h"
 #include "chakrapetchmedium.h"
 #include "common/display.h"
-#include "freertos/idf_additions.h"
-#include "gui_footer.h"
-#include "gui_menu.h"
+#include "gui_element_footer.h"
+#include "gui_element_header.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "pax_gfx.h"
-#include "pax_matrix.h"
 #include "pax_types.h"
-#include "settings.h"
-// #include "shapes/pax_misc.h"
 #include "wifi_ota.h"
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU)
@@ -35,7 +30,7 @@
 #error "Unsupported target for firmware update"
 #endif
 
-static void firmware_update_callback(const char* status_text) {
+static void firmware_update_callback(const char* status_text, uint8_t progress) {
     printf("OTA status changed: %s\r\n", status_text);
     pax_buf_t* buffer = display_get_buffer();
     pax_draw_rect(buffer, 0xFFEEEAEE, 0, 85, buffer->width, 32);
@@ -45,10 +40,9 @@ static void firmware_update_callback(const char* status_text) {
 
 void menu_firmware_update(pax_buf_t* buffer, gui_theme_t* theme) {
     pax_background(buffer, theme->palette.color_background);
-    // gui_render_header(buffer, theme, "Firmware update");
-    gui_render_header_adv(buffer, theme, ((gui_header_field_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Firmware update"}}), 1,
-                          NULL, 0);
-    gui_render_footer_adv(buffer, theme, NULL, 0, NULL, 0);
+    gui_header_draw(buffer, theme, ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Firmware update"}}), 1,
+                    NULL, 0);
+    gui_footer_draw(buffer, theme, NULL, 0, NULL, 0);
 
     bool staging = false;
     bsp_input_read_navigation_key(BSP_INPUT_NAVIGATION_KEY_F2, &staging);

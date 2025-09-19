@@ -206,15 +206,18 @@ void usb_mode_set(usb_mode_t mode) {
             usb_serial_jtag_ll_phy_select(1);
             break;
         case USB_DEBUG:
+        case USB_DISABLED:
         default:
             usb_serial_jtag_ll_phy_select(0);
             vTaskDelay(pdMS_TO_TICKS(500));  // Wait for disconnect after switching to debug
             break;
     }
 
-    // Put the device back onto the bus by re-enabling the pull-up on USB DP
-    usb_serial_jtag_ll_phy_enable_pull_override(&override_enable_usb);
-    usb_serial_jtag_ll_phy_disable_pull_override();
+    if (mode != USB_DISABLED) {
+        // Put the device back onto the bus by re-enabling the pull-up on USB DP
+        usb_serial_jtag_ll_phy_enable_pull_override(&override_enable_usb);
+        usb_serial_jtag_ll_phy_disable_pull_override();
+    }
     current_mode = mode;
 }
 

@@ -3,7 +3,7 @@ run-name: Add release artifacts
 
 on:
   workflow_run:
-    branches: ['v*.*.*']
+    branches: ["v*.*.*"]
     workflows: [Build]
     types:
       - completed
@@ -28,11 +28,9 @@ jobs:
       - name: Add artifacts to release
         run: |
           gh release upload ${{ github.event.workflow_run.head_branch }} tanmatsu.zip
-          gh release upload ${{ github.event.workflow_run.head_branch }} konsool.zip
+          gh release upload ${{ github.event.workflow_run.head_branch }} kami.zip
           gh release upload ${{ github.event.workflow_run.head_branch }} mch2022.zip
           gh release upload ${{ github.event.workflow_run.head_branch }} hackerhotel-2024.zip
-          gh release upload ${{ github.event.workflow_run.head_branch }} hackerhotel-2026.zip
           gh release upload ${{ github.event.workflow_run.head_branch }} esp32-p4-function-ev-board.zip
-          gh release upload ${{ github.event.workflow_run.head_branch }} kami.zip
         env:
           GH_TOKEN: ${{ github.token }}

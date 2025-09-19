@@ -10,7 +10,7 @@
 #include "driver/uart.h"
 #include "freertos/idf_additions.h"
 #include "freertos/projdefs.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
@@ -20,11 +20,11 @@ static char const TAG[] = "terminal";
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2
-#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "↑ / ↓ / ← / → Navigate ⏎ Select"}}), 1
+#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ / ← / → | ⏎ Select"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "🅰 Select"}}), 1
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅰 Select"}}), 1
 #else
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT NULL, 0
@@ -56,7 +56,7 @@ static void install_uart_driver(void) {
 static void render(pax_buf_t* buffer, gui_theme_t* theme, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_HOME), "Home"}}), 1, FOOTER_LEFT,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_HOME), "Home"}}), 1, FOOTER_LEFT,
                                      FOOTER_RIGHT);
     }
     display_blit_buffer(buffer);
@@ -73,7 +73,7 @@ void menu_terminal(pax_buf_t* buffer, gui_theme_t* theme) {
     struct cons_insts_s console_instance;
 
     struct cons_config_s con_conf = {
-        .font = pax_font_sky_mono, .font_size_mult = 2, .paxbuf = display_get_buffer(), .output_cb = console_write_cb};
+        .font = pax_font_sky_mono, .font_size_mult = 1, .paxbuf = display_get_buffer(), .output_cb = console_write_cb};
 
     console_init(&console_instance, &con_conf);
     display_blit_buffer(buffer);

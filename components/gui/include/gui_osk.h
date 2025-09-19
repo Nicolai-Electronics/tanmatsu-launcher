@@ -24,9 +24,10 @@
 
 #pragma once
 
-#include "pax_fonts.h"
-#include "pax_gfx.h"
-#include "pax_shapes.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include "pax_types.h"
 
 // A number of inputs supported by the PAX keyboard.
 typedef enum {

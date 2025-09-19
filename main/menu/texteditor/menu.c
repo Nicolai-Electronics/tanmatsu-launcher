@@ -15,6 +15,7 @@
 #include "esp_err.h"
 #include "esp_lcd_mipi_dsi.h"
 #include "esp_lcd_types.h"
+#include "gui_element_icontext.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
 #include "menu/texteditor.h"
@@ -164,7 +165,8 @@ static void draw_statusbar(texteditor_t* editor) {
     char title_buf[64];
     snprintf(title_buf, sizeof(title_buf), "Text editor: %s", editor->file_path);
     render_base_screen_statusbar(editor->buffer, editor->theme, true, true, false,
-                                 ((gui_header_field_t[]){{get_icon(ICON_TEXTEDITOR), title_buf}}), 1, NULL, 0, NULL, 0);
+                                 ((gui_element_icontext_t[]){{get_icon(ICON_TEXTEDITOR), title_buf}}), 1, NULL, 0, NULL,
+                                 0);
 }
 
 // Scroll by a certain number of pixels.

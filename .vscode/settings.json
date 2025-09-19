@@ -5,5 +5,8 @@
     "clangd.arguments": [
         "--query-driver=/**/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
         "--compile-commands-dir=build/tanmatsu"
+    ],
+    "cSpell.words": [
+        "otadata"
     ]
 }

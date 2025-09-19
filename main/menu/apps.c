@@ -2,21 +2,29 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/syslimits.h>
+#include "app_inspect.h"
+#include "app_management.h"
 #include "app_metadata_parser.h"
 #include "appfs.h"
+#if CONFIG_IDF_TARGET_ESP32P4
+#include "badge_elf.h"
+#endif
 #include "bsp/input.h"
 #include "common/display.h"
+#include "filesystem_utils.h"
 #include "freertos/idf_additions.h"
-#include "gui_footer.h"
+#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "menu/app_inspect.h"
 #include "menu/message_dialog.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
 #include "sdkconfig.h"
-// #include "shapes/pax_misc.h"
+#include "usb_device.h"
 
 #define MAX_NUM_APPS 128
 
@@ -30,40 +38,111 @@ static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
 
 extern bool wifi_stack_get_task_done(void);
 
-static void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app_t* app) {
+void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app_t* app) {
 
     if (app == NULL) {
-        message_dialog(buffer, theme, "Error", "No app selected", "OK");
+        message_dialog(get_icon(ICON_ERROR), "Error", "No app selected", "OK");
         return;
     }
 
     render_base_screen_statusbar(buffer, theme, true, true, true,
-                                 ((gui_header_field_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, NULL, 0, NULL, 0);
+                                 ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, NULL, 0, NULL, 0);
     char message[64] = {0};
     snprintf(message, sizeof(message), "Starting %s...", app->name);
     pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, theme->footer.text_height,
                   position.x0, position.y0, message);
     display_blit_buffer(buffer);
-    printf("Starting %s...\n", app->slug);
-    if (app->appfs_fd != APPFS_INVALID_FD) {
-        appfsBootSelect(app->appfs_fd, NULL);
-        while (wifi_stack_get_task_done() == false) {
-            printf("Waiting for wifi stack task to finish...\n");
-            vTaskDelay(pdMS_TO_TICKS(100));
+    printf("Starting %s (from %s)...\n", app->slug, app->path);
+
+    switch (app->executable_type) {
+        case EXECUTABLE_TYPE_APPFS:
+            if (app->executable_appfs_fd == APPFS_INVALID_FD) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "App not found in AppFS", "OK");
+                return;
+            }
+            appfsBootSelect(app->executable_appfs_fd, NULL);
+            while (wifi_stack_get_task_done() == false) {
+                printf("Waiting for wifi stack task to finish...\n");
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+            usb_mode_set(USB_DEBUG);
+            esp_restart();
+            break;
+        case EXECUTABLE_TYPE_ELF: {
+#if CONFIG_IDF_TARGET_ESP32P4
+            size_t req = snprintf(NULL, 0, "%s/%s/%s", app->path, app->slug, app->executable_filename);
+            if (req > PATH_MAX) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "Applet path is too long", "OK");
+            } else {
+                char* path = malloc(req + 1);
+                snprintf(path, req + 1, "%s/%s/%s", app->path, app->slug, app->executable_filename);
+                if (!fs_utils_exists(path)) {
+                    message_dialog(get_icon(ICON_ERROR), "Error", "Applet not found", "OK");
+                } else if (!badge_elf_start(path)) {
+                    message_dialog(get_icon(ICON_ERROR), "Error", "Failed to start app", "OK");
+                }
+                free(path);
+            }
+#else
+            message_dialog(get_icon(ICON_ERROR), "Error", "Applets are not supported on this platform", "OK");
+#endif
+            break;
         }
-        esp_restart();
-    } else {
-        message_dialog(buffer, theme, "Error", "App not found", "OK");
+        case EXECUTABLE_TYPE_SCRIPT: {
+            if (app->executable_interpreter_slug == NULL) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "No interpreter specified for script", "OK");
+                return;
+            }
+
+            // TODO: properly parse app entry for interpreter, for now just assume it's in AppFS
+            appfs_handle_t interpreter_fd = find_appfs_handle_for_slug(app->executable_interpreter_slug);
+            if (interpreter_fd == APPFS_INVALID_FD) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "Interpreter not found in AppFS", "OK");
+                return;
+            }
+
+            size_t req = snprintf(NULL, 0, "%s/%s/%s", app->path, app->slug, app->executable_filename);
+            if (req > PATH_MAX) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "Script path is too long", "OK");
+                return;
+            }
+
+            char* path = malloc(req + 1);
+            snprintf(path, req + 1, "%s/%s/%s", app->path, app->slug, app->executable_filename);
+            if (!fs_utils_exists(path)) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "Script file not found", "OK");
+                free(path);
+                return;
+            }
+
+            appfsBootSelect(app->executable_appfs_fd, path);
+            while (wifi_stack_get_task_done() == false) {
+                printf("Waiting for wifi stack task to finish...\n");
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+            usb_mode_set(USB_DEBUG);
+            esp_restart();
+            free(path);  // Not reached
+            break;
+        }
+        default:
+            message_dialog(get_icon(ICON_ERROR), "Error", "Unknown executable type", "OK");
+            break;
     }
 }
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_header_field_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
-#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "↑ / ↓ Navigate ⏎ Start app"}}), 1
+#define FOOTER_LEFT                                              \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},       \
+                                {get_icon(ICON_F1), "Back"},     \
+                                {get_icon(ICON_F2), "Details"},  \
+                                {get_icon(ICON_F5), "Remove"}}), \
+        4
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Start app"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT ((gui_header_field_t[]){{NULL, "🅰 Start app"}}), 1
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅰 Start app"}}), 1
 #else
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT NULL, 0
@@ -72,7 +151,7 @@ static void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t positi
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_header_field_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, FOOTER_LEFT,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, FOOTER_LEFT,
                                      FOOTER_RIGHT);
     }
     menu_render(buffer, menu, position, theme, partial);
@@ -83,65 +162,106 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
-    app_t* apps[MAX_NUM_APPS] = {0};
-    size_t number_of_apps     = create_list_of_apps(apps, MAX_NUM_APPS);
+    bool exit = false;
+    while (!exit) {
 
-    menu_t menu = {0};
-    menu_initialize(&menu);
-    populate_menu(&menu, apps, number_of_apps);
+        app_t* apps[MAX_NUM_APPS] = {0};
+        size_t number_of_apps     = create_list_of_apps(apps, MAX_NUM_APPS);
 
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
+        menu_t menu = {0};
+        menu_initialize(&menu);
+        populate_menu(&menu, apps, number_of_apps);
 
-    pax_vec2_t position = {
-        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
+        int header_height = theme->header.height + (theme->header.vertical_margin * 2);
+        int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
 
-    render(buffer, theme, &menu, position, false, true);
-    while (1) {
-        bsp_input_event_t event;
-        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
-            switch (event.type) {
-                case INPUT_EVENT_TYPE_NAVIGATION: {
-                    if (event.args_navigation.state) {
-                        switch (event.args_navigation.key) {
-                            case BSP_INPUT_NAVIGATION_KEY_ESC:
-                            case BSP_INPUT_NAVIGATION_KEY_F1:
-                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
-                                menu_free(&menu);
-                                free_list_of_apps(apps, MAX_NUM_APPS);
-                                return;
-                            case BSP_INPUT_NAVIGATION_KEY_UP:
-                                menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, position, true, false);
-                                break;
-                            case BSP_INPUT_NAVIGATION_KEY_DOWN:
-                                menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, position, true, false);
-                                break;
-                            case BSP_INPUT_NAVIGATION_KEY_RETURN:
-                            case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
-                            case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
-                                void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                app_t* app = (app_t*)arg;
-                                execute_app(buffer, theme, position, app);
-                                render(buffer, theme, &menu, position, false, false);
-                                break;
+        pax_vec2_t position = {
+            .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
+            .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
+            .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
+            .y1 =
+                pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
+        };
+
+        render(buffer, theme, &menu, position, false, true);
+        bool refresh = false;
+        while (!refresh) {
+            bsp_input_event_t event;
+            if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                switch (event.type) {
+                    case INPUT_EVENT_TYPE_NAVIGATION: {
+                        if (event.args_navigation.state) {
+                            switch (event.args_navigation.key) {
+                                case BSP_INPUT_NAVIGATION_KEY_ESC:
+                                case BSP_INPUT_NAVIGATION_KEY_F1:
+                                case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                                    menu_free(&menu);
+                                    free_list_of_apps(apps, MAX_NUM_APPS);
+                                    return;
+                                case BSP_INPUT_NAVIGATION_KEY_UP:
+                                    menu_navigate_previous(&menu);
+                                    render(buffer, theme, &menu, position, true, false);
+                                    break;
+                                case BSP_INPUT_NAVIGATION_KEY_DOWN:
+                                    menu_navigate_next(&menu);
+                                    render(buffer, theme, &menu, position, true, false);
+                                    break;
+                                case BSP_INPUT_NAVIGATION_KEY_RETURN:
+                                case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                                case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
+                                    void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                    app_t* app = (app_t*)arg;
+                                    execute_app(buffer, theme, position, app);
+                                    render(buffer, theme, &menu, position, false, false);
+                                    break;
+                                }
+                                case BSP_INPUT_NAVIGATION_KEY_MENU:
+                                case BSP_INPUT_NAVIGATION_KEY_F2: {
+                                    void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                    app_t* app = (app_t*)arg;
+                                    if (menu_app_inspect(buffer, theme, app)) {
+                                        refresh = true;
+                                        break;
+                                    }
+                                    render(buffer, theme, &menu, position, false, true);
+                                    break;
+                                }
+                                case BSP_INPUT_NAVIGATION_KEY_F5:
+                                case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_Y: {
+                                    void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                    app_t* app = (app_t*)arg;
+                                    message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
+                                        get_icon(ICON_HELP), "Delete App", "Do you really want to delete the app?");
+                                    if (msg_ret == MSG_DIALOG_RETURN_OK) {
+                                        esp_err_t res_int = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_INTERNAL);
+                                        esp_err_t res_sd  = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_SD);
+                                        if (res_int == ESP_OK || res_sd == ESP_OK) {
+                                            message_dialog(get_icon(ICON_INFO), "Success", "App removed successfully",
+                                                           "OK");
+                                        } else {
+                                            message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to remove app",
+                                                           "OK");
+                                        }
+                                        refresh = true;
+                                    } else {
+                                        render(buffer, theme, &menu, position, false, true);
+                                    }
+                                    break;
+                                }
+                                default:
+                                    break;
                             }
-                            default:
-                                break;
                         }
+                        break;
                     }
-                    break;
+                    default:
+                        break;
                 }
-                default:
-                    break;
+            } else {
+                render(buffer, theme, &menu, position, true, true);
             }
-        } else {
-            render(buffer, theme, &menu, position, true, true);
         }
+        menu_free(&menu);
+        free_list_of_apps(apps, MAX_NUM_APPS);
     }
 }

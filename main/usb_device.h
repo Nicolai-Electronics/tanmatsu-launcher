@@ -5,8 +5,9 @@
 #include <stdint.h>
 
 typedef enum {
-    USB_DEBUG  = 0,
-    USB_DEVICE = 1,
+    USB_DEBUG    = 0,
+    USB_DEVICE   = 1,
+    USB_DISABLED = 2,
 } usb_mode_t;
 
 void usb_initialize(void);
