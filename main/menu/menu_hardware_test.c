@@ -1,6 +1,7 @@
 #include "menu_hardware_test.h"
 #include <stdbool.h>
 #include "bsp/input.h"
+#include "bsp/orientation.h"
 #include "bsp/power.h"
 #include "common/display.h"
 #include "common/theme.h"
@@ -18,6 +19,8 @@ typedef enum {
     ACTION_TOGGLE_USB_HOST_POWER,
     ACTION_TOGGLE_KEYBOARD_BACKLIGHT,
     ACTION_TOGGLE_RADIO_MODE,
+    ACTION_TOGGLE_GYROSCOPE,
+    ACTION_TOGGLE_ACCELEROMETER,
 } menu_home_action_t;
 
 static void execute_action(menu_home_action_t action) {
@@ -62,6 +65,46 @@ static void execute_action(menu_home_action_t action) {
                     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
                     printf("Radio mode: Off\r\n");
                     break;
+            }
+            break;
+        }
+        case ACTION_TOGGLE_GYROSCOPE: {
+            static bool gyro_enabled = false;
+            gyro_enabled             = !gyro_enabled;
+            if (gyro_enabled) {
+                if (bsp_orientation_enable_gyroscope() == ESP_OK) {
+                    printf("Gyroscope: Enabled\r\n");
+                } else {
+                    gyro_enabled = false;
+                    message_dialog(get_icon(ICON_ERROR), "Error", "Failed to enable gyroscope", "OK");
+                }
+            } else {
+                if (bsp_orientation_disable_gyroscope() == ESP_OK) {
+                    printf("Gyroscope: Disabled\r\n");
+                } else {
+                    gyro_enabled = true;
+                    message_dialog(get_icon(ICON_ERROR), "Error", "Failed to disable gyroscope", "OK");
+                }
+            }
+            break;
+        }
+        case ACTION_TOGGLE_ACCELEROMETER: {
+            static bool accel_enabled = false;
+            accel_enabled             = !accel_enabled;
+            if (accel_enabled) {
+                if (bsp_orientation_enable_accelerometer() == ESP_OK) {
+                    printf("Accelerometer: Enabled\r\n");
+                } else {
+                    accel_enabled = false;
+                    message_dialog(get_icon(ICON_ERROR), "Error", "Failed to enable accelerometer", "OK");
+                }
+            } else {
+                if (bsp_orientation_disable_accelerometer() == ESP_OK) {
+                    printf("Accelerometer: Disabled\r\n");
+                } else {
+                    accel_enabled = true;
+                    message_dialog(get_icon(ICON_ERROR), "Error", "Failed to disable accelerometer", "OK");
+                }
             }
             break;
         }
@@ -121,6 +164,18 @@ static void render(menu_t* menu, bool partial, bool icons) {
     }
     // menu_set_value(menu, 2, radio_state_str);
 
+    bool  gyro_enabled  = false;
+    bool  accel_enabled = false;
+    float gyro_x, gyro_y, gyro_z;
+    float accel_x, accel_y, accel_z;
+    bsp_orientation_get(&gyro_enabled, &accel_enabled, &gyro_x, &gyro_y, &gyro_z, &accel_x, &accel_y, &accel_z);
+    char gyro_string[32] = {0};
+    snprintf(gyro_string, sizeof(gyro_string), "%4.2f, %4.2f, %4.2f dps", gyro_x, gyro_y, gyro_z);
+    char accel_string[32] = {0};
+    snprintf(accel_string, sizeof(accel_string), "%4.2f, %4.2f, %4.2f m/s²", accel_x, accel_y, accel_z);
+    menu_set_value(menu, 2, gyro_enabled ? gyro_string : "Disabled");
+    menu_set_value(menu, 3, accel_enabled ? accel_string : "Disabled");
+
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
 }
@@ -134,11 +189,13 @@ void menu_hardware_test(void) {
     menu_insert_item_value(&menu, "USB host port power", "", NULL, (void*)ACTION_TOGGLE_USB_HOST_POWER, -1);
     menu_insert_item_value(&menu, "Keyboard backlight", "", NULL, (void*)ACTION_TOGGLE_KEYBOARD_BACKLIGHT, -1);
     // menu_insert_item_value(&menu, "Radio mode", "", NULL, (void*)ACTION_TOGGLE_RADIO_MODE, -1);
+    menu_insert_item_value(&menu, "Gyroscope", "", NULL, (void*)ACTION_TOGGLE_GYROSCOPE, -1);
+    menu_insert_item_value(&menu, "Accelerometer", "", NULL, (void*)ACTION_TOGGLE_ACCELEROMETER, -1);
 
     render(&menu, false, true);
     while (1) {
         bsp_input_event_t event;
-        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
+        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(20)) == pdTRUE) {
             switch (event.type) {
                 case INPUT_EVENT_TYPE_NAVIGATION: {
                     if (event.args_navigation.state) {
