@@ -1,22 +1,17 @@
-#include "rftest.h"
+#include "menu_rftest.h"
 #include "bsp/input.h"
 #include "common/display.h"
-#include "device_information.h"
-#include "firmware_update.h"
+#include "common/theme.h"
 #include "freertos/idf_additions.h"
-#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
-#include "menu/about.h"
 #include "menu/message_dialog.h"
 #include "menu/terminal.h"
-#include "menu/wifi.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
 #include "radio_update.h"
-#include "settings_clock.h"
 
 typedef enum {
     ACTION_NONE,
@@ -26,7 +21,7 @@ typedef enum {
     ACTION_TERMINAL,
 } menu_home_action_t;
 
-static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
+static void execute_action(menu_home_action_t action) {
     switch (action) {
         case ACTION_INSTALL_NORMAL_FIRMWARE:
             radio_update("/int/tanmatsu-radio.bin", false, 0);
@@ -41,6 +36,8 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             esp_restart();
             break;
         case ACTION_TERMINAL:
+            pax_buf_t*   fb    = display_get_buffer();
+            gui_theme_t* theme = get_theme();
             menu_terminal(fb, theme);
             break;
         default:
@@ -48,9 +45,11 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
     }
 }
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool partial, bool icons) {
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
+static void render(menu_t* menu, bool partial, bool icons) {
+    pax_buf_t*   buffer        = display_get_buffer();
+    gui_theme_t* theme         = get_theme();
+    int          header_height = theme->header.height + (theme->header.vertical_margin * 2);
+    int          footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
 
     pax_vec2_t position = {
         .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
@@ -70,7 +69,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
     display_blit_buffer(buffer);
 }
 
-void menu_rftest(pax_buf_t* buffer, gui_theme_t* theme) {
+void menu_rftest(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
@@ -85,7 +84,7 @@ void menu_rftest(pax_buf_t* buffer, gui_theme_t* theme) {
     menu_insert_item_icon(&menu, "Terminal for RF test local firmware", NULL, (void*)ACTION_TERMINAL, -1,
                           get_icon(ICON_DEVICE_INFO));
 
-    render(buffer, theme, &menu, false, true);
+    render(&menu, false, true);
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -100,18 +99,18 @@ void menu_rftest(pax_buf_t* buffer, gui_theme_t* theme) {
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, true, false);
+                                render(&menu, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_DOWN:
                                 menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, true, false);
+                                render(&menu, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                execute_action(buffer, (menu_home_action_t)arg, theme);
-                                render(buffer, theme, &menu, false, true);
+                                execute_action((menu_home_action_t)arg);
+                                render(&menu, false, true);
                                 break;
                             }
                             default:
@@ -124,7 +123,7 @@ void menu_rftest(pax_buf_t* buffer, gui_theme_t* theme) {
                     break;
             }
         } else {
-            render(buffer, theme, &menu, true, true);
+            render(&menu, true, true);
         }
     }
 }
