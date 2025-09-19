@@ -99,6 +99,22 @@ void texteditor_nav_down(texteditor_t* editor, bool is_pgdn) {
 // Helper function that moves the cursor left one column.
 // Returns whether the cursor was moved.
 static bool texteditor_nav_left_helper(texteditor_t* editor) {
+    if (editor->cursor_pos.col == 0) {
+        // Can't move left if already at the start of the line.
+        return false;
+    }
+
+    // Find the start of the previous character.
+    text_line_t* line       = &editor->file_data.lines[editor->cursor_pos.line];
+    size_t       new_offset = pax_utf8_seekprev_l(line->data, line->data_len, editor->cursor_pos.offset);
+    assert(new_offset < editor->cursor_pos.offset);
+    editor->cursor_pos.col--;
+    editor->cursor_pos.offset = new_offset;
+
+    // Recalculate visual X position of cursor.
+    texteditor_line_width(editor, editor->cursor_pos.line, true);
+    editor->cursor_req_x = editor->cursor_vis_x;
+    return true;
 }
 
 // Logic for moving the cursor left.
@@ -115,6 +131,22 @@ void texteditor_nav_left(texteditor_t* editor, bool ctrl, bool is_home, bool is_
 // Helper function that moves the cursor right one column.
 // Returns whether the cursor was moved.
 static bool texteditor_nav_right_helper(texteditor_t* editor) {
+    text_line_t* line = &editor->file_data.lines[editor->cursor_pos.line];
+    if (editor->cursor_pos.offset >= line->data_len) {
+        // Can't move right if already at the end of the line.
+        return false;
+    }
+
+    // Find the start of the next character.
+    size_t new_offset = pax_utf8_seeknext_l(line->data, line->data_len, editor->cursor_pos.offset);
+    assert(new_offset > editor->cursor_pos.offset);
+    editor->cursor_pos.col++;
+    editor->cursor_pos.offset = new_offset;
+
+    // Recalculate visual X position of cursor.
+    texteditor_line_width(editor, editor->cursor_pos.line, true);
+    editor->cursor_req_x = editor->cursor_vis_x;
+    return true;
 }
 
 // Logic for moving the cursor right.
@@ -123,7 +155,9 @@ void texteditor_nav_right(texteditor_t* editor, bool ctrl, bool is_end, bool is_
     if (is_end) {
         editor->cursor_pos.col    = pax_utf8_strlen_l(line->data, line->data_len);
         editor->cursor_pos.offset = line->data_len;
-        texteditor_line_width(editor, editor->cursor_pos.line, true);  // Recalculate visual X position of cursor.
+
+        // Recalculate visual X position of cursor.
+        texteditor_line_width(editor, editor->cursor_pos.line, true);
         editor->cursor_req_x = editor->cursor_vis_x;
         return;
     }
