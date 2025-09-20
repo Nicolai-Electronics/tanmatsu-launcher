@@ -1,0 +1,12 @@
+[submodule "components/esp-hosted-tanmatsu"]
+	path = components/esp-hosted-tanmatsu
+	url = git@github.com:Nicolai-Electronics/esp32-component-esp-hosted-tanmatsu.git
+	branch = renze/esp-hosted-update
+[submodule "components/esp-wifi-remote-tanmatsu"]
+	path = components/esp-wifi-remote-tanmatsu
+	url = git@github.com:Nicolai-Electronics/esp32-component-esp-wifi-remote-tanmatsu.git
+	branch = renze/esp-hosted-update
+[submodule "components/tanmatsu-wifi"]
+	path = components/tanmatsu-wifi
+	url = git@github.com:Nicolai-Electronics/esp32-component-tanmatsu-wifi.git
+	branch = renze/esp-hosted-update
