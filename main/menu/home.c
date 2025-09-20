@@ -42,7 +42,7 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             menu_apps(fb, theme);
             break;
         case ACTION_NAMETAG:
-            menu_nametag(fb, theme);
+            menu_nametag();
             break;
         case ACTION_SETTINGS:
             menu_settings();

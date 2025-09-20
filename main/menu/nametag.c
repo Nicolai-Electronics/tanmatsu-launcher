@@ -2,6 +2,7 @@
 #include "bsp/input.h"
 #include "bsp/led.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/idf_additions.h"
@@ -14,32 +15,19 @@
 #include "pax_matrix.h"
 #include "pax_text.h"
 #include "pax_types.h"
+#include "shapes/pax_misc.h"
 
 static const char* TAG = "nametag";
 
-// #include "shapes/pax_misc.h"
+static bool      flip                      = false;
+static pax_buf_t nametag_pax_buf           = {0};
+static pax_buf_t nametag_pax_buf_converted = {0};
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
-#define FOOTER_RIGHT NULL, 0
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
-#else
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
-#endif
-
-pax_buf_t nametag_pax_buf = {0};
-// void*     nametag_buffer  = NULL;
+static pax_buf_t test_a = {0};
+static pax_buf_t test_b = {0};
+static pax_buf_t test_c = {0};
 
 static bool load_nametag(void) {
-    /*nametag_buffer = heap_caps_calloc(1, 800 * 480 * 4, MALLOC_CAP_SPIRAM);
-    if (nametag_buffer == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate memory for nametag");
-        return false;
-    }*/
     FILE* fd = fopen("/sd/nametag.png", "rb");
     if (fd == NULL) {
         fd = fopen("/int/nametag.png", "rb");
@@ -50,18 +38,22 @@ static bool load_nametag(void) {
             return false;
         }
     }
-    // pax_buf_init(&nametag_pax_buf, &nametag_buffer, 800, 480, PAX_BUF_32_8888ARGB);
-    if (!pax_decode_png_fd(&nametag_pax_buf, fd, PAX_BUF_32_8888ARGB, 0)) {  // CODEC_FLAG_EXISTING)) {
+    if (!pax_decode_png_fd(&nametag_pax_buf, fd, PAX_BUF_32_8888ARGB, 0)) {
         ESP_LOGE(TAG, "Failed to decode png file");
-        // free(nametag_buffer);
-        // nametag_buffer = NULL;
         return false;
     }
+
+    // pax_buf_init(&nametag_pax_buf_converted, NULL, nametag_pax_buf.width, nametag_pax_buf.height, PAX_BUF_16_565RGB);
+    // pax_background(&nametag_pax_buf_converted, 0xFFFFFFFF);
+    // pax_draw_image(&nametag_pax_buf_converted, &nametag_pax_buf, 0, 0);
+
     fclose(fd);
     return true;
 }
 
 static void render_nametag(pax_buf_t* buffer) {
+    pax_buf_set_orientation(&nametag_pax_buf, flip ? PAX_O_ROT_HALF : PAX_O_UPRIGHT);
+    pax_background(buffer, 0xFFFFFFFF);
     pax_draw_image(buffer, &nametag_pax_buf, 0, 0);
     display_blit_buffer(buffer);
 }
@@ -94,7 +86,36 @@ static void set_led_color(uint8_t led, uint32_t color) {
     led_buffer[led * 3 + 2] = (color >> 0) & 0xFF;   // B
 }
 
-void menu_nametag(pax_buf_t* buffer, gui_theme_t* theme) {
+void menu_nametag(void) {
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
+
+    ///
+
+    pax_buf_init(&test_a, NULL, pax_buf_get_width(buffer), pax_buf_get_height(buffer), PAX_BUF_32_8888ARGB);
+    pax_background(&test_a, 0xFFFF0000);
+    pax_buf_init(&test_b, NULL, pax_buf_get_width(buffer), pax_buf_get_height(buffer), PAX_BUF_24_888RGB);
+    pax_background(&test_b, 0xFF00FF00);
+    pax_buf_init(&test_c, NULL, pax_buf_get_width(buffer), pax_buf_get_height(buffer), PAX_BUF_16_565RGB);
+    pax_background(&test_c, 0xFF0000FF);
+
+    while (1) {
+        printf("A\r\n");
+        pax_draw_image(buffer, &test_a, 0, 0);
+        display_blit_buffer(buffer);
+        vTaskDelay(pdMS_TO_TICKS(200));
+        printf("B\r\n");
+        pax_draw_image(buffer, &test_b, 0, 0);
+        display_blit_buffer(buffer);
+        vTaskDelay(pdMS_TO_TICKS(200));
+        printf("C\r\n");
+        pax_draw_image(buffer, &test_c, 0, 0);
+        display_blit_buffer(buffer);
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+
+    ///
+
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
@@ -123,9 +144,8 @@ void menu_nametag(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
-                                // free(nametag_buffer);
-                                // nametag_buffer = NULL;
                                 pax_buf_destroy(&nametag_pax_buf);
+                                pax_buf_destroy(&nametag_pax_buf_converted);
                                 set_led_color(0, 0x000000);
                                 set_led_color(1, 0x000000);
                                 set_led_color(2, 0x000000);
@@ -134,6 +154,10 @@ void menu_nametag(pax_buf_t* buffer, gui_theme_t* theme) {
                                 set_led_color(5, 0x000000);
                                 bsp_led_write(led_buffer, sizeof(led_buffer));
                                 return;
+                            case BSP_INPUT_NAVIGATION_KEY_F2:
+                                flip = !flip;
+                                render_nametag(buffer);
+                                break;
                             default:
                                 break;
                         }
