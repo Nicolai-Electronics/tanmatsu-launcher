@@ -5,6 +5,7 @@
 #include "apps.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
+#include "bsp/orientation.h"
 #include "bsp/power.h"
 #include "charging_mode.h"
 #include "common/display.h"
@@ -144,6 +145,8 @@ void menu_home(void) {
 
     render(buffer, theme, &menu, position, false, true);
 
+    bsp_orientation_enable_accelerometer();
+
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -244,7 +247,24 @@ void menu_home(void) {
                     break;
             }
         } else {
-            render(buffer, theme, &menu, position, true, true);
+            bool  gyro_enabled  = false;
+            bool  accel_enabled = false;
+            float gyro_x, gyro_y, gyro_z;
+            float accel_x, accel_y, accel_z;
+            bsp_orientation_get(&gyro_enabled, &accel_enabled, &gyro_x, &gyro_y, &gyro_z, &accel_x, &accel_y, &accel_z);
+            bool changed = false;
+            if (accel_x > 2.0f || !accel_enabled) {
+                if (pax_buf_get_orientation(buffer) != PAX_O_ROT_CCW) {
+                    pax_buf_set_orientation(buffer, PAX_O_ROT_CCW);
+                    changed = true;
+                }
+            } else if (accel_x < -2.0f) {
+                if (pax_buf_get_orientation(buffer) != PAX_O_ROT_CW) {
+                    pax_buf_set_orientation(buffer, PAX_O_ROT_CW);
+                    changed = true;
+                }
+            }
+            render(buffer, theme, &menu, position, !changed, true);
         }
     }
 }
