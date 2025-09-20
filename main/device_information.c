@@ -4,6 +4,7 @@
 #include "esp_efuse.h"
 #include "esp_efuse_custom_table.h"
 #include "esp_efuse_table.h"
+#include "esp_idf_version.h"
 
 esp_err_t read_device_identity(device_identity_t* out_identity) {
     esp_err_t res;
@@ -55,10 +56,27 @@ esp_err_t read_device_identity(device_identity_t* out_identity) {
         return res;
     }
 
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
+    res = esp_efuse_read_field_blob(ESP_EFUSE_WAFER_VERSION_MAJOR_LO, &out_identity->waver_rev_major, 2);
+    if (res != ESP_OK) {
+        return res;
+    }
+
+    uint8_t version_major_hi = 0;
+
+    res = esp_efuse_read_field_blob(ESP_EFUSE_WAFER_VERSION_MAJOR_HI, &version_major_hi, 1);
+    if (res != ESP_OK) {
+        return res;
+    }
+
+    out_identity->waver_rev_major |= (version_major_hi << 2);
+#else
+    // Fallback for ESP-IDF version 5.4 and earlier
     res = esp_efuse_read_field_blob(ESP_EFUSE_WAFER_VERSION_MAJOR, &out_identity->waver_rev_major, 2);
     if (res != ESP_OK) {
         return res;
     }
+#endif
 
     res = esp_efuse_read_field_blob(ESP_EFUSE_WAFER_VERSION_MINOR, &out_identity->waver_rev_minor, 4);
     if (res != ESP_OK) {
