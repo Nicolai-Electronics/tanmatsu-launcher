@@ -41,6 +41,10 @@ idf_component_register(
 		"menu/menu_filebrowser.c"
 		"menu/menu_hardware_test.c"
 
+		# Tests
+		"hardware_test/test_keyboard_stuck_keys.c"
+		"hardware_test/test_keyboard.c"
+
 		# Fonts
 		"chakrapetchmedium.c"
 
@@ -85,6 +89,7 @@ idf_component_register(
 	INCLUDE_DIRS
 		"."
 		"include"
+		"hardware_test"
 	EMBED_FILES
 		${files}
 )

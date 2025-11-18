@@ -58,7 +58,7 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             menu_device_information(fb, theme);
             break;
         case ACTION_ABOUT: {
-            menu_about(fb, theme);
+            menu_about();
             break;
         }
         case ACTION_RADIO_UPDATE:
