@@ -13,9 +13,13 @@
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
+#include "test_keyboard.h"
+#include "test_keyboard_stuck_keys.h"
 
 typedef enum {
     ACTION_NONE,
+    ACTION_KEYBOARD_STUCK_KEYS,
+    ACTION_KEYBOARD,
     ACTION_TOGGLE_USB_HOST_POWER,
     ACTION_TOGGLE_KEYBOARD_BACKLIGHT,
     ACTION_TOGGLE_RADIO_MODE,
@@ -23,8 +27,23 @@ typedef enum {
     ACTION_TOGGLE_ACCELEROMETER,
 } menu_home_action_t;
 
-static void execute_action(menu_home_action_t action) {
+static void execute_action(menu_t* menu, menu_home_action_t action) {
     switch (action) {
+        case ACTION_KEYBOARD_STUCK_KEYS: {
+            char result_buffer[128];
+            bool test_result = test_keyboard_stuck_keys(result_buffer, sizeof(result_buffer));
+            if (test_result) {
+                menu_set_value(menu, 0, "PASS");
+            } else {
+                menu_set_value(menu, 0, "FAIL");
+                message_dialog(get_icon(ICON_ERROR), "Keyboard: stuck keys test", result_buffer, "OK");
+            }
+            break;
+        }
+        case ACTION_KEYBOARD: {
+            test_keyboard();
+            break;
+        }
         case ACTION_TOGGLE_USB_HOST_POWER: {
             bool usb_enabled = false;
             bsp_power_get_usb_host_boost_enabled(&usb_enabled);
@@ -135,15 +154,17 @@ static void render(menu_t* menu, bool partial, bool icons) {
             ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1);
     }
 
+    uint8_t position_index = 2;
+
     bool usb_enabled = false;
     bsp_power_get_usb_host_boost_enabled(&usb_enabled);
-    menu_set_value(menu, 0, usb_enabled ? "On" : "Off");
+    menu_set_value(menu, position_index++, usb_enabled ? "On" : "Off");
 
     uint8_t kb_backlight = 0;
     bsp_input_get_backlight_brightness(&kb_backlight);
     char kb_backlight_str[6];
     snprintf(kb_backlight_str, sizeof(kb_backlight_str), "%u%%", kb_backlight);
-    menu_set_value(menu, 1, kb_backlight_str);
+    menu_set_value(menu, position_index++, kb_backlight_str);
 
     bsp_radio_state_t radio_state = BSP_POWER_RADIO_STATE_OFF;
     bsp_power_get_radio_state(&radio_state);
@@ -162,7 +183,7 @@ static void render(menu_t* menu, bool partial, bool icons) {
             radio_state_str = "Unknown";
             break;
     }
-    // menu_set_value(menu, 2, radio_state_str);
+    // menu_set_value(menu, position_index++, radio_state_str);
 
     bool  gyro_enabled  = false;
     bool  accel_enabled = false;
@@ -173,8 +194,8 @@ static void render(menu_t* menu, bool partial, bool icons) {
     snprintf(gyro_string, sizeof(gyro_string), "%4.2f, %4.2f, %4.2f dps", gyro_x, gyro_y, gyro_z);
     char accel_string[32] = {0};
     snprintf(accel_string, sizeof(accel_string), "%4.2f, %4.2f, %4.2f m/s²", accel_x, accel_y, accel_z);
-    menu_set_value(menu, 2, gyro_enabled ? gyro_string : "Disabled");
-    menu_set_value(menu, 3, accel_enabled ? accel_string : "Disabled");
+    menu_set_value(menu, position_index++, gyro_enabled ? gyro_string : "Disabled");
+    menu_set_value(menu, position_index++, accel_enabled ? accel_string : "Disabled");
 
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
@@ -186,6 +207,10 @@ void menu_hardware_test(void) {
 
     menu_t menu = {0};
     menu_initialize(&menu);
+    menu_insert_item_value(&menu, "Keyboard: stuck keys", "", NULL, (void*)ACTION_KEYBOARD_STUCK_KEYS, -1);
+    menu_set_value(&menu, 0, "Click to run");
+    menu_insert_item_value(&menu, "Keyboard", "", NULL, (void*)ACTION_KEYBOARD, -1);
+    menu_set_value(&menu, 1, "Click to run");
     menu_insert_item_value(&menu, "USB host port power", "", NULL, (void*)ACTION_TOGGLE_USB_HOST_POWER, -1);
     menu_insert_item_value(&menu, "Keyboard backlight", "", NULL, (void*)ACTION_TOGGLE_KEYBOARD_BACKLIGHT, -1);
     // menu_insert_item_value(&menu, "Radio mode", "", NULL, (void*)ACTION_TOGGLE_RADIO_MODE, -1);
@@ -195,7 +220,7 @@ void menu_hardware_test(void) {
     render(&menu, false, true);
     while (1) {
         bsp_input_event_t event;
-        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(20)) == pdTRUE) {
+        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(100)) == pdTRUE) {
             switch (event.type) {
                 case INPUT_EVENT_TYPE_NAVIGATION: {
                     if (event.args_navigation.state) {
@@ -217,7 +242,7 @@ void menu_hardware_test(void) {
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                execute_action((menu_home_action_t)arg);
+                                execute_action(&menu, (menu_home_action_t)arg);
                                 render(&menu, false, true);
                                 break;
                             }
