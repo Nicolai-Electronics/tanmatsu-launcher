@@ -106,37 +106,40 @@ static gui_element_icontext_t wifi_indicator(void) {
     wifi_mode_t       mode              = WIFI_MODE_NULL;
     bsp_radio_state_t state;
     bsp_power_get_radio_state(&state);
-    if (state == BSP_POWER_RADIO_STATE_OFF) {
-        return (gui_element_icontext_t){get_icon(ICON_WIFI), "OFF"};
-    }
-    if (state == BSP_POWER_RADIO_STATE_BOOTLOADER) {
-        return (gui_element_icontext_t){get_icon(ICON_WIFI), "BOOTLOADER"};
-    }
-    if (radio_initialized && esp_wifi_get_mode(&mode) == ESP_OK) {
-        if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
-            if (wifi_connection_is_connected() && esp_wifi_sta_get_ap_info(&connected_ap) == ESP_OK) {
-                pax_buf_t* icon = get_icon(ICON_WIFI_0);
-                if (connected_ap.rssi > -50) {
-                    icon = get_icon(ICON_WIFI_4);
-                } else if (connected_ap.rssi > -60) {
-                    icon = get_icon(ICON_WIFI_3);
-                } else if (connected_ap.rssi > -70) {
-                    icon = get_icon(ICON_WIFI_2);
-                } else if (connected_ap.rssi > -80) {
-                    icon = get_icon(ICON_WIFI_1);
+    switch (state) {
+        case BSP_POWER_RADIO_STATE_OFF:
+            return (gui_element_icontext_t){NULL, ""};
+        case BSP_POWER_RADIO_STATE_BOOTLOADER:
+            return (gui_element_icontext_t){NULL, "BOOT"};
+        case BSP_POWER_RADIO_STATE_APPLICATION:
+        default:
+            if (radio_initialized && esp_wifi_get_mode(&mode) == ESP_OK) {
+                if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
+                    if (wifi_connection_is_connected() && esp_wifi_sta_get_ap_info(&connected_ap) == ESP_OK) {
+                        pax_buf_t* icon = get_icon(ICON_WIFI_0);
+                        if (connected_ap.rssi > -50) {
+                            icon = get_icon(ICON_WIFI_4);
+                        } else if (connected_ap.rssi > -60) {
+                            icon = get_icon(ICON_WIFI_3);
+                        } else if (connected_ap.rssi > -70) {
+                            icon = get_icon(ICON_WIFI_2);
+                        } else if (connected_ap.rssi > -80) {
+                            icon = get_icon(ICON_WIFI_1);
+                        }
+                        return (gui_element_icontext_t){icon, (char*)connected_ap.ssid};
+                    } else {
+                        return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), "Disconnected"};
+                    }
+                } else if (mode == WIFI_MODE_AP) {
+                    return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), ""};  // AP mode is currently unused
+                    // The device will be in AP mode by default until connection to a network is
+                } else {
+                    return (gui_element_icontext_t){get_icon(ICON_WIFI_UNKNOWN), "Other"};
                 }
-                return (gui_element_icontext_t){icon, (char*)connected_ap.ssid};
             } else {
-                return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), "Disconnected"};
+                return (gui_element_icontext_t){get_icon(ICON_WIFI_ERROR), ""};
             }
-        } else if (mode == WIFI_MODE_AP) {
-            return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), ""};  // AP mode is currently unused
-            // The device will be in AP mode by default until connection to a network is
-        } else {
-            return (gui_element_icontext_t){get_icon(ICON_WIFI_UNKNOWN), "Other"};
-        }
-    } else {
-        return (gui_element_icontext_t){get_icon(ICON_WIFI_ERROR), ""};
+            break;
     }
 }
 

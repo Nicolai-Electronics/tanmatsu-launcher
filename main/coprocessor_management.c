@@ -33,7 +33,7 @@ static void callback(char const* status_text, uint8_t percentage) {
 }
 
 void coprocessor_flash(bool force) {
-    uint16_t coprocessor_firmware_target = 6;
+    uint16_t coprocessor_firmware_target = 5;
 
     tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
 
