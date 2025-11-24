@@ -21,6 +21,7 @@
 #include "esp_lcd_types.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
+#include "freertos/idf_additions.h"
 #include "gui_element_footer.h"
 #include "gui_element_header.h"
 #include "gui_menu.h"
@@ -34,6 +35,7 @@
 #include "pax_gfx.h"
 #include "pax_text.h"
 #include "portmacro.h"
+#include "projdefs.h"
 #include "python.h"
 #include "sdcard.h"
 #include "sdkconfig.h"
@@ -325,6 +327,10 @@ void app_main(void) {
     python_initialize();
 #endif
 #endif
+
+    // Clear LED data
+    const uint8_t led_zero[6 * 3] = {0};
+    bsp_led_write(led_zero, sizeof(led_zero));
 
     xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, 1);
 

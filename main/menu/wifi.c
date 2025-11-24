@@ -146,7 +146,7 @@ static bool _menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
                                     if (wifi_settings_get(index, &settings) == ESP_OK) {
                                         snprintf(message_buffer, sizeof(message_buffer),
                                                  "Connecting to WiFi network %s...", settings.ssid);
-                                        busy_dialog(get_icon(ICON_WIFI), "WiFi", message_buffer);
+                                        busy_dialog(get_icon(ICON_WIFI), "WiFi", message_buffer, true);
                                         if (wifi_connection_connect(index, 1) == ESP_OK) {
                                             if (wifi_connection_await(1000)) {
                                                 message_dialog(get_icon(ICON_WIFI), "WiFi", "Connected successfully",

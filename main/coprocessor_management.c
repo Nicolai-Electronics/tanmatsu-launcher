@@ -29,11 +29,11 @@ static void callback(char const* status_text, uint8_t percentage) {
     last_percentage = percentage;
     char text[128];
     sprintf(text, "%s (%u%%)", status_text, percentage);
-    busy_dialog(get_icon(ICON_SYSTEM_UPDATE), "Coprocessor update", text);
+    busy_dialog(get_icon(ICON_SYSTEM_UPDATE), "Coprocessor update", text, false);
 }
 
 void coprocessor_flash(bool force) {
-    uint16_t coprocessor_firmware_target = 4;
+    uint16_t coprocessor_firmware_target = 6;
 
     tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
 

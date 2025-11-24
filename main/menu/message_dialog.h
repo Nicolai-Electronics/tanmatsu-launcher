@@ -22,7 +22,7 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
                                   gui_element_icontext_t* footer_right, size_t footer_right_count);
 
 void message_dialog(pax_buf_t* icon, const char* title, const char* message, const char* action_text);
-void busy_dialog(pax_buf_t* icon, const char* title, const char* message);
+void busy_dialog(pax_buf_t* icon, const char* title, const char* message, bool header);
 
 bsp_input_navigation_key_t adv_dialog(pax_buf_t* icon, const char* title, const char* message,
                                       gui_element_icontext_t* headers, int header_count);

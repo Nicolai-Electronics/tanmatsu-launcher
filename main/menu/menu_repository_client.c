@@ -87,7 +87,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
 }
 
 void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
-    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Connecting to WiFi...");
+    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Connecting to WiFi...", true);
 
     if (!wifi_stack_get_initialized()) {
         ESP_LOGE(TAG, "WiFi stack not initialized");
@@ -104,7 +104,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
         }
     }
 
-    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Downloading list of projects...");
+    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Downloading list of projects...", true);
 
     bool success = load_projects("https://apps.tanmatsu.cloud", &projects, NULL);
     if (!success) {
@@ -114,7 +114,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
         return;
     }
 
-    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Rendering list of projects...");
+    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Rendering list of projects...", true);
 
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));

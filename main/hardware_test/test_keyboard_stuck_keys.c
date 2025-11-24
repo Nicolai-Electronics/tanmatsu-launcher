@@ -7,7 +7,7 @@
 static const char* title = "Keyboard: stuck keys test";
 
 bool test_keyboard_stuck_keys(char* result_buffer, size_t result_buffer_size) {
-    busy_dialog(get_icon(ICON_SYSTEM_UPDATE), title, "Don't press any keys!");
+    busy_dialog(get_icon(ICON_SYSTEM_UPDATE), title, "Don't press any keys!", true);
     vTaskDelay(pdMS_TO_TICKS(1000));
 
     // Scan all navigation keys
