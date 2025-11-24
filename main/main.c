@@ -219,7 +219,14 @@ void app_main(void) {
     ESP_ERROR_CHECK(res);
 
     // Initialize the Board Support Package
-    esp_err_t bsp_init_result = bsp_device_initialize();
+    const bsp_configuration_t bsp_configuration = {
+        .display =
+            {
+                .requested_color_format = LCD_COLOR_PIXEL_FORMAT_RGB565,
+                .num_fbs                = 1,
+            },
+    };
+    esp_err_t bsp_init_result = bsp_device_initialize(&bsp_configuration);
 
     if (bsp_init_result == ESP_OK) {
         ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
