@@ -81,6 +81,7 @@ const char* icon_paths[] = {
     [ICON_GLOBE_LOCATION]      = "/int/icons/menu/globe_location.png",
     [ICON_APP]                 = "/int/icons/menu/app.png",
     [ICON_ERROR]               = "/int/icons/menu/error.png",
+    [ICON_BRIGHTNESS]          = "/int/icons/menu/brightness.png",  // Missing!
 };
 
 pax_buf_t icons[ICON_LAST] = {0};

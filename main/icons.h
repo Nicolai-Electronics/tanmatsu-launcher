@@ -63,6 +63,7 @@ typedef enum {
     ICON_GLOBE_LOCATION,
     ICON_APP,
     ICON_ERROR,
+    ICON_BRIGHTNESS,
     ICON_LAST
 } icon_t;
 

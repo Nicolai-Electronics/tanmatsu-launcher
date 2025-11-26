@@ -10,6 +10,7 @@
 #include "common/display.h"
 #include "common/theme.h"
 #include "coprocessor_management.h"
+#include "esp_log.h"
 #include "freertos/idf_additions.h"
 #include "freertos/projdefs.h"
 #include "gui_element_footer.h"
@@ -25,6 +26,8 @@
 #include "pax_matrix.h"
 #include "pax_types.h"
 #include "usb_device.h"
+
+static const char TAG[] = "home menu";
 
 typedef enum {
     ACTION_NONE,
@@ -221,7 +224,6 @@ void menu_home(void) {
                 case INPUT_EVENT_TYPE_ACTION:
                     switch (event.args_action.type) {
                         case BSP_INPUT_ACTION_TYPE_POWER_BUTTON:
-                            printf("Power button event! %u\r\n", event.args_action.state);
                             if (event.args_action.state) {
                                 power_button_latch = true;
                             } else if (power_button_latch) {
@@ -231,10 +233,10 @@ void menu_home(void) {
                             }
                             break;
                         case BSP_INPUT_ACTION_TYPE_SD_CARD:
-                            printf("SD card event! %u\r\n", event.args_action.state);
+                            ESP_LOGI(TAG, "Unhandled: SD card event (%u)\r\n", event.args_action.state);
                             break;
                         case BSP_INPUT_ACTION_TYPE_AUDIO_JACK:
-                            printf("Audio jack event! %u\r\n", event.args_action.state);
+                            ESP_LOGI(TAG, "Unhandled: audio jack event (%u)\r\n", event.args_action.state);
                             break;
                         default:
                             break;
