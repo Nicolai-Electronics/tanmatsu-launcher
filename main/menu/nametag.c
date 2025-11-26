@@ -86,14 +86,6 @@ static void render_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* mes
     display_blit_buffer(buffer);
 }
 
-uint8_t led_buffer[6 * 3] = {0};
-
-static void set_led_color(uint8_t led, uint32_t color) {
-    led_buffer[led * 3 + 0] = (color >> 8) & 0xFF;   // G
-    led_buffer[led * 3 + 1] = (color >> 16) & 0xFF;  // R
-    led_buffer[led * 3 + 2] = (color >> 0) & 0xFF;   // B
-}
-
 void menu_nametag(pax_buf_t* buffer, gui_theme_t* theme) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
@@ -105,13 +97,16 @@ void menu_nametag(pax_buf_t* buffer, gui_theme_t* theme) {
     }
 
     render_nametag(buffer);
-    set_led_color(0, 0xFC0303);
-    set_led_color(1, 0xFC6F03);
-    set_led_color(2, 0xF4FC03);
-    set_led_color(3, 0xFC03E3);
-    set_led_color(4, 0x0303FC);
-    set_led_color(5, 0x03FC03);
-    bsp_led_write(led_buffer, sizeof(led_buffer));
+
+    bsp_led_clear();
+    bsp_led_set_mode(false);
+    bsp_led_set_pixel(0, 0xFC0303);
+    bsp_led_set_pixel(1, 0xFC6F03);
+    bsp_led_set_pixel(2, 0xF4FC03);
+    bsp_led_set_pixel(3, 0xFC03E3);
+    bsp_led_set_pixel(4, 0x0303FC);
+    bsp_led_set_pixel(5, 0x03FC03);
+    bsp_led_send();
 
     while (1) {
         bsp_input_event_t event;
@@ -126,13 +121,8 @@ void menu_nametag(pax_buf_t* buffer, gui_theme_t* theme) {
                                 // free(nametag_buffer);
                                 // nametag_buffer = NULL;
                                 pax_buf_destroy(&nametag_pax_buf);
-                                set_led_color(0, 0x000000);
-                                set_led_color(1, 0x000000);
-                                set_led_color(2, 0x000000);
-                                set_led_color(3, 0x000000);
-                                set_led_color(4, 0x000000);
-                                set_led_color(5, 0x000000);
-                                bsp_led_write(led_buffer, sizeof(led_buffer));
+                                bsp_led_clear();
+                                bsp_led_set_mode(true);
                                 return;
                             default:
                                 break;

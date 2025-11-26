@@ -40,6 +40,7 @@ idf_component_register(
 		"menu/menu_power_information.c"
 		"menu/menu_filebrowser.c"
 		"menu/menu_hardware_test.c"
+		"menu/menu_brightness.c"
 
 		# Tests
 		"hardware_test/test_keyboard_stuck_keys.c"
@@ -63,6 +64,8 @@ idf_component_register(
 		"filesystem_utils.c"
 		"app_management.c"
 		"ntp.c"
+		"device_settings.c"
+
 	PRIV_REQUIRES
 		esp_lcd
 		fatfs

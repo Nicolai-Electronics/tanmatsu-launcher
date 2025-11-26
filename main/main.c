@@ -15,6 +15,7 @@
 #include "common/theme.h"
 #include "coprocessor_management.h"
 #include "custom_certificates.h"
+#include "device_settings.h"
 #include "driver/gpio.h"
 #include "esp_err.h"
 #include "esp_lcd_panel_ops.h"
@@ -244,6 +245,15 @@ void app_main(void) {
         return;
     }
 
+    // Apply settings
+    startup_screen("Applying settings...");
+    device_settings_apply();
+
+    // Configure LEDs
+    bsp_led_clear();
+    bsp_led_set_mode(true);
+
+    // Initialize filesystems
     startup_screen("Mounting FAT filesystem...");
 
     esp_vfs_fat_mount_config_t fat_mount_config = {
@@ -332,10 +342,6 @@ void app_main(void) {
     python_initialize();
 #endif
 #endif
-
-    // Clear LED data
-    const uint8_t led_zero[6 * 3] = {0};
-    bsp_led_write(led_zero, sizeof(led_zero));
 
     xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, 1);
 

@@ -12,6 +12,7 @@
 #include "menu/menu_power_information.h"
 #include "menu/message_dialog.h"
 #include "menu/wifi.h"
+#include "menu_brightness.h"
 #include "menu_device_information.h"
 #include "menu_filebrowser.h"
 #include "menu_hardware_test.h"
@@ -23,6 +24,7 @@
 
 typedef enum {
     ACTION_NONE,
+    ACTION_BRIGHTNESS,
     ACTION_WIFI,
     ACTION_CLOCK,
     ACTION_FIRMWARE_UPDATE,
@@ -45,6 +47,9 @@ static void radio_update_v2(void) {
 
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
     switch (action) {
+        case ACTION_BRIGHTNESS:
+            menu_brightness();
+            break;
         case ACTION_WIFI:
             menu_wifi(fb, theme);
             break;
@@ -95,6 +100,7 @@ void menu_settings(void) {
 
     menu_t menu = {0};
     menu_initialize(&menu);
+    menu_insert_item_icon(&menu, "Brightness", NULL, (void*)ACTION_BRIGHTNESS, -1, get_icon(ICON_BRIGHTNESS));
     menu_insert_item_icon(&menu, "WiFi configuration", NULL, (void*)ACTION_WIFI, -1, get_icon(ICON_WIFI));
     menu_insert_item_icon(&menu, "Clock configuration", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
     menu_insert_item_icon(&menu, "Firmware update", NULL, (void*)ACTION_FIRMWARE_UPDATE, -1,
