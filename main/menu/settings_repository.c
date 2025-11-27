@@ -16,9 +16,8 @@
 #define REPO_BASE_URI_MAX_LEN   64
 #define HTTP_USER_AGENT_MAX_LEN 128
 
-#define DEFAULT_REPO_SERVER     "https://apps.tanmatsu.cloud"
-#define DEFAULT_REPO_BASE_URI   "/v1"
-#define DEFAULT_HTTP_USER_AGENT "Tanmatsu/1.0"
+#define DEFAULT_REPO_SERVER   "https://apps.tanmatsu.cloud"
+#define DEFAULT_REPO_BASE_URI "/v1"
 
 typedef enum {
     ACTION_NONE,
@@ -102,12 +101,15 @@ static void edit_user_agent(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu)
 }
 
 static void reset_defaults(menu_t* menu) {
+    char default_ua[HTTP_USER_AGENT_MAX_LEN] = {0};
+    device_settings_get_default_http_user_agent(default_ua, sizeof(default_ua));
+
     device_settings_set_repo_server(DEFAULT_REPO_SERVER);
     device_settings_set_repo_base_uri(DEFAULT_REPO_BASE_URI);
-    device_settings_set_http_user_agent(DEFAULT_HTTP_USER_AGENT);
+    device_settings_set_http_user_agent(default_ua);
     menu_set_value(menu, 0, DEFAULT_REPO_SERVER);
     menu_set_value(menu, 1, DEFAULT_REPO_BASE_URI);
-    menu_set_value(menu, 2, DEFAULT_HTTP_USER_AGENT);
+    menu_set_value(menu, 2, default_ua);
 }
 
 void menu_settings_repository(pax_buf_t* buffer, gui_theme_t* theme) {

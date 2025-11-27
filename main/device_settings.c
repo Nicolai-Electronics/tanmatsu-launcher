@@ -1,6 +1,8 @@
 #include "device_settings.h"
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
+#include "bsp/device.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
 #include "bsp/led.h"
@@ -10,9 +12,8 @@
 static const char* NVS_NAMESPACE = "system";
 
 // Default values for repository settings
-#define DEFAULT_REPO_SERVER     "https://apps.tanmatsu.cloud"
-#define DEFAULT_REPO_BASE_URI   "/v1"
-#define DEFAULT_HTTP_USER_AGENT "Tanmatsu/1.0"
+#define DEFAULT_REPO_SERVER   "https://apps.tanmatsu.cloud"
+#define DEFAULT_REPO_BASE_URI "/v1"
 
 static esp_err_t device_settings_get_percentage(const char* key, uint8_t default_value, uint8_t minimum_value,
                                                 uint8_t* out_percentage) {
@@ -181,8 +182,16 @@ esp_err_t device_settings_set_repo_base_uri(const char* value) {
     return device_settings_set_string("repo.baseuri", value);
 }
 
+void device_settings_get_default_http_user_agent(char* out_value, size_t max_length) {
+    char device_name[64] = {0};
+    bsp_device_get_name(device_name, sizeof(device_name));
+    snprintf(out_value, max_length, "%s/1.0", device_name);
+}
+
 esp_err_t device_settings_get_http_user_agent(char* out_value, size_t max_length) {
-    return device_settings_get_string("http.ua", DEFAULT_HTTP_USER_AGENT, out_value, max_length);
+    char default_ua[128] = {0};
+    device_settings_get_default_http_user_agent(default_ua, sizeof(default_ua));
+    return device_settings_get_string("http.ua", default_ua, out_value, max_length);
 }
 
 esp_err_t device_settings_set_http_user_agent(const char* value) {
