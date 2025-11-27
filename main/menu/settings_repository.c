@@ -30,8 +30,9 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
                                      ((gui_element_icontext_t[]){{get_icon(ICON_REPOSITORY), "Repository settings"}}), 1,
                                      ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},
-                                                                 {get_icon(ICON_F1), "Back"}}),
-                                     2, ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Edit setting"}}), 1);
+                                                                 {get_icon(ICON_F1), "Back"},
+                                                                 {get_icon(ICON_F4), "Reset defaults"}}),
+                                     3, ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Edit setting"}}), 1);
     }
 
     menu_render(buffer, menu, position, theme, partial);
@@ -129,6 +130,10 @@ void menu_settings_repository(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_DOWN:
                                 menu_navigate_next(&menu);
                                 render(buffer, theme, &menu, position, true, false);
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_F4:
+                                reset_defaults(&menu);
+                                render(buffer, theme, &menu, position, false, true);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
