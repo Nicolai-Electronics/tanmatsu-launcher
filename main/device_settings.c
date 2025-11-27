@@ -6,6 +6,7 @@
 #include "bsp/display.h"
 #include "bsp/input.h"
 #include "bsp/led.h"
+#include "esp_app_desc.h"
 #include "esp_err.h"
 #include "nvs.h"
 
@@ -183,9 +184,10 @@ esp_err_t device_settings_set_repo_base_uri(const char* value) {
 }
 
 void device_settings_get_default_http_user_agent(char* out_value, size_t max_length) {
-    char device_name[64] = {0};
+    char                    device_name[64]  = {0};
+    const esp_app_desc_t*   app_description  = esp_app_get_description();
     bsp_device_get_name(device_name, sizeof(device_name));
-    snprintf(out_value, max_length, "%s/1.0", device_name);
+    snprintf(out_value, max_length, "%s/%s", device_name, app_description->version);
 }
 
 esp_err_t device_settings_get_http_user_agent(char* out_value, size_t max_length) {
