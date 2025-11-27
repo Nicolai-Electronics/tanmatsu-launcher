@@ -25,7 +25,6 @@ typedef enum {
     ACTION_SERVER,
     ACTION_BASE_URI,
     ACTION_USER_AGENT,
-    ACTION_RESET_DEFAULTS,
 } menu_repo_settings_action_t;
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
@@ -59,7 +58,6 @@ static void menu_populate(menu_t* menu) {
     menu_insert_item_value(menu, "Server", server, NULL, (void*)ACTION_SERVER, -1);
     menu_insert_item_value(menu, "Base URI", base_uri, NULL, (void*)ACTION_BASE_URI, -1);
     menu_insert_item_value(menu, "User Agent", user_agent, NULL, (void*)ACTION_USER_AGENT, -1);
-    menu_insert_item(menu, "Reset to defaults", NULL, (void*)ACTION_RESET_DEFAULTS, -1);
 
     if (previous_position >= menu_get_length(menu)) {
         previous_position = menu_get_length(menu) - 1;
@@ -169,9 +167,6 @@ void menu_settings_repository(pax_buf_t* buffer, gui_theme_t* theme) {
                                         break;
                                     case ACTION_USER_AGENT:
                                         edit_user_agent(buffer, theme, &menu);
-                                        break;
-                                    case ACTION_RESET_DEFAULTS:
-                                        reset_defaults(&menu);
                                         break;
                                     default:
                                         break;
