@@ -10,8 +10,9 @@
 static const char* NVS_NAMESPACE = "system";
 
 // Default values for repository settings
-#define DEFAULT_REPO_SERVER   "https://apps.tanmatsu.cloud"
-#define DEFAULT_REPO_BASE_URI "/v1"
+#define DEFAULT_REPO_SERVER     "https://apps.tanmatsu.cloud"
+#define DEFAULT_REPO_BASE_URI   "/v1"
+#define DEFAULT_HTTP_USER_AGENT "Tanmatsu/1.0"
 
 static esp_err_t device_settings_get_percentage(const char* key, uint8_t default_value, uint8_t minimum_value,
                                                 uint8_t* out_percentage) {
@@ -178,4 +179,12 @@ esp_err_t device_settings_get_repo_base_uri(char* out_value, size_t max_length) 
 
 esp_err_t device_settings_set_repo_base_uri(const char* value) {
     return device_settings_set_string("repo.baseuri", value);
+}
+
+esp_err_t device_settings_get_http_user_agent(char* out_value, size_t max_length) {
+    return device_settings_get_string("http.ua", DEFAULT_HTTP_USER_AGENT, out_value, max_length);
+}
+
+esp_err_t device_settings_set_http_user_agent(const char* value) {
+    return device_settings_set_string("http.ua", value);
 }

@@ -12,16 +12,19 @@
 #include "pax_gfx.h"
 #include "pax_types.h"
 
-#define REPO_SERVER_MAX_LEN   128
-#define REPO_BASE_URI_MAX_LEN 64
+#define REPO_SERVER_MAX_LEN     128
+#define REPO_BASE_URI_MAX_LEN   64
+#define HTTP_USER_AGENT_MAX_LEN 128
 
-#define DEFAULT_REPO_SERVER   "https://apps.tanmatsu.cloud"
-#define DEFAULT_REPO_BASE_URI "/v1"
+#define DEFAULT_REPO_SERVER     "https://apps.tanmatsu.cloud"
+#define DEFAULT_REPO_BASE_URI   "/v1"
+#define DEFAULT_HTTP_USER_AGENT "Tanmatsu/1.0"
 
 typedef enum {
     ACTION_NONE,
     ACTION_SERVER,
     ACTION_BASE_URI,
+    ACTION_USER_AGENT,
     ACTION_RESET_DEFAULTS,
 } menu_repo_settings_action_t;
 
@@ -40,11 +43,13 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
 }
 
 static void menu_populate(menu_t* menu) {
-    char server[REPO_SERVER_MAX_LEN]     = {0};
-    char base_uri[REPO_BASE_URI_MAX_LEN] = {0};
+    char server[REPO_SERVER_MAX_LEN]       = {0};
+    char base_uri[REPO_BASE_URI_MAX_LEN]   = {0};
+    char user_agent[HTTP_USER_AGENT_MAX_LEN] = {0};
 
     device_settings_get_repo_server(server, sizeof(server));
     device_settings_get_repo_base_uri(base_uri, sizeof(base_uri));
+    device_settings_get_http_user_agent(user_agent, sizeof(user_agent));
 
     size_t previous_position = menu_get_position(menu);
     while (menu_get_length(menu) > 0) {
@@ -53,6 +58,7 @@ static void menu_populate(menu_t* menu) {
 
     menu_insert_item_value(menu, "Server", server, NULL, (void*)ACTION_SERVER, -1);
     menu_insert_item_value(menu, "Base URI", base_uri, NULL, (void*)ACTION_BASE_URI, -1);
+    menu_insert_item_value(menu, "User Agent", user_agent, NULL, (void*)ACTION_USER_AGENT, -1);
     menu_insert_item(menu, "Reset to defaults", NULL, (void*)ACTION_RESET_DEFAULTS, -1);
 
     if (previous_position >= menu_get_length(menu)) {
@@ -85,11 +91,25 @@ static void edit_base_uri(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu) {
     }
 }
 
+static void edit_user_agent(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu) {
+    char user_agent[HTTP_USER_AGENT_MAX_LEN] = {0};
+    bool accepted                            = false;
+
+    device_settings_get_http_user_agent(user_agent, sizeof(user_agent));
+    menu_textedit(buffer, theme, "User Agent", user_agent, sizeof(user_agent), false, &accepted);
+    if (accepted) {
+        device_settings_set_http_user_agent(user_agent);
+        menu_set_value(menu, 2, user_agent);
+    }
+}
+
 static void reset_defaults(menu_t* menu) {
     device_settings_set_repo_server(DEFAULT_REPO_SERVER);
     device_settings_set_repo_base_uri(DEFAULT_REPO_BASE_URI);
+    device_settings_set_http_user_agent(DEFAULT_HTTP_USER_AGENT);
     menu_set_value(menu, 0, DEFAULT_REPO_SERVER);
     menu_set_value(menu, 1, DEFAULT_REPO_BASE_URI);
+    menu_set_value(menu, 2, DEFAULT_HTTP_USER_AGENT);
 }
 
 void menu_settings_repository(pax_buf_t* buffer, gui_theme_t* theme) {
@@ -146,6 +166,9 @@ void menu_settings_repository(pax_buf_t* buffer, gui_theme_t* theme) {
                                         break;
                                     case ACTION_BASE_URI:
                                         edit_base_uri(buffer, theme, &menu);
+                                        break;
+                                    case ACTION_USER_AGENT:
+                                        edit_user_agent(buffer, theme, &menu);
                                         break;
                                     case ACTION_RESET_DEFAULTS:
                                         reset_defaults(&menu);
