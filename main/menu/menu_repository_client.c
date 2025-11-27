@@ -4,6 +4,7 @@
 #include "bsp/input.h"
 #include "cJSON.h"
 #include "common/display.h"
+#include "device_settings.h"
 #include "esp_log.h"
 #include "gui_menu.h"
 #include "gui_style.h"
@@ -106,7 +107,9 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
 
     busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Downloading list of projects...", true);
 
-    bool success = load_projects("https://apps.tanmatsu.cloud", &projects, NULL);
+    char server[128] = {0};
+    device_settings_get_repo_server(server, sizeof(server));
+    bool success = load_projects(server, &projects, NULL);
     if (!success) {
         ESP_LOGE(TAG, "Failed to load projects");
         message_dialog(get_icon(ICON_REPOSITORY), "Repository: fatal error", "Failed to load projects from server",

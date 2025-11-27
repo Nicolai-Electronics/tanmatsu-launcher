@@ -21,6 +21,7 @@
 #include "pax_types.h"
 #include "radio_update.h"
 #include "settings_clock.h"
+#include "settings_repository.h"
 
 typedef enum {
     ACTION_NONE,
@@ -34,6 +35,7 @@ typedef enum {
     ACTION_RADIO_UPDATE,
     ACTION_POWER_INFORMATION,
     ACTION_HARDWARE_TEST,
+    ACTION_REPOSITORY,
 } menu_home_action_t;
 
 static void radio_update_v2(void) {
@@ -74,6 +76,10 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             break;
         case ACTION_HARDWARE_TEST:
             menu_hardware_test();
+            break;
+        case ACTION_REPOSITORY:
+            menu_settings_repository(fb, theme);
+            break;
         default:
             break;
     }
@@ -108,6 +114,7 @@ void menu_settings(void) {
     menu_insert_item_icon(&menu, "Device information", NULL, (void*)ACTION_DEVICE_INFO, -1, get_icon(ICON_DEVICE_INFO));
     menu_insert_item_icon(&menu, "Power information", NULL, (void*)ACTION_POWER_INFORMATION, -1,
                           get_icon(ICON_BATTERY_UNKNOWN));
+    menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)

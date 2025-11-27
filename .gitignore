@@ -16,3 +16,5 @@ shell.nix
 sdkconfig
 .submodules_update_done
 sdkconfig_*
+REPOLAYOUT.md
+CLAUDE.md
