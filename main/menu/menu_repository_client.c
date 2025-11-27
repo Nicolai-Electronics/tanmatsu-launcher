@@ -65,7 +65,7 @@ static cJSON* get_project_by_index(cJSON* json_projects, int index) {
     return cJSON_GetArrayItem(json_projects, index);
 }
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool partial, bool icons) {
+static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const char* server, bool partial, bool icons) {
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
 
@@ -77,11 +77,13 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
     };
 
     if (!partial || icons) {
+        char server_info[160];
+        snprintf(server_info, sizeof(server_info), "Server: %s", server);
         render_base_screen_statusbar(
             buffer, theme, !partial, !partial || icons, !partial,
             ((gui_element_icontext_t[]){{get_icon(ICON_REPOSITORY), "Repository"}}), 1,
             ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
-            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1);
+            ((gui_element_icontext_t[]){{get_icon(ICON_GLOBE), server_info}, {NULL, "  ↑ / ↓ | ⏎ Select"}}), 2);
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
@@ -126,7 +128,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
     menu_initialize(&menu);
     populate_project_list(&menu, projects.json);
 
-    render(buffer, theme, &menu, false, true);
+    render(buffer, theme, &menu, server, false, true);
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -141,11 +143,11 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, true, false);
+                                render(buffer, theme, &menu, server, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_DOWN:
                                 menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, true, false);
+                                render(buffer, theme, &menu, server, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
@@ -157,7 +159,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                     break;
                                 }
                                 menu_repository_client_project(buffer, theme, wrapper);
-                                render(buffer, theme, &menu, false, true);
+                                render(buffer, theme, &menu, server, false, true);
                                 break;
                             }
                             default:
@@ -170,7 +172,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                     break;
             }
         } else {
-            render(buffer, theme, &menu, true, true);
+            render(buffer, theme, &menu, server, true, true);
         }
     }
 
