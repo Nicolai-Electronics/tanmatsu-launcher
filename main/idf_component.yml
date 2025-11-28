@@ -6,7 +6,7 @@ dependencies:
   robotman2412/pax-gfx:
     version: ">=2.0.4"
   badgeteam/appfs:
-    version: ">=1.0.1"
+    version: ">=1.0.2"
   nicolaielectronics/rvswd:
     version: ">=0.2.0"
     rules:

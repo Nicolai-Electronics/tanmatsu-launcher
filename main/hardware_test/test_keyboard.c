@@ -9,6 +9,7 @@
 #include "pax_fonts.h"
 #include "pax_gfx.h"
 #include "pax_text.h"
+#include "portmacro.h"
 #include "shapes/pax_misc.h"
 #include "shapes/pax_rects.h"
 
@@ -185,7 +186,9 @@ void test_keyboard(void) {
     while (1) {
         bsp_input_event_t event;
 
-        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(100)) == pdTRUE) {
+        draw_keyboard();
+
+        if (xQueueReceive(input_event_queue, &event, portMAX_DELAY) == pdTRUE) {
             if (event.type == INPUT_EVENT_TYPE_SCANCODE) {
                 bsp_input_scancode_t scancode = event.args_scancode.scancode & ~BSP_INPUT_SCANCODE_RELEASE_MODIFIER;
                 for (uint32_t i = 0; i < sizeof(keys) / sizeof(keys[0]); i++) {
@@ -206,7 +209,6 @@ void test_keyboard(void) {
                 if (!esc_pressed && !backspace_pressed && exiting) {
                     return;
                 }
-                draw_keyboard();
             }
         }
     }
