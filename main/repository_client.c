@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "cJSON.h"
+#include "device_settings.h"
 #include "http_download.h"
 #include "wifi_connection.h"
 
@@ -26,8 +27,10 @@ void free_repository_data_json(repository_json_data_t* data) {
 // Helper functions for API
 
 bool load_information(const char* base_url, repository_json_data_t* out_data) {
-    char url[128];
-    sprintf(url, "%s/v1/information", base_url);
+    char base_uri[64] = {0};
+    device_settings_get_repo_base_uri(base_uri, sizeof(base_uri));
+    char url[256];
+    sprintf(url, "%s%s/information", base_url, base_uri);
     bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
     if (!success) return false;
     out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
@@ -39,8 +42,10 @@ bool load_information(const char* base_url, repository_json_data_t* out_data) {
 }
 
 bool load_categories(const char* base_url, repository_json_data_t* out_data) {
-    char url[128];
-    sprintf(url, "%s/v1/categories?device=%s", base_url, "tanmatsu");
+    char base_uri[64] = {0};
+    device_settings_get_repo_base_uri(base_uri, sizeof(base_uri));
+    char url[256];
+    sprintf(url, "%s%s/categories?device=%s", base_url, base_uri, "tanmatsu");
     bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
     if (!success) return false;
     out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
@@ -52,11 +57,13 @@ bool load_categories(const char* base_url, repository_json_data_t* out_data) {
 }
 
 bool load_projects(const char* base_url, repository_json_data_t* out_data, const char* category) {
-    char url[128];
+    char base_uri[64] = {0};
+    device_settings_get_repo_base_uri(base_uri, sizeof(base_uri));
+    char url[256];
     if (category != NULL) {
-        sprintf(url, "%s/v1/projects?device=%s&category=%s", base_url, "tanmatsu", category);
+        sprintf(url, "%s%s/projects?device=%s&category=%s", base_url, base_uri, "tanmatsu", category);
     } else {
-        sprintf(url, "%s/v1/projects?device=%s", base_url, "tanmatsu");
+        sprintf(url, "%s%s/projects?device=%s", base_url, base_uri, "tanmatsu");
     }
     bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
     if (!success) return false;
@@ -70,13 +77,15 @@ bool load_projects(const char* base_url, repository_json_data_t* out_data, const
 
 bool load_projects_paginated(const char* base_url, repository_json_data_t* out_data, const char* category,
                              uint32_t offset, uint32_t amount) {
-    char url[128];
+    char base_uri[64] = {0};
+    device_settings_get_repo_base_uri(base_uri, sizeof(base_uri));
+    char url[256];
     if (category != NULL) {
-        sprintf(url, "%s/v1/projects?device=%s&category=%s&offset=%" PRIu32 "&amount=%" PRIu32, base_url, "tanmatsu",
-                category, offset, amount);
+        sprintf(url, "%s%s/projects?device=%s&category=%s&offset=%" PRIu32 "&amount=%" PRIu32, base_url, base_uri,
+                "tanmatsu", category, offset, amount);
     } else {
-        sprintf(url, "%s/v1/projects?device=%s&offset=%" PRIu32 "&amount=%" PRIu32, base_url, "tanmatsu", offset,
-                amount);
+        sprintf(url, "%s%s/projects?device=%s&offset=%" PRIu32 "&amount=%" PRIu32, base_url, base_uri, "tanmatsu",
+                offset, amount);
     }
     bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
     if (!success) return false;
@@ -89,8 +98,10 @@ bool load_projects_paginated(const char* base_url, repository_json_data_t* out_d
 }
 
 bool load_project(const char* base_url, repository_json_data_t* out_data, const char* project_slug) {
-    char url[128];
-    sprintf(url, "%s/v1/projects/%s", base_url, project_slug);
+    char base_uri[64] = {0};
+    device_settings_get_repo_base_uri(base_uri, sizeof(base_uri));
+    char url[256];
+    sprintf(url, "%s%s/projects/%s", base_url, base_uri, project_slug);
     bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
     if (!success) return false;
     out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
