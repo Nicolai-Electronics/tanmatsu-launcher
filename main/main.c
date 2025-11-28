@@ -351,7 +351,7 @@ void app_main(void) {
 #endif
 #endif
 
-    xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, 1);
+    xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, CONFIG_SOC_CPU_CORES_NUM - 1);
 
     badgelink_init();
     usb_initialize();

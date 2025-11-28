@@ -65,7 +65,7 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ / ← / → | ⏎ Select"}}), 1
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_KAMI)
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅼 Settings 🅰 Select"}}), 1
 #else

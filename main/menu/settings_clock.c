@@ -33,7 +33,7 @@ static const char* TAG = "clock";
 #define FOOTER_RIGHT   ((gui_element_icontext_t[]){{NULL, " ← / → Navigate ↑ / ↓ Modify value"}}), 1
 #define DATE_TEXT_SIZE 45
 #define TIME_TEXT_SIZE 90
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
 #define FOOTER_LEFT    ((gui_element_icontext_t[]){{NULL, "🅱Back"}}), 1
 #define FOOTER_RIGHT   ((gui_element_icontext_t[]){{NULL, "🆂Set timezone"}, {NULL, "🅴Toggle NTP"}}), 2
 #define DATE_TEXT_SIZE 32
