@@ -17,6 +17,18 @@
 #include "repository_client.h"
 #include "wifi_connection.h"
 
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1
+#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#define FOOTER_LEFT  NULL, 0
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | 🅱 Back 🅰 Select"}}), 1
+#else
+#define FOOTER_LEFT  NULL, 0
+#define FOOTER_RIGHT NULL, 0
+#endif
+
 extern bool wifi_stack_get_initialized(void);
 
 static const char* TAG = "Repository client";
@@ -76,11 +88,9 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
     };
 
     if (!partial || icons) {
-        render_base_screen_statusbar(
-            buffer, theme, !partial, !partial || icons, !partial,
-            ((gui_element_icontext_t[]){{get_icon(ICON_REPOSITORY), "Repository"}}), 1,
-            ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
-            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1);
+        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_REPOSITORY), "Repository"}}), 1,
+                                     FOOTER_LEFT, FOOTER_RIGHT);
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);

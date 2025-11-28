@@ -304,7 +304,7 @@ size_t create_list_of_apps_from_other_appfs_entries(app_t** out_list, size_t lis
         if (!already_in_list) {
             app_t* app           = calloc(1, sizeof(app_t));
             app->slug            = strdup(slug);
-            app->name            = strdup(name);
+            app->name            = (strcmp(name, "main.bin") == 0) ? strdup(slug) : strdup(name);
             app->path            = strdup("");
             app->version         = version;
             app->icon            = calloc(1, sizeof(pax_buf_t));
