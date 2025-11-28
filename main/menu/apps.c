@@ -75,6 +75,10 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                 message_dialog(get_icon(ICON_ERROR), "Error", "Applet path is too long", "OK");
             } else {
                 char* path = malloc(req + 1);
+                if (path == NULL) {
+                    printf("Out of memory\r\n");
+                    return;
+                }
                 snprintf(path, req + 1, "%s/%s/%s", app->path, app->slug, app->executable_filename);
                 if (!fs_utils_exists(path)) {
                     message_dialog(get_icon(ICON_ERROR), "Error", "Applet not found", "OK");
@@ -108,6 +112,10 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
             }
 
             char* path = malloc(req + 1);
+            if (path == NULL) {
+                printf("Out of memory (failed to alloc %u bytes)\r\n", req + 1);
+                return;
+            }
             snprintf(path, req + 1, "%s/%s/%s", app->path, app->slug, app->executable_filename);
             if (!fs_utils_exists(path)) {
                 message_dialog(get_icon(ICON_ERROR), "Error", "Script file not found", "OK");
@@ -142,7 +150,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Start app"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅰 Start app"}}), 1
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅼 Info 🅴 Remove 🅰 Start"}}), 1
 #else
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT NULL, 0
@@ -195,6 +203,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                 case BSP_INPUT_NAVIGATION_KEY_ESC:
                                 case BSP_INPUT_NAVIGATION_KEY_F1:
                                 case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                                case BSP_INPUT_NAVIGATION_KEY_HOME:
                                     menu_free(&menu);
                                     free_list_of_apps(apps, MAX_NUM_APPS);
                                     return;
@@ -226,6 +235,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     render(buffer, theme, &menu, position, false, true);
                                     break;
                                 }
+                                case BSP_INPUT_NAVIGATION_KEY_SELECT:
                                 case BSP_INPUT_NAVIGATION_KEY_F5:
                                 case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_Y: {
                                     void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
