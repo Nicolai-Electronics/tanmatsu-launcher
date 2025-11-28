@@ -148,7 +148,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                                 {get_icon(ICON_F5), "Remove"}}), \
         4
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Start app"}}), 1
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅼 Info 🅴 Remove 🅰 Start"}}), 1
 #else

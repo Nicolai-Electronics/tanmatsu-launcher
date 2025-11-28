@@ -20,7 +20,7 @@
 #define FOOTER_RIGHT NULL, 0
 #define TEXT_FONT    pax_font_sky_mono
 #define TEXT_SIZE    18
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{NULL, "🅱 Back"}}), 1
 #define FOOTER_RIGHT NULL, 0
 #define TEXT_FONT    pax_font_sky_mono
