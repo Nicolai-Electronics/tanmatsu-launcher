@@ -29,7 +29,10 @@ float texteditor_line_width(texteditor_t* editor, size_t line_index, bool force_
 static void texteditor_draw_line_impl1(texteditor_t* editor, size_t line_index, pax_vec2i pos) {
     text_line_t line      = editor->file_data.lines[line_index];
     ptrdiff_t   cursorpos = -1;
-    if (editor->cursor_pos.line == line_index) cursorpos = editor->cursor_pos.col;
+    if (editor->cursor_pos.line == line_index) {
+        printf("loin %d kol %zu\n", editor->cursor_pos.line, editor->cursor_pos.offset);
+        cursorpos = editor->cursor_pos.offset;
+    }
     pax_2vec2f dims = pax_draw_text_adv(editor->buffer, editor->theme->palette.color_foreground,
                                         editor->theme->menu.text_font, editor->theme->menu.text_height, pos.x, pos.y,
                                         line.data, line.data_len, PAX_ALIGN_BEGIN, PAX_ALIGN_BEGIN, cursorpos);

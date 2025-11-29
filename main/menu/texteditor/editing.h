@@ -6,6 +6,11 @@
 
 #include "menu/texteditor/types.h"
 
+// Get the codepoint of the character immediately before the cursor.
+bool texteditor_char_before_cursor(texteditor_t* editor, uint32_t* codepoint);
+// Get the codepoint of the character immediately after the cursor.
+bool texteditor_char_after_cursor(texteditor_t* editor, uint32_t* codepoint);
+
 // Insert a new text line in a specific position.
 bool text_file_new_line(text_file_t* file, size_t line_index);
 // Remove a text line in a specific position.

@@ -19,40 +19,17 @@
 #include "icons.h"
 #include "menu/message_dialog.h"
 #include "menu/texteditor.h"
+#include "menu/texteditor/editing.h"
 #include "menu/texteditor/rendering.h"
 #include "menu/texteditor/saving.h"
 #include "menu/texteditor/types.h"
 #include "pax_gfx.h"
-#include "pax_matrix.h"
-#include "pax_orientation.h"
-#include "pax_types.h"
-#include "shapes/pax_misc.h"
 
 #ifdef TEXTEDITOR_USE_PPA
 #include <driver/ppa.h>
 #endif
 
 #ifdef TEXTEDITOR_USE_PPA
-// Helper function to do one scale-rotation-mirror with the PPA.
-static void texteditor_do_srm0(texteditor_t* editor, void* fb, pax_vec2i dest, pax_recti src) {
-    pax_buf_t tmp_buf = {0};
-    size_t    h_res, v_res;
-    bsp_display_get_parameters(&h_res, &v_res, NULL, NULL);
-    pax_buf_init(&tmp_buf, fb, h_res, v_res, PAX_BUF_16_565RGB);
-
-    pax_recti dest_ = {dest.x, dest.y, src.w, src.h};
-    dest_           = pax_recti_abs(pax_orient_det_recti(editor->buffer, dest_));
-    src             = pax_recti_abs(pax_orient_det_recti(editor->buffer, src));
-
-    pax_blit_raw_rot_sized(&tmp_buf, pax_buf_get_pixels(editor->buffer), pax_buf_get_dims_raw(editor->buffer), dest_.x,
-                           dest_.y, PAX_O_UPRIGHT, src.x, src.y, src.w, src.h);
-
-    asm("fence rw,rw");
-    esp_cache_msync(fb, pax_buf_get_size(&tmp_buf), ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_TYPE_DATA);
-    pax_join();
-    pax_buf_destroy(&tmp_buf);
-}
-
 // Helper function to do one scale-rotation-mirror with the PPA.
 static void texteditor_do_srm(texteditor_t* editor, void* fb, pax_vec2i dest, pax_recti src) {
     pax_vec2i const raw_dims = pax_buf_get_dims_raw(editor->buffer);
@@ -277,40 +254,34 @@ void menu_texteditor(pax_buf_t* buffer, gui_theme_t* theme, char const* file_pat
         bsp_input_event_t event;
         taskYIELD();
         xQueueReceive(input_event_queue, &event, portMAX_DELAY);
-        if (event.type == INPUT_EVENT_TYPE_NAVIGATION) {
-            bsp_input_event_args_navigation_t const args = event.args_navigation;
-            bool const                              ctrl = args.modifiers & BSP_INPUT_MODIFIER_CTRL;
-            if (args.state && args.key == BSP_INPUT_NAVIGATION_KEY_ESC) {
-                break;
-            } else if (args.state && ctrl && args.key == BSP_INPUT_NAVIGATION_KEY_UP) {
-                menu_texteditor_scroll(&editor, (pax_vec2i){0, -theme->menu.text_height});
-            } else if (args.state && ctrl && args.key == BSP_INPUT_NAVIGATION_KEY_DOWN) {
-                menu_texteditor_scroll(&editor, (pax_vec2i){0, theme->menu.text_height});
-            } else if (args.state && ctrl && args.key == BSP_INPUT_NAVIGATION_KEY_LEFT) {
-                menu_texteditor_scroll(&editor, (pax_vec2i){-theme->menu.text_height, 0});
-            } else if (args.state && ctrl && args.key == BSP_INPUT_NAVIGATION_KEY_RIGHT) {
-                menu_texteditor_scroll(&editor, (pax_vec2i){theme->menu.text_height, 0});
+
+        if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.state) {
+            bool const fn   = event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION;
+            bool const ctrl = event.args_navigation.modifiers & BSP_INPUT_MODIFIER_CTRL;
+            switch (event.args_navigation.key) {
+                default:
+                    break;
+                case BSP_INPUT_NAVIGATION_KEY_ESC:
+                    goto break_outer;
+                case BSP_INPUT_NAVIGATION_KEY_UP:
+                    texteditor_nav_up(&editor, fn);
+                    break;
+                case BSP_INPUT_NAVIGATION_KEY_DOWN:
+                    texteditor_nav_down(&editor, fn);
+                    break;
+                case BSP_INPUT_NAVIGATION_KEY_LEFT:
+                    texteditor_nav_left(&editor, ctrl, fn, false);
+                    break;
+                case BSP_INPUT_NAVIGATION_KEY_RIGHT:
+                    texteditor_nav_right(&editor, ctrl, fn, false);
+                    break;
             }
         }
 
-        if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_ESC) {
-            break;
-        } else if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.state &&
-                   event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_DOWN) {
-            menu_texteditor_scroll(&editor, (pax_vec2i){0, theme->menu.text_height});
-        } else if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.state &&
-                   event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_UP) {
-            menu_texteditor_scroll(&editor, (pax_vec2i){0, -theme->menu.text_height});
-        } else if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.state &&
-                   event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_LEFT) {
-            menu_texteditor_scroll(&editor, (pax_vec2i){-theme->menu.text_height, 0});
-        } else if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.state &&
-                   event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_RIGHT) {
-            menu_texteditor_scroll(&editor, (pax_vec2i){theme->menu.text_height, 0});
-        }
-        texteditor_draw_text(&editor, false);
+        texteditor_draw_text(&editor, true);
         texteditor_blit(&editor);
     }
+break_outer:
 
 #ifdef TEXTEDITOR_USE_PPA
     // Remove the PPA client again.

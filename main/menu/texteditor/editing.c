@@ -10,6 +10,80 @@
 #include "pax_text.h"
 #include "pax_types.h"
 
+// Get the codepoint of the character immediately before the cursor.
+bool texteditor_char_before_cursor(texteditor_t* editor, uint32_t* codepoint) {
+    if (editor->cursor_pos.line == 0 && editor->cursor_pos.col == 0) {
+        return false;
+    } else if (editor->cursor_pos.col == 0) {
+        *codepoint = '\n';
+        return true;
+    }
+    text_line_t* line   = &editor->file_data.lines[editor->cursor_pos.line];
+    size_t       offset = pax_utf8_seekprev_l(line->data, line->data_len, editor->cursor_pos.offset);
+    pax_utf8_getch_l(line->data + offset, line->data_len - offset, codepoint);
+    return true;
+}
+
+// Get the codepoint of the character immediately after the cursor.
+bool texteditor_char_after_cursor(texteditor_t* editor, uint32_t* codepoint) {
+    text_line_t* line = &editor->file_data.lines[editor->cursor_pos.line];
+    if (editor->cursor_pos.offset >= line->data_len) {
+        if (editor->cursor_pos.line + 1 >= editor->file_data.lines_len) {
+            return false;
+        }
+        *codepoint = '\n';
+        return true;
+    }
+    pax_utf8_getch_l(line->data + editor->cursor_pos.offset, line->data_len - editor->cursor_pos.offset, codepoint);
+    return true;
+}
+
+// Is a whitespace character?
+static bool is_whitespace(uint32_t codepoint) {
+    switch (codepoint) {
+        case ' ':
+        case '\t':
+        case 0xA0:  // NBSP
+            return true;
+        default:
+            return false;
+    }
+}
+
+// Is a punctuation character?
+static bool is_punctuation(uint32_t codepoint) {
+    switch (codepoint) {
+        case '.':
+        case ',':
+        case ';':
+        case ':':
+        case '!':
+        case '?':
+        case '-':
+        case '_':
+        case '(':
+        case ')':
+        case '[':
+        case ']':
+        case '{':
+        case '}':
+        case '<':
+        case '>':
+        case '/':
+        case '\\':
+        case '\'':
+        case '\"':
+            return true;
+        default:
+            return false;
+    }
+}
+
+// Is a regular character?
+static bool is_regular(uint32_t codepoint) {
+    return !(is_whitespace(codepoint) || is_punctuation(codepoint));
+}
+
 // Insert a new text line in a specific position.
 bool text_file_new_line(text_file_t* file, size_t line_index) {
     assert(line_index <= file->lines_len);
@@ -125,7 +199,77 @@ void texteditor_nav_left(texteditor_t* editor, bool ctrl, bool is_home, bool is_
         editor->cursor_pos.col    = 0;
         editor->cursor_pos.offset = 0;
         return;
+    } else if (editor->cursor_pos.col == 0) {
+        // Move to end of previous line if possible.
+        if (editor->cursor_pos.line != 0) {
+            editor->cursor_pos.line--;
+            text_line_t* line         = &editor->file_data.lines[editor->cursor_pos.line];
+            editor->cursor_pos.col    = pax_utf8_strlen_l(line->data, line->data_len);
+            editor->cursor_pos.offset = line->data_len;
+        }
     }
+
+    // Always move left at least once.
+    uint32_t codepoint;
+    texteditor_char_before_cursor(editor, &codepoint);
+    if (texteditor_nav_left_helper(editor)) {
+        uint32_t next_codepoint;
+        if (!texteditor_char_before_cursor(editor, &next_codepoint)) {
+            // Can't skip multiple characters if there aren't multiple.
+        } else if (is_backspace) {
+            uint32_t next_codepoint = 0;
+            if (!is_whitespace(next_codepoint)) {
+                // Skip an optional whitespace and a cluster of similar characters.
+                bool punctuation = is_punctuation(next_codepoint);
+                while (punctuation == is_punctuation(next_codepoint)) {
+                    texteditor_nav_left_helper(editor);
+                    if (!texteditor_char_before_cursor(editor, &next_codepoint)) {
+                        break;
+                    }
+                }
+            } else if (is_whitespace(codepoint)) {
+                // Or: A cluster of multiple whitespace characters.
+                do {
+                    texteditor_nav_left_helper(editor);
+                } while (texteditor_char_before_cursor(editor, &next_codepoint) && is_whitespace(next_codepoint));
+            }
+        } else if (ctrl) {
+            // Skip a cluster of whitespace.
+            bool has_next;
+            do {
+                texteditor_nav_left_helper(editor);
+                has_next = texteditor_char_before_cursor(editor, &next_codepoint);
+            } while (has_next && is_whitespace(next_codepoint));
+
+            if (has_next && !is_punctuation(next_codepoint)) {
+                // A cluster of regular characters.
+                do {
+                    texteditor_nav_left_helper(editor);
+                } while (texteditor_char_before_cursor(editor, &next_codepoint) && is_regular(next_codepoint));
+
+            } else if (has_next) {
+                texteditor_nav_left_helper(editor);
+                has_next = texteditor_char_before_cursor(editor, &next_codepoint);
+
+                if (has_next && is_regular(codepoint)) {
+                    // An optional punctuation, and a cluster of regular characters.
+                    do {
+                        texteditor_nav_left_helper(editor);
+                    } while (texteditor_char_before_cursor(editor, &next_codepoint) && is_regular(next_codepoint));
+
+                } else if (has_next && is_punctuation(codepoint)) {
+                    // Or: Multiple punctuation characters.
+                    do {
+                        texteditor_nav_left_helper(editor);
+                    } while (texteditor_char_before_cursor(editor, &next_codepoint) && is_punctuation(next_codepoint));
+                }
+            }
+        }
+    }
+
+    // Recalculate visual X position of cursor.
+    texteditor_line_width(editor, editor->cursor_pos.line, true);
+    editor->cursor_req_x = editor->cursor_vis_x;
 }
 
 // Helper function that moves the cursor right one column.
@@ -160,5 +304,74 @@ void texteditor_nav_right(texteditor_t* editor, bool ctrl, bool is_end, bool is_
         texteditor_line_width(editor, editor->cursor_pos.line, true);
         editor->cursor_req_x = editor->cursor_vis_x;
         return;
+    } else if (editor->cursor_pos.offset >= line->data_len) {
+        // Move to beginning of next line if possible.
+        if (editor->cursor_pos.line < editor->file_data.lines_len - 1) {
+            editor->cursor_pos.line++;
+            editor->cursor_pos.col    = 0;
+            editor->cursor_pos.offset = 0;
+        }
     }
+
+    // Always move left at least once.
+    uint32_t codepoint;
+    texteditor_char_after_cursor(editor, &codepoint);
+    if (texteditor_nav_right_helper(editor)) {
+        uint32_t next_codepoint;
+        if (!texteditor_char_after_cursor(editor, &next_codepoint)) {
+            // Can't skip multiple characters if there aren't multiple.
+        } else if (is_del) {
+            uint32_t next_codepoint = 0;
+            if (!is_whitespace(next_codepoint)) {
+                // Skip an optional whitespace and a cluster of similar characters.
+                bool punctuation = is_punctuation(next_codepoint);
+                while (punctuation == is_punctuation(next_codepoint)) {
+                    texteditor_nav_right_helper(editor);
+                    if (!texteditor_char_after_cursor(editor, &next_codepoint)) {
+                        break;
+                    }
+                }
+            } else if (is_whitespace(codepoint)) {
+                // Or: A cluster of multiple whitespace characters.
+                do {
+                    texteditor_nav_right_helper(editor);
+                } while (texteditor_char_after_cursor(editor, &next_codepoint) && is_whitespace(next_codepoint));
+            }
+        } else if (ctrl) {
+            // Skip a cluster of whitespace.
+            bool has_next;
+            do {
+                texteditor_nav_right_helper(editor);
+                has_next = texteditor_char_after_cursor(editor, &next_codepoint);
+            } while (has_next && is_whitespace(next_codepoint));
+
+            if (has_next && !is_punctuation(next_codepoint)) {
+                // A cluster of regular characters.
+                do {
+                    texteditor_nav_right_helper(editor);
+                } while (texteditor_char_after_cursor(editor, &next_codepoint) && is_regular(next_codepoint));
+
+            } else if (has_next) {
+                texteditor_nav_right_helper(editor);
+                has_next = texteditor_char_after_cursor(editor, &next_codepoint);
+
+                if (has_next && is_regular(codepoint)) {
+                    // An optional punctuation, and a cluster of regular characters.
+                    do {
+                        texteditor_nav_right_helper(editor);
+                    } while (texteditor_char_after_cursor(editor, &next_codepoint) && is_regular(next_codepoint));
+
+                } else if (has_next && is_punctuation(codepoint)) {
+                    // Or: Multiple punctuation characters.
+                    do {
+                        texteditor_nav_right_helper(editor);
+                    } while (texteditor_char_after_cursor(editor, &next_codepoint) && is_punctuation(next_codepoint));
+                }
+            }
+        }
+    }
+
+    // Recalculate visual X position of cursor.
+    texteditor_line_width(editor, editor->cursor_pos.line, true);
+    editor->cursor_req_x = editor->cursor_vis_x;
 }
