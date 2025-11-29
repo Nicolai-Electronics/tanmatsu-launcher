@@ -70,7 +70,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
         }
 
         if (app->version) {
-            snprintf(text_buffer, sizeof(text_buffer), "Version: %" PRIu32, app->version);
+            snprintf(text_buffer, sizeof(text_buffer), "Version: %s", app->version);
             pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                           position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
         }
