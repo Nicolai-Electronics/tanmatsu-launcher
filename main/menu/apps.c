@@ -147,20 +147,103 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                                 {get_icon(ICON_F2), "Details"},  \
                                 {get_icon(ICON_F5), "Remove"}}), \
         4
-#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Start app"}}), 1
+#define FOOTER_LEFT_UPDATE                                       \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},       \
+                                {get_icon(ICON_F1), "Back"},     \
+                                {get_icon(ICON_F2), "Details"},  \
+                                {get_icon(ICON_F5), "Remove"},   \
+                                {get_icon(ICON_F6), "Update"}}), \
+        5
+#define FOOTER_RIGHT             ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Start app"}}), 1
+#define FOOTER_RIGHT_INSTALL     ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Install app"}}), 1
+#define FOOTER_RIGHT_UNAVAILABLE ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ (Unavailable)"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅼 Info 🅴 Remove 🅰 Start"}}), 1
+#define FOOTER_LEFT              NULL, 0
+#define FOOTER_LEFT_UPDATE       NULL, 0
+#define FOOTER_RIGHT             ((gui_element_icontext_t[]){{NULL, "🅼 Info 🅴 Remove 🅰 Start"}}), 1
+#define FOOTER_RIGHT_INSTALL     ((gui_element_icontext_t[]){{NULL, "🅼 Info 🅴 Remove 🅰 Install"}}), 1
+#define FOOTER_RIGHT_UNAVAILABLE ((gui_element_icontext_t[]){{NULL, "🅼 Info 🅴 Remove 🅰 (Unavailable)"}}), 1
 #else
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
+#define FOOTER_LEFT                                                                                \
+    ((gui_element_icontext_t[]){                                                                   \
+        {get_icon(ICON_ESC), "/"}, {NULL, "F1 Back"}, {NULL, "F2 Details"}, {NULL, "F5 Remove"}}), \
+        4
+#define FOOTER_LEFT_UPDATE                                 \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, \
+                                {NULL, "F1 Back"},         \
+                                {NULL, "F2 Details"},      \
+                                {NULL, "F5 Remove"},       \
+                                {NULL, "F6 Update"}}),     \
+        5
+#define FOOTER_RIGHT             ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Start app"}}), 1
+#define FOOTER_RIGHT_INSTALL     ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Install app"}}), 1
+#define FOOTER_RIGHT_UNAVAILABLE ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ (Unavailable)"}}), 1
 #endif
 
+typedef enum {
+    APP_MENU_FOOTER_TYPE_NORMAL = 0,
+    APP_MENU_FOOTER_TYPE_INSTALL,
+    APP_MENU_FOOTER_TYPE_UPDATE,
+    APP_MENU_FOOTER_TYPE_UNAVAILABLE,
+    APP_MENU_FOOTER_TYPE_COUNT,
+} app_menu_footer_type_t;
+
+static app_menu_footer_type_t previous_footer_type = APP_MENU_FOOTER_TYPE_COUNT;
+
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
+    void*  arg = menu_get_callback_args(menu, menu_get_position(menu));
+    app_t* app = (app_t*)arg;
+
+    app_menu_footer_type_t footer_type = APP_MENU_FOOTER_TYPE_NORMAL;
+    if (app == NULL) {
+        footer_type = APP_MENU_FOOTER_TYPE_UNAVAILABLE;
+    } else {
+        if (app->executable_type == EXECUTABLE_TYPE_APPFS) {
+            if (app->executable_appfs_fd == APPFS_INVALID_FD) {
+                if (app->executable_on_sd_available) {
+                    footer_type = APP_MENU_FOOTER_TYPE_INSTALL;
+                } else {
+                    footer_type = APP_MENU_FOOTER_TYPE_UNAVAILABLE;
+                }
+            } else {
+                // Check for updates
+                if (app->executable_on_sd_available && app->executable_on_sd_revision > app->executable_revision) {
+                    footer_type = APP_MENU_FOOTER_TYPE_UPDATE;
+                }
+            }
+        }
+    };
+
+    if (previous_footer_type != footer_type) {
+        previous_footer_type = footer_type;
+        partial              = false;
+    }
+
     if (!partial || icons) {
-        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, FOOTER_LEFT,
-                                     FOOTER_RIGHT);
+        switch (footer_type) {
+            case APP_MENU_FOOTER_TYPE_NORMAL:
+                render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
+                                             ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
+                                             FOOTER_LEFT, FOOTER_RIGHT);
+                break;
+            case APP_MENU_FOOTER_TYPE_INSTALL:
+                render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
+                                             ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
+                                             FOOTER_LEFT, FOOTER_RIGHT_INSTALL);
+                break;
+            case APP_MENU_FOOTER_TYPE_UPDATE:
+                render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
+                                             ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
+                                             FOOTER_LEFT_UPDATE, FOOTER_RIGHT);
+                break;
+            case APP_MENU_FOOTER_TYPE_UNAVAILABLE:
+                render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
+                                             ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
+                                             FOOTER_LEFT, FOOTER_RIGHT_UNAVAILABLE);
+                break;
+            default:
+                break;
+        }
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
@@ -220,7 +303,26 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                 case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                     void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                     app_t* app = (app_t*)arg;
-                                    execute_app(buffer, theme, position, app);
+                                    if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
+                                        app->executable_appfs_fd == APPFS_INVALID_FD &&
+                                        app->executable_on_sd_available) {
+                                        // Install from SD card
+                                        busy_dialog(get_icon(ICON_APPS), "Installing", "Installing application...",
+                                                    true);
+                                        esp_err_t res = app_mgmt_install_from_file(app->slug, app->name,
+                                                                                   app->executable_on_sd_revision,
+                                                                                   app->executable_on_sd_filename);
+                                        if (res == ESP_OK) {
+                                            message_dialog(get_icon(ICON_INFO), "Success", "App installed successfully",
+                                                           "OK");
+                                        } else {
+                                            message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to install app",
+                                                           "OK");
+                                        }
+                                        refresh = true;
+                                    } else {
+                                        execute_app(buffer, theme, position, app);
+                                    }
                                     render(buffer, theme, &menu, position, false, false);
                                     break;
                                 }
@@ -256,6 +358,30 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     } else {
                                         render(buffer, theme, &menu, position, false, true);
                                     }
+                                    break;
+                                }
+                                case BSP_INPUT_NAVIGATION_KEY_F6: {
+                                    void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                    app_t* app = (app_t*)arg;
+                                    if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
+                                        app->executable_on_sd_available &&
+                                        app->executable_revision != app->executable_on_sd_revision) {
+                                        // Install from SD card
+                                        busy_dialog(get_icon(ICON_APPS), "Updating", "Updating application...", true);
+                                        esp_err_t res = app_mgmt_install_from_file(app->slug, app->name,
+                                                                                   app->executable_on_sd_revision,
+                                                                                   app->executable_on_sd_filename);
+                                        if (res == ESP_OK) {
+                                            message_dialog(get_icon(ICON_INFO), "Success", "App updated successfully",
+                                                           "OK");
+                                        } else {
+                                            message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to update app",
+                                                           "OK");
+                                        }
+                                    } else {
+                                        message_dialog(get_icon(ICON_ERROR), "Failed", "Nothing to update", "OK");
+                                    }
+                                    refresh = true;
                                     break;
                                 }
                                 default:

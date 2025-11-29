@@ -21,7 +21,7 @@ typedef struct {
     char*      name;
     char*      description;
     char*      categories[APP_MAX_NUM_CATEGORIES];
-    uint32_t   version;
+    char*      version;
     pax_buf_t* icon;
     char*      author;
     char*      license_type;
@@ -33,14 +33,18 @@ typedef struct {
     char*             executable_filename;
     char*             executable_interpreter_slug;
     appfs_handle_t    executable_appfs_fd;
+
+    bool     executable_on_sd_available;
+    uint32_t executable_on_sd_revision;
+    char*    executable_on_sd_filename;
 } app_t;
 
 appfs_handle_t find_appfs_handle_for_slug(const char* search_slug);
-app_t*         create_app(const char* path, const char* slug);
+app_t*         create_app(const char* path, const char* slug, bool sdcard);
 void           free_app(app_t* app);
 
 size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, const char* path, app_t** full_list,
-                                          size_t full_list_size);
+                                          size_t full_list_size, bool sdcard);
 size_t create_list_of_apps_from_other_appfs_entries(app_t** out_list, size_t list_size, app_t** full_list,
                                                     size_t full_list_size);
 size_t create_list_of_apps(app_t** out_list, size_t list_size);
