@@ -5,6 +5,8 @@ dependencies:
     version: ">=0.7.1"
   robotman2412/pax-gfx:
     version: ">=2.0.4"
+  robotman2412/pax-codecs:
+    version: ">=1.0.1"
   badgeteam/appfs:
     version: ">=1.0.1"
   nicolaielectronics/rvswd:
@@ -16,7 +18,7 @@ dependencies:
   nicolaielectronics/wifi-manager:
     version: ">=0.2.0"
   badgeteam/badge-elf:
-    version: ">=0.1.0"
+    version: ">=0.2.0"
     rules:
       - if: target == esp32p4
   badgeteam/badge-elf-api:
