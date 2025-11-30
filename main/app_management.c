@@ -345,17 +345,47 @@ esp_err_t app_mgmt_uninstall(const char* slug, app_mgmt_location_t location) {
     return res;
 }
 
-esp_err_t app_mgmt_move(const char* slug, app_mgmt_location_t from, app_mgmt_location_t to) {
-    // Implementation of the move function
-    return ESP_OK;  // Placeholder return value
-}
+esp_err_t app_mgmt_install_from_file(const char* slug, const char* name, uint32_t revision, char* firmware_path) {
+    if (slug == NULL || name == NULL || firmware_path == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
 
-bool app_mgmt_is_installed(const char* slug, app_mgmt_location_t location) {
-    // Implementation to check if an app is installed
-    return false;  // Placeholder return value
-}
+    FILE* fd = fopen(firmware_path, "rb");
+    if (fd == NULL) {
+        ESP_LOGE(TAG, "Failed to open executable file for app %s", slug);
+        return ESP_FAIL;
+    }
 
-bool app_mgmt_is_archived(const char* slug, app_mgmt_location_t location) {
-    // Implementation to check if an app is archived
-    return false;  // Placeholder return value
+    size_t   file_size = fs_utils_get_file_size(fd);
+    uint8_t* file_data = fs_utils_load_file_to_ram(fd);
+    fclose(fd);
+
+    if (file_data == NULL) {
+        ESP_LOGE(TAG, "Failed to read executable file for app %s", slug);
+        return ESP_FAIL;
+    }
+
+    appfs_handle_t appfs_file = APPFS_INVALID_FD;
+    if (appfsCreateFileExt(slug, name, revision, file_size, &appfs_file) != ESP_OK) {
+        free(file_data);
+        ESP_LOGE(TAG, "Failed to create appfs file: %s", slug);
+        return ESP_FAIL;
+    }
+
+    int rounded_size = (file_size + (SPI_FLASH_MMU_PAGE_SIZE - 1)) & (~(SPI_FLASH_MMU_PAGE_SIZE - 1));
+    if (appfsErase(appfs_file, 0, rounded_size) != ESP_OK) {
+        free(file_data);
+        ESP_LOGE(TAG, "Failed to erase appfs file: %s", slug);
+        return ESP_FAIL;
+    }
+
+    if (appfsWrite(appfs_file, 0, file_data, file_size) != ESP_OK) {
+        free(file_data);
+        ESP_LOGE(TAG, "Failed to install executable to AppFS: %s", slug);
+        return ESP_FAIL;
+    }
+
+    free(file_data);
+
+    return ESP_OK;
 }

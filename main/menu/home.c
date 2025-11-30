@@ -69,8 +69,8 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅼 Settings 🅰 Select"}}), 1
 #else
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
+#define FOOTER_LEFT  ((gui_element_icontext_t[]){{NULL, "F5 Settings"}, {NULL, "F6 USB mode"}}), 2
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ / ← / → | ⏎ Select"}}), 1
 #endif
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
