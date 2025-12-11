@@ -29,13 +29,14 @@ esp_err_t sd_mount(sd_pwr_ctrl_handle_t pwr_ctrl_handle) {
     esp_err_t res;
 
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = false, .max_files = 5, .allocation_unit_size = 16 * 1024};
+        .format_if_mount_failed = false, .max_files = 10, .allocation_unit_size = 16 * 1024};
 
     sdmmc_card_t* card;
     const char    mount_point[] = "/sd";
     ESP_LOGI(TAG, "Initializing SD card");
 
     sdmmc_host_t host    = SDMMC_HOST_DEFAULT();
+    host.max_freq_khz    = SDMMC_FREQ_HIGHSPEED;  // 40MHz for better throughput
     host.pwr_ctrl_handle = pwr_ctrl_handle;
 
     sdmmc_slot_config_t slot_config = {
@@ -78,13 +79,14 @@ esp_err_t sd_mount_spi(sd_pwr_ctrl_handle_t pwr_ctrl_handle) {
     esp_err_t res;
 
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = false, .max_files = 5, .allocation_unit_size = 16 * 1024};
+        .format_if_mount_failed = false, .max_files = 10, .allocation_unit_size = 16 * 1024};
 
     sdmmc_card_t* card;
     const char    mount_point[] = "/sd";
     ESP_LOGI(TAG, "Initializing SD card");
 
     sdmmc_host_t host    = SDSPI_HOST_DEFAULT();
+    host.max_freq_khz    = SDMMC_FREQ_HIGHSPEED;  // 40MHz for better throughput
     host.pwr_ctrl_handle = pwr_ctrl_handle;
 
     spi_bus_config_t bus_cfg = {
