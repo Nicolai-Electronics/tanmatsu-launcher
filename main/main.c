@@ -337,7 +337,8 @@ void app_main(void) {
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
         sd_pwr_ctrl_handle_t sd_pwr_handle = initialize_sd_ldo();
-        sd_mount_spi(sd_pwr_handle);
+        sd_mount(sd_pwr_handle);
+        // sd_speedtest();  // Uncomment to run SD card benchmark
         test_sd();
 #endif
     }
