@@ -130,6 +130,54 @@ esp_err_t sd_mount_spi(sd_pwr_ctrl_handle_t pwr_ctrl_handle) {
     return ESP_OK;
 }
 
+// Fast file I/O helpers - use internal DMA RAM for stdio buffers
+#define SD_STDIO_BUF_SIZE 8192
+#define SD_FILE_MAX_TRACKED 8
+
+typedef struct {
+    FILE* file;
+    void* buffer;
+} sd_file_entry_t;
+
+static sd_file_entry_t sd_file_table[SD_FILE_MAX_TRACKED] = {0};
+
+FILE* sd_fopen(const char* path, const char* mode) {
+    FILE* f = fopen(path, mode);
+    if (f == NULL) return NULL;
+
+    // Allocate stdio buffer in internal DMA-capable RAM for fast SD card access
+    void* buf = heap_caps_malloc(SD_STDIO_BUF_SIZE, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    if (buf != NULL) {
+        setvbuf(f, buf, _IOFBF, SD_STDIO_BUF_SIZE);
+        // Track the buffer so we can free it on close
+        for (int i = 0; i < SD_FILE_MAX_TRACKED; i++) {
+            if (sd_file_table[i].file == NULL) {
+                sd_file_table[i].file = f;
+                sd_file_table[i].buffer = buf;
+                break;
+            }
+        }
+    }
+    return f;
+}
+
+void sd_fclose(FILE* f) {
+    if (f == NULL) return;
+
+    // Find and free the tracked buffer
+    for (int i = 0; i < SD_FILE_MAX_TRACKED; i++) {
+        if (sd_file_table[i].file == f) {
+            fclose(f);
+            free(sd_file_table[i].buffer);
+            sd_file_table[i].file = NULL;
+            sd_file_table[i].buffer = NULL;
+            return;
+        }
+    }
+    // Not tracked (buffer allocation failed), just close
+    fclose(f);
+}
+
 #define SPEEDTEST_SIZE (20 * 1024 * 1024)  // 20MB
 #define SPEEDTEST_CHUNK_SIZE (32 * 1024)  // 32KB chunks for efficient I/O
 

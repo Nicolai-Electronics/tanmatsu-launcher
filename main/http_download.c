@@ -8,6 +8,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "sdcard.h"
 
 static const char* TAG = "HTTP download";
 
@@ -99,7 +100,9 @@ static bool download_success(esp_err_t err, http_download_info_t* info) {
 }
 
 static bool _download_file(const char* url, const char* path) {
-    FILE* fd = fopen(path, "w");
+    // Use fast SD card I/O for /sd paths
+    bool  is_sd = (strncmp(path, "/sd", 3) == 0);
+    FILE* fd    = is_sd ? sd_fopen(path, "w") : fopen(path, "w");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open file");
         return false;
@@ -120,7 +123,11 @@ static bool _download_file(const char* url, const char* path) {
                                        .user_agent          = user_agent};
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t                err    = esp_http_client_perform(client);
-    fclose(fd);
+    if (is_sd) {
+        sd_fclose(fd);
+    } else {
+        fclose(fd);
+    }
     esp_http_client_cleanup(client);
     return download_success(err, &info);
 }

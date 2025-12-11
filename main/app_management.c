@@ -9,6 +9,7 @@
 #include "filesystem_utils.h"
 #include "http_download.h"
 #include "repository_client.h"
+#include "sdcard.h"
 
 static const char* TAG = "App management";
 
@@ -147,7 +148,8 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
     // Store metadata in the app directory
     char file_path[512] = {0};
     snprintf(file_path, sizeof(file_path), "%s/metadata.json", app_path);
-    FILE* fd = fopen(file_path, "wb");
+    bool  is_sd = (location == APP_MGMT_LOCATION_SD);
+    FILE* fd    = is_sd ? sd_fopen(file_path, "wb") : fopen(file_path, "wb");
     if (fd == NULL) {
         free_repository_data_json(&metadata);
         free_repository_data_json(&information);
@@ -155,7 +157,11 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
         return ESP_FAIL;
     }
     fwrite(metadata.data, 1, metadata.size, fd);
-    fclose(fd);
+    if (is_sd) {
+        sd_fclose(fd);
+    } else {
+        fclose(fd);
+    }
 
     // Install assets
     cJSON* assets = cJSON_GetObjectItem(application, "assets");
@@ -269,7 +275,7 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
 
             if (location == APP_MGMT_LOCATION_SD) {
                 snprintf(file_path, sizeof(file_path), "%s/%s", app_path, executable);
-                FILE* fd = fopen(file_path, "wb");
+                FILE* fd = sd_fopen(file_path, "wb");
                 if (fd == NULL) {
                     free(file_data);
                     free_repository_data_json(&metadata);
@@ -279,7 +285,7 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
                     return ESP_FAIL;
                 }
                 fwrite(file_data, 1, file_size, fd);
-                fclose(fd);
+                sd_fclose(fd);
             }
 
             free(file_data);
@@ -350,7 +356,8 @@ esp_err_t app_mgmt_install_from_file(const char* slug, const char* name, uint32_
         return ESP_ERR_INVALID_ARG;
     }
 
-    FILE* fd = fopen(firmware_path, "rb");
+    bool  is_sd = (strncmp(firmware_path, "/sd", 3) == 0);
+    FILE* fd    = is_sd ? sd_fopen(firmware_path, "rb") : fopen(firmware_path, "rb");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open executable file for app %s", slug);
         return ESP_FAIL;
@@ -358,7 +365,11 @@ esp_err_t app_mgmt_install_from_file(const char* slug, const char* name, uint32_
 
     size_t   file_size = fs_utils_get_file_size(fd);
     uint8_t* file_data = fs_utils_load_file_to_ram(fd);
-    fclose(fd);
+    if (is_sd) {
+        sd_fclose(fd);
+    } else {
+        fclose(fd);
+    }
 
     if (file_data == NULL) {
         ESP_LOGE(TAG, "Failed to read executable file for app %s", slug);

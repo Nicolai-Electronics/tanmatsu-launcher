@@ -14,6 +14,7 @@
 #include "pax_matrix.h"
 #include "pax_text.h"
 #include "pax_types.h"
+#include "sdcard.h"
 
 static const char* TAG = "nametag";
 
@@ -40,9 +41,11 @@ static bool load_nametag(void) {
         ESP_LOGE(TAG, "Failed to allocate memory for nametag");
         return false;
     }*/
-    FILE* fd = fopen("/sd/nametag.png", "rb");
+    bool  from_sd = true;
+    FILE* fd      = sd_fopen("/sd/nametag.png", "rb");
     if (fd == NULL) {
-        fd = fopen("/int/nametag.png", "rb");
+        from_sd = false;
+        fd      = fopen("/int/nametag.png", "rb");
         if (fd == NULL) {
             ESP_LOGE(TAG, "Failed to open file");
             // free(nametag_buffer);
@@ -55,9 +58,18 @@ static bool load_nametag(void) {
         ESP_LOGE(TAG, "Failed to decode png file");
         // free(nametag_buffer);
         // nametag_buffer = NULL;
+        if (from_sd) {
+            sd_fclose(fd);
+        } else {
+            fclose(fd);
+        }
         return false;
     }
-    fclose(fd);
+    if (from_sd) {
+        sd_fclose(fd);
+    } else {
+        fclose(fd);
+    }
     return true;
 }
 
