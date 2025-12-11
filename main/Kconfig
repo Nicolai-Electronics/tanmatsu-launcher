@@ -1,0 +1,15 @@
+menu "SD Card"
+
+    config SD_FAST_IO
+        bool "Use fast SD card I/O with internal DMA buffers"
+        default n
+        help
+            When enabled, sd_fopen() and sd_fclose() will allocate stdio buffers
+            in internal DMA-capable RAM instead of PSRAM. This significantly
+            improves SD card read/write performance on ESP32-P4 by avoiding
+            PSRAM cache synchronization overhead.
+
+            Enabling this uses approximately 8KB of internal RAM per open file
+            (up to 8 files tracked).
+
+endmenu
