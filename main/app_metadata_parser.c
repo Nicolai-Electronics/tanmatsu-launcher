@@ -205,6 +205,8 @@ app_t* create_app(const char* path, const char* slug, bool sdcard) {
             app->icon     = calloc(1, sizeof(pax_buf_t));
             if (app->icon != NULL) {
                 if (!pax_decode_png_fd(app->icon, icon_fd, PAX_BUF_32_8888ARGB, 0)) {
+                    free(app->icon);
+                    app->icon = NULL;
                     ESP_LOGE(TAG, "Failed to decode icon for app %s", slug);
                 }
             } else {
