@@ -189,7 +189,7 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
 
             char status_text[64] = {0};
             snprintf(status_text, sizeof(status_text), "Downloading asset '%s'...", target_file->valuestring);
-            if (!download_file(file_url, file_path, download_callback, status_text)) {
+            if (!download_file(file_url, target_path, download_callback, status_text)) {
                 free_repository_data_json(&metadata);
                 free_repository_data_json(&information);
                 app_mgmt_uninstall(slug, location);
