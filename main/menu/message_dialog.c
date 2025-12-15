@@ -102,33 +102,44 @@ extern bool wifi_stack_get_initialized(void);
 static wifi_ap_record_t connected_ap = {0};
 
 static gui_element_icontext_t wifi_indicator(void) {
-    bool        radio_initialized = wifi_stack_get_initialized();
-    wifi_mode_t mode              = WIFI_MODE_NULL;
-    if (radio_initialized && esp_wifi_get_mode(&mode) == ESP_OK) {
-        if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
-            if (wifi_connection_is_connected() && esp_wifi_sta_get_ap_info(&connected_ap) == ESP_OK) {
-                pax_buf_t* icon = get_icon(ICON_WIFI_0);
-                if (connected_ap.rssi > -50) {
-                    icon = get_icon(ICON_WIFI_4);
-                } else if (connected_ap.rssi > -60) {
-                    icon = get_icon(ICON_WIFI_3);
-                } else if (connected_ap.rssi > -70) {
-                    icon = get_icon(ICON_WIFI_2);
-                } else if (connected_ap.rssi > -80) {
-                    icon = get_icon(ICON_WIFI_1);
+    bool              radio_initialized = wifi_stack_get_initialized();
+    wifi_mode_t       mode              = WIFI_MODE_NULL;
+    bsp_radio_state_t state;
+    bsp_power_get_radio_state(&state);
+    switch (state) {
+        case BSP_POWER_RADIO_STATE_OFF:
+            return (gui_element_icontext_t){NULL, ""};
+        case BSP_POWER_RADIO_STATE_BOOTLOADER:
+            return (gui_element_icontext_t){NULL, "BOOT"};
+        case BSP_POWER_RADIO_STATE_APPLICATION:
+        default:
+            if (radio_initialized && esp_wifi_get_mode(&mode) == ESP_OK) {
+                if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
+                    if (wifi_connection_is_connected() && esp_wifi_sta_get_ap_info(&connected_ap) == ESP_OK) {
+                        pax_buf_t* icon = get_icon(ICON_WIFI_0);
+                        if (connected_ap.rssi > -50) {
+                            icon = get_icon(ICON_WIFI_4);
+                        } else if (connected_ap.rssi > -60) {
+                            icon = get_icon(ICON_WIFI_3);
+                        } else if (connected_ap.rssi > -70) {
+                            icon = get_icon(ICON_WIFI_2);
+                        } else if (connected_ap.rssi > -80) {
+                            icon = get_icon(ICON_WIFI_1);
+                        }
+                        return (gui_element_icontext_t){icon, (char*)connected_ap.ssid};
+                    } else {
+                        return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), "Disconnected"};
+                    }
+                } else if (mode == WIFI_MODE_AP) {
+                    return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), ""};  // AP mode is currently unused
+                    // The device will be in AP mode by default until connection to a network is
+                } else {
+                    return (gui_element_icontext_t){get_icon(ICON_WIFI_UNKNOWN), "Other"};
                 }
-                return (gui_element_icontext_t){icon, (char*)connected_ap.ssid};
             } else {
-                return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), "Disconnected"};
+                return (gui_element_icontext_t){get_icon(ICON_WIFI_ERROR), ""};
             }
-        } else if (mode == WIFI_MODE_AP) {
-            return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), ""};  // AP mode is currently unused
-            // The device will be in AP mode by default until connection to a network is
-        } else {
-            return (gui_element_icontext_t){get_icon(ICON_WIFI_UNKNOWN), "Other"};
-        }
-    } else {
-        return (gui_element_icontext_t){get_icon(ICON_WIFI_ERROR), ""};
+            break;
     }
 }
 
@@ -181,9 +192,12 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
         header_right[3]    = wifi_indicator();
         header_right[4]    = sdcard_indicator();
         header_right_count = 5;
+    } else {
+        header_right_count = 0;
     }
-    render_base_screen(buffer, theme, background, header, footer, header_left, header_left_count, header_right,
-                       header_right_count, footer_left, footer_left_count, footer_right, footer_right_count);
+    render_base_screen(buffer, theme, background, header || footer, footer, header_left, header_left_count,
+                       header_right, header_right_count, footer_left, footer_left_count, footer_right,
+                       footer_right_count);
 }
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, pax_buf_t* icon, const char* title,
@@ -330,12 +344,12 @@ message_dialog_return_type_t adv_dialog_yes_no_cancel(pax_buf_t* icon, const cha
     }
 }
 
-void busy_dialog(pax_buf_t* icon, const char* title, const char* message) {
+void busy_dialog(pax_buf_t* icon, const char* title, const char* message, bool header) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
 
-    render_base_screen_statusbar(buffer, theme, true, true, true, ((gui_element_icontext_t[]){{icon, (char*)title}}), 1,
-                                 NULL, 0, NULL, 0);
+    render_base_screen_statusbar(buffer, theme, true, header, true, ((gui_element_icontext_t[]){{icon, (char*)title}}),
+                                 1, NULL, 0, NULL, 0);
 
     pax_center_text(buffer, 0xFF000000, theme->menu.text_font, 24, pax_buf_get_width(buffer) / 2.0f,
                     (pax_buf_get_height(buffer) - 24) / 2.0f, message);

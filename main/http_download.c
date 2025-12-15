@@ -1,4 +1,5 @@
 #include "http_download.h"
+#include "device_settings.h"
 #include "esp_event.h"
 #include "esp_http_client.h"
 #include "esp_system.h"
@@ -107,12 +108,16 @@ static bool _download_file(const char* url, const char* path) {
     http_download_info_t info = {0};
     info.fd                   = fd;
 
+    char user_agent[128] = {0};
+    device_settings_get_http_user_agent(user_agent, sizeof(user_agent));
+
     esp_http_client_config_t config = {.url                 = url,
                                        .use_global_ca_store = true,
                                        .keep_alive_enable   = true,
                                        .timeout_ms          = 10000,
                                        .user_data           = (void*)&info,
-                                       .event_handler       = _event_handler};
+                                       .event_handler       = _event_handler,
+                                       .user_agent          = user_agent};
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t                err    = esp_http_client_perform(client);
     fclose(fd);
@@ -133,14 +138,19 @@ bool download_file(const char* url, const char* path, download_callback_t callba
 }
 
 static bool _download_ram(const char* url, uint8_t** ptr, size_t* size) {
-    http_download_info_t info        = {0};
-    info.buffer                      = ptr;
+    http_download_info_t info = {0};
+    info.buffer               = ptr;
+
+    char user_agent[128] = {0};
+    device_settings_get_http_user_agent(user_agent, sizeof(user_agent));
+
     esp_http_client_config_t config  = {.url                 = url,
                                         .use_global_ca_store = true,
                                         .keep_alive_enable   = true,
                                         .timeout_ms          = 10000,
                                         .user_data           = (void*)&info,
-                                        .event_handler       = _event_handler};
+                                        .event_handler       = _event_handler,
+                                        .user_agent          = user_agent};
     esp_http_client_handle_t client  = esp_http_client_init(&config);
     esp_err_t                err     = esp_http_client_perform(client);
     bool                     success = download_success(err, &info);

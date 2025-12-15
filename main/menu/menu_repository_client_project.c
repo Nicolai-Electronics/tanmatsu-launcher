@@ -6,6 +6,7 @@
 #include "bsp/input.h"
 #include "cJSON.h"
 #include "common/display.h"
+#include "device_settings.h"
 #include "esp_log.h"
 #include "gui_menu.h"
 #include "gui_style.h"
@@ -99,17 +100,19 @@ static void download_callback(size_t download_position, size_t file_size, const 
     last_percentage = percentage;
     char text[64];
     sprintf(text, "%s (%u%%)", status_text, percentage);
-    busy_dialog(get_icon(ICON_DOWNLOADING), "Downloading", text);
+    busy_dialog(get_icon(ICON_DOWNLOADING), "Downloading", text, true);
 };
 
 static void execute_action(pax_buf_t* buffer, menu_repository_client_project_action_t action, gui_theme_t* theme,
                            cJSON* wrapper) {
+    char server[128] = {0};
+    device_settings_get_repo_server(server, sizeof(server));
 
     cJSON* slug_obj = cJSON_GetObjectItem(wrapper, "slug");
     switch (action) {
         case ACTION_INSTALL: {
-            busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Installing on internal memory...");
-            if (app_mgmt_install("https://apps.tanmatsu.cloud", slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL,
+            busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Installing on internal memory...", true);
+            if (app_mgmt_install(server, slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL,
                                  download_callback) != ESP_OK) {
                 message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK");
             } else {
@@ -118,8 +121,8 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
             break;
         }
         case ACTION_INSTALL_SD: {
-            busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Installing on SD card...");
-            if (app_mgmt_install("https://apps.tanmatsu.cloud", slug_obj->valuestring, APP_MGMT_LOCATION_SD,
+            busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Installing on SD card...", true);
+            if (app_mgmt_install(server, slug_obj->valuestring, APP_MGMT_LOCATION_SD,
                                  download_callback) != ESP_OK) {
                 message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK, download_callback");
             } else {
@@ -133,7 +136,7 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
 }
 
 void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON* wrapper) {
-    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Rendering project...");
+    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Rendering project...", true);
 
     cJSON* project = cJSON_GetObjectItem(wrapper, "project");
     if (project == NULL) {

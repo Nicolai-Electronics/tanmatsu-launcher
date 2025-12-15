@@ -1,5 +1,6 @@
 #include "app_metadata_parser.h"
 #include <ctype.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include "bsp/device.h"
@@ -11,6 +12,7 @@
 #include "pax_codecs.h"
 #include "pax_gfx.h"
 #include "pax_types.h"
+#include "sys/unistd.h"
 
 static const char* TAG = "App metadata";
 
@@ -38,7 +40,103 @@ appfs_handle_t find_appfs_handle_for_slug(const char* search_slug) {
     return APPFS_INVALID_FD;
 }
 
-app_t* create_app(const char* path, const char* slug) {
+bool get_executable_revision(const char* path, const char* slug, uint32_t* out_revision, char** out_executable) {
+    printf("Finding executable revision for app %s in %s\n", slug, path);
+    bool result = false;
+
+    app_t* app = calloc(1, sizeof(app_t));
+    app->path  = strdup(path);
+    app->slug  = strdup(slug);
+
+    char path_buffer[256] = {0};
+    snprintf(path_buffer, sizeof(path_buffer), "%s/%s/metadata.json", path, slug);
+    FILE* fd = fopen(path_buffer, "r");
+    if (fd == NULL) {
+        ESP_LOGE(TAG, "Failed to open metadata file %s", path_buffer);
+        return app;
+    }
+
+    char* json_data = (char*)load_file_to_ram(fd);
+    fclose(fd);
+
+    if (json_data == NULL) {
+        ESP_LOGE(TAG, "Failed to read from metadata file %s", path_buffer);
+        return app;
+    }
+
+    cJSON* root = cJSON_Parse(json_data);
+    if (root == NULL) {
+        free(json_data);
+        ESP_LOGE(TAG, "Failed to parse metadata file %s", path_buffer);
+        return app;
+    }
+
+    char device_name[32] = {0};
+    bsp_device_get_name(device_name, sizeof(device_name));
+    for (int i = 0; device_name[i]; i++) {
+        device_name[i] = tolower(device_name[i]);
+    }
+
+    cJSON* matched_executable = NULL;
+    cJSON* executable_obj     = cJSON_GetObjectItem(root, "application");
+    if (executable_obj) {
+        cJSON* executable_entry_obj = NULL;
+        cJSON_ArrayForEach(executable_entry_obj, executable_obj) {
+            cJSON* targets_obj = cJSON_GetObjectItem(executable_entry_obj, "targets");
+            if (targets_obj) {
+                cJSON* target_obj = NULL;
+                cJSON_ArrayForEach(target_obj, targets_obj) {
+                    if (target_obj && (target_obj->valuestring != NULL) &&
+                        (strcmp(target_obj->valuestring, device_name) == 0) &&
+                        strlen(target_obj->valuestring) == strlen(device_name)) {
+                        matched_executable = executable_entry_obj;
+                        break;
+                    }
+                }
+            }
+            if (matched_executable != NULL) {
+                break;
+            }
+        }
+    }
+
+    if (matched_executable != NULL) {
+        // Parse application
+        cJSON* type_obj = cJSON_GetObjectItem(matched_executable, "type");
+        if (type_obj && (type_obj->valuestring != NULL)) {
+            if (strcmp(type_obj->valuestring, "appfs") == 0) {
+                app->executable_type     = EXECUTABLE_TYPE_APPFS;
+                app->executable_appfs_fd = find_appfs_handle_for_slug(app->slug);
+
+                cJSON* revision_obj = cJSON_GetObjectItem(matched_executable, "revision");
+                if (revision_obj) {
+                    *out_revision = revision_obj->valueint;
+                    if (out_executable != NULL) {
+                        cJSON* executable_obj = cJSON_GetObjectItem(matched_executable, "executable");
+                        if (executable_obj != NULL && cJSON_IsString(executable_obj)) {
+                            size_t length = snprintf(NULL, 0, "%s/%s/%s", path, slug, executable_obj->valuestring);
+                            if (length > 0) {
+                                *out_executable = malloc(length + 1);
+                                if (*out_executable) {
+                                    snprintf(*out_executable, length + 1, "%s/%s/%s", path, slug,
+                                             executable_obj->valuestring);
+                                    result = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    cJSON_Delete(root);
+    free(json_data);
+
+    return result;
+}
+
+app_t* create_app(const char* path, const char* slug, bool sdcard) {
     app_t* app = calloc(1, sizeof(app_t));
     app->path  = strdup(path);
     app->slug  = strdup(slug);
@@ -95,7 +193,7 @@ app_t* create_app(const char* path, const char* slug) {
 
     cJSON* version_obj = cJSON_GetObjectItem(root, "version");
     if (version_obj) {
-        app->version = version_obj->valueint;
+        app->version = strdup(version_obj->valuestring);
     }
 
     cJSON* icon_obj = cJSON_GetObjectItem(root, "icon");
@@ -107,6 +205,8 @@ app_t* create_app(const char* path, const char* slug) {
             app->icon     = calloc(1, sizeof(pax_buf_t));
             if (app->icon != NULL) {
                 if (!pax_decode_png_fd(app->icon, icon_fd, PAX_BUF_32_8888ARGB, 0)) {
+                    free(app->icon);
+                    app->icon = NULL;
                     ESP_LOGE(TAG, "Failed to decode icon for app %s", slug);
                 }
             } else {
@@ -197,6 +297,29 @@ app_t* create_app(const char* path, const char* slug) {
             cJSON* filename_obj = cJSON_GetObjectItem(matched_executable, "executable");
             if (filename_obj && (filename_obj->valuestring != NULL)) {
                 app->executable_filename = strdup(filename_obj->valuestring);
+
+                if (app->executable_type == EXECUTABLE_TYPE_APPFS && sdcard) {
+                    // Check for SD card executable
+                    app->executable_on_sd_revision = app->executable_revision;
+                    app->executable_on_sd_filename = strdup(app->executable_filename);
+
+                    printf("Check\r\n");
+
+                    size_t length = snprintf(NULL, 0, "%s/%s/%s", path, slug, app->executable_filename);
+                    if (length > 0) {
+                        app->executable_on_sd_filename = malloc(length + 1);
+                        if (app->executable_on_sd_filename) {
+                            snprintf(app->executable_on_sd_filename, length + 1, "%s/%s/%s", path, slug,
+                                     app->executable_filename);
+                            if (access(app->executable_on_sd_filename, F_OK) == 0) {
+                                printf("Found!!!!\r\n");
+                                app->executable_on_sd_available = true;
+                            } else {
+                                printf("Not found (%s)!!!\r\n", app->executable_on_sd_filename);
+                            }
+                        }
+                    }
+                }
             }
 
             cJSON* interpreter_obj = cJSON_GetObjectItem(matched_executable, "interpreter");
@@ -229,6 +352,7 @@ void free_app(app_t* app) {
     if (app->slug != NULL) free(app->slug);
     if (app->name != NULL) free(app->name);
     if (app->description != NULL) free(app->description);
+    if (app->version != NULL) free(app->version);
     for (int i = 0; i < APP_MAX_NUM_CATEGORIES; i++) {
         if (app->categories[i] != NULL) {
             free(app->categories[i]);
@@ -244,11 +368,12 @@ void free_app(app_t* app) {
         pax_buf_destroy(app->icon);
         free(app->icon);
     }
+    if (app->executable_on_sd_filename != NULL) free(app->executable_on_sd_filename);
     free(app);
 }
 
 size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, const char* path, app_t** full_list,
-                                          size_t full_list_size) {
+                                          size_t full_list_size, bool sdcard) {
     DIR* dir = opendir(path);
     if (dir == NULL) {
         return 0;
@@ -265,11 +390,19 @@ size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, co
                 if (full_list[i] != NULL && full_list[i]->slug != NULL &&
                     strcmp(full_list[i]->slug, entry->d_name) == 0) {
                     already_in_list = true;
+
+                    // Add SD card executable info if applicable
+                    if (sdcard && get_executable_revision(path, entry->d_name, &full_list[i]->executable_on_sd_revision,
+                                                          &full_list[i]->executable_on_sd_filename)) {
+                        if (access(full_list[i]->executable_on_sd_filename, F_OK) == 0) {
+                            full_list[i]->executable_on_sd_available = true;
+                        }
+                    }
                     break;
                 }
             }
             if (!already_in_list) {
-                app_t* app = create_app(path, entry->d_name);
+                app_t* app = create_app(path, entry->d_name, sdcard);
                 if (app != NULL && count < list_size) {
                     out_list[count++] = app;
                 }
@@ -302,13 +435,14 @@ size_t create_list_of_apps_from_other_appfs_entries(app_t** out_list, size_t lis
         }
 
         if (!already_in_list) {
-            app_t* app           = calloc(1, sizeof(app_t));
-            app->slug            = strdup(slug);
-            app->name            = strdup(name);
-            app->path            = strdup("");
-            app->version         = version;
-            app->icon            = calloc(1, sizeof(pax_buf_t));
-            app->executable_type = EXECUTABLE_TYPE_APPFS;
+            app_t* app               = calloc(1, sizeof(app_t));
+            app->slug                = strdup(slug);
+            app->name                = (strcmp(name, "main.bin") == 0) ? strdup(slug) : strdup(name);
+            app->path                = strdup("");
+            app->version             = strdup("Unknown");
+            app->icon                = calloc(1, sizeof(pax_buf_t));
+            app->executable_type     = EXECUTABLE_TYPE_APPFS;
+            app->executable_revision = version;
             if (app->icon != NULL) {
                 pax_buf_init(app->icon, NULL, 32, 32, PAX_BUF_32_8888ARGB);
                 pax_draw_image(app->icon, get_icon(ICON_APP), 0, 0);
@@ -325,8 +459,10 @@ size_t create_list_of_apps_from_other_appfs_entries(app_t** out_list, size_t lis
 size_t create_list_of_apps(app_t** out_list, size_t list_size) {
     size_t count = 0;
 
-    count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/sd/apps", out_list, list_size);
-    count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/int/apps", out_list, list_size);
+    count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/int/apps", out_list, list_size,
+                                                false);
+    count +=
+        create_list_of_apps_from_directory(&out_list[count], list_size - count, "/sd/apps", out_list, list_size, true);
     count += create_list_of_apps_from_other_appfs_entries(&out_list[count], list_size - count, out_list, list_size);
     return count;
 }

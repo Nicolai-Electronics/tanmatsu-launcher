@@ -1,5 +1,6 @@
 #include "chakrapetchmedium.h"
 #include "gui_style.h"
+#include "pax_gfx.h"
 #include "sdkconfig.h"
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
@@ -77,32 +78,29 @@ const gui_theme_t theme = {
 const gui_theme_t theme = {
     .palette =
         {
-            .color_foreground          = 0xFF000000,  // #000000
-            .color_background          = 0xFFFFFFFF,  // #FFFFFF
-            .color_active_foreground   = 0xFFFFFFFF,  // #FFFFFF
-            .color_active_background   = 0xFF491d88,  // #491d88
-            .color_highlight_primary   = 0xFFFEC859,  // #FEC859
-            .color_highlight_secondary = 0xFFFEC859,  // #FEC859
-            .color_highlight_tertiary  = 0xFFFEC859,  // #FEC859
+            .color_foreground          = 0xFF340132,  // #340132
+            .color_background          = 0xFFEEEAEE,  // #EEEAEE
+            .color_active_foreground   = 0xFF340132,  // #340132
+            .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
+            .color_highlight_primary   = 0xFF01BC99,  // #01BC99
+            .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
+            .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
         },
     .footer =
         {
             .height             = 24,
             .vertical_margin    = 0,
             .horizontal_margin  = 0,
-            .text_height        = 16,
+            .text_height        = 18,
             .vertical_padding   = 0,
             .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
+            .text_font          = pax_font_saira_regular,
             .palette =
                 {
-                    .color_foreground          = 0xFFFEC859,  // #FEC859
-                    .color_background          = 0xFF491d88,  // #491d88
-                    .color_active_foreground   = 0xFFFEC859,  // #FEC859
-                    .color_active_background   = 0xFF491d88,  // #491d88
-                    .color_highlight_primary   = 0xFFFEC859,  // #FEC859
-                    .color_highlight_secondary = 0xFFFEC859,  // #FEC859
-                    .color_highlight_tertiary  = 0xFFFEC859,  // #FEC859
+                    .color_foreground        = 0xFF340132,  // #340132
+                    .color_background        = 0xFFEEEAEE,  // #EEEAEE
+                    .color_active_foreground = 0xFF340132,  // #340132
+                    .color_active_background = 0xFFFFFFFF,  // #FFFFFF
                 },
         },
     .header =
@@ -110,19 +108,16 @@ const gui_theme_t theme = {
             .height             = 32,
             .vertical_margin    = 0,
             .horizontal_margin  = 0,
-            .text_height        = 16,
+            .text_height        = 18,
             .vertical_padding   = 0,
             .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
+            .text_font          = pax_font_saira_regular,
             .palette =
                 {
-                    .color_foreground          = 0xFFFEC859,  // #FEC859
-                    .color_background          = 0xFF491d88,  // #491d88
-                    .color_active_foreground   = 0xFFFEC859,  // #FEC859
-                    .color_active_background   = 0xFF491d88,  // #491d88
-                    .color_highlight_primary   = 0xFFFEC859,  // #FEC859
-                    .color_highlight_secondary = 0xFFFEC859,  // #FEC859
-                    .color_highlight_tertiary  = 0xFFFEC859,  // #FEC859
+                    .color_foreground        = 0xFF340132,  // #340132
+                    .color_background        = 0xFFEEEAEE,  // #EEEAEE
+                    .color_active_foreground = 0xFF340132,  // #340132
+                    .color_active_background = 0xFFFFFFFF,  // #FFFFFF
                 },
         },
     .menu =
@@ -130,22 +125,22 @@ const gui_theme_t theme = {
             .height                = 240 - 32 - 16,
             .vertical_margin       = 0,
             .horizontal_margin     = 0,
-            .text_height           = 16,
+            .text_height           = 18,
             .vertical_padding      = 3,
             .horizontal_padding    = 3,
-            .text_font             = &chakrapetchmedium,
+            .text_font             = pax_font_saira_regular,
             .list_entry_height     = 32,
             .grid_horizontal_count = 3,
             .grid_vertical_count   = 3,
             .palette =
                 {
-                    .color_foreground          = 0xFF000000,  // #000000
-                    .color_background          = 0xFFFFFFFF,  // #FFFFFF
-                    .color_active_foreground   = 0xFFFFFFFF,  // #FFFFFF
-                    .color_active_background   = 0xFF491d88,  // #491d88
-                    .color_highlight_primary   = 0xFFFEC859,  // #FEC859
-                    .color_highlight_secondary = 0xFFFEC859,  // #FEC859
-                    .color_highlight_tertiary  = 0xFFFEC859,  // #FEC859
+                    .color_foreground          = 0xFF340132,  // #340132
+                    .color_background          = 0xFFEEEAEE,  // #EEEAEE
+                    .color_active_foreground   = 0xFF340132,  // #340132
+                    .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
+                    .color_highlight_primary   = 0xFF01BC99,  // #01BC99
+                    .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
+                    .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
                 },
         },
 };
@@ -166,10 +161,10 @@ const gui_theme_t theme = {
             .height             = 16,
             .vertical_margin    = 0,
             .horizontal_margin  = 0,
-            .text_height        = 16,
+            .text_height        = 18,
             .vertical_padding   = 5,
             .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
+            .text_font          = pax_font_saira_regular,
             .palette =
                 {
                     .color_foreground          = 1,
@@ -186,10 +181,10 @@ const gui_theme_t theme = {
             .height             = 32,
             .vertical_margin    = 0,
             .horizontal_margin  = 0,
-            .text_height        = 16,
+            .text_height        = 18,
             .vertical_padding   = 0,
             .horizontal_padding = 0,
-            .text_font          = &chakrapetchmedium,
+            .text_font          = pax_font_saira_regular,
             .palette =
                 {
                     .color_foreground          = 1,
@@ -206,10 +201,10 @@ const gui_theme_t theme = {
             .height                = 240 - 32 - 16,
             .vertical_margin       = 0,
             .horizontal_margin     = 0,
-            .text_height           = 16,
+            .text_height           = 18,
             .vertical_padding      = 3,
             .horizontal_padding    = 3,
-            .text_font             = &chakrapetchmedium,
+            .text_font             = pax_font_saira_regular,
             .list_entry_height     = 32,
             .grid_horizontal_count = 3,
             .grid_vertical_count   = 3,

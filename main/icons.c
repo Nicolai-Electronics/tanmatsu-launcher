@@ -81,12 +81,12 @@ const char* icon_paths[] = {
     [ICON_GLOBE_LOCATION]      = "/int/icons/menu/globe_location.png",
     [ICON_APP]                 = "/int/icons/menu/app.png",
     [ICON_ERROR]               = "/int/icons/menu/error.png",
+    [ICON_BRIGHTNESS]          = "/int/icons/menu/brightness.png",  // Missing!
 };
 
-pax_buf_t icons[ICON_LAST] = {0};
+pax_buf_t EXT_RAM_BSS_ATTR icons[ICON_LAST] = {0};
 
 void load_icons(void) {
-#if !defined(CONFIG_BSP_TARGET_MCH2022)
     for (int i = 0; i < ICON_LAST; i++) {
         FILE* fd = fopen(icon_paths[i], "rb");
         if (fd == NULL) {
@@ -109,7 +109,6 @@ void load_icons(void) {
         }
         fclose(fd);
     }
-#endif
 }
 
 pax_buf_t* get_icon(icon_t icon) {

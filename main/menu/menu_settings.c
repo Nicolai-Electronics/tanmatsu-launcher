@@ -12,6 +12,7 @@
 #include "menu/menu_power_information.h"
 #include "menu/message_dialog.h"
 #include "menu/wifi.h"
+#include "menu_brightness.h"
 #include "menu_device_information.h"
 #include "menu_filebrowser.h"
 #include "menu_hardware_test.h"
@@ -20,9 +21,23 @@
 #include "pax_types.h"
 #include "radio_update.h"
 #include "settings_clock.h"
+#include "settings_repository.h"
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1
+#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
+#define FOOTER_LEFT  NULL, 0
+#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | 🅱 Back 🅰 Select"}}), 1
+#else
+#define FOOTER_LEFT  NULL, 0
+#define FOOTER_RIGHT NULL, 0
+#endif
 
 typedef enum {
     ACTION_NONE,
+    ACTION_BRIGHTNESS,
     ACTION_WIFI,
     ACTION_CLOCK,
     ACTION_FIRMWARE_UPDATE,
@@ -32,6 +47,7 @@ typedef enum {
     ACTION_RADIO_UPDATE,
     ACTION_POWER_INFORMATION,
     ACTION_HARDWARE_TEST,
+    ACTION_REPOSITORY,
 } menu_home_action_t;
 
 static void radio_update_v2(void) {
@@ -45,6 +61,9 @@ static void radio_update_v2(void) {
 
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
     switch (action) {
+        case ACTION_BRIGHTNESS:
+            menu_brightness();
+            break;
         case ACTION_WIFI:
             menu_wifi(fb, theme);
             break;
@@ -58,7 +77,7 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             menu_device_information(fb, theme);
             break;
         case ACTION_ABOUT: {
-            menu_about(fb, theme);
+            menu_about();
             break;
         }
         case ACTION_RADIO_UPDATE:
@@ -69,6 +88,10 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             break;
         case ACTION_HARDWARE_TEST:
             menu_hardware_test();
+            break;
+        case ACTION_REPOSITORY:
+            menu_settings_repository(fb, theme);
+            break;
         default:
             break;
     }
@@ -79,11 +102,9 @@ static void render(menu_t* menu, pax_vec2_t position, bool partial, bool icons) 
     gui_theme_t* theme  = get_theme();
 
     if (!partial || icons) {
-        render_base_screen_statusbar(
-            buffer, theme, !partial, !partial || icons, !partial,
-            ((gui_element_icontext_t[]){{get_icon(ICON_SETTINGS), "Settings"}}), 1,
-            ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
-            ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1);
+        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_SETTINGS), "Settings"}}), 1,
+                                     FOOTER_LEFT, FOOTER_RIGHT);
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
@@ -95,6 +116,7 @@ void menu_settings(void) {
 
     menu_t menu = {0};
     menu_initialize(&menu);
+    menu_insert_item_icon(&menu, "Brightness", NULL, (void*)ACTION_BRIGHTNESS, -1, get_icon(ICON_BRIGHTNESS));
     menu_insert_item_icon(&menu, "WiFi configuration", NULL, (void*)ACTION_WIFI, -1, get_icon(ICON_WIFI));
     menu_insert_item_icon(&menu, "Clock configuration", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
     menu_insert_item_icon(&menu, "Firmware update", NULL, (void*)ACTION_FIRMWARE_UPDATE, -1,
@@ -102,6 +124,7 @@ void menu_settings(void) {
     menu_insert_item_icon(&menu, "Device information", NULL, (void*)ACTION_DEVICE_INFO, -1, get_icon(ICON_DEVICE_INFO));
     menu_insert_item_icon(&menu, "Power information", NULL, (void*)ACTION_POWER_INFORMATION, -1,
                           get_icon(ICON_BATTERY_UNKNOWN));
+    menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
     defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
@@ -134,6 +157,7 @@ void menu_settings(void) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                            case BSP_INPUT_NAVIGATION_KEY_HOME:
                                 menu_free(&menu);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:

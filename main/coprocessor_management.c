@@ -5,9 +5,10 @@
 #include <stdbool.h>
 #include "bsp/device.h"
 #include "bsp/i2c.h"
-#include "common/display.h"
 #include "esp_log.h"
-#include "pax_gfx.h"
+#include "icons.h"
+#include "menu/message_dialog.h"
+
 static const char* TAG = "Coprocessor management";
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
@@ -20,19 +21,19 @@ static const char* TAG = "Coprocessor management";
 extern uint8_t const coprocessor_firmware_start[] asm("_binary_tanmatsu_coprocessor_bin_start");
 extern uint8_t const coprocessor_firmware_end[] asm("_binary_tanmatsu_coprocessor_bin_end");
 
-static void callback(char const* msg, uint8_t progress) {
+static void callback(char const* status_text, uint8_t percentage) {
+    static uint8_t last_percentage = 0xFF;
+    if (percentage == last_percentage) {
+        return;  // No change, no need to update
+    }
+    last_percentage = percentage;
     char text[128];
-    snprintf(text, sizeof(text), "%s (%u%%)", msg, progress);
-    printf("Coprocessor update: %s\r\n", text);
-    pax_buf_t* buffer = display_get_buffer();
-    pax_background(buffer, 0xFF0000FF);
-    pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 0, "Updating coprocessor firmware...");
-    pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 18, text);
-    display_blit_buffer(buffer);
+    sprintf(text, "%s (%u%%)", status_text, percentage);
+    busy_dialog(get_icon(ICON_SYSTEM_UPDATE), "Coprocessor update", text, false);
 }
 
 void coprocessor_flash(bool force) {
-    uint16_t coprocessor_firmware_target = 4;
+    uint16_t coprocessor_firmware_target = 6;
 
     tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
 

@@ -15,8 +15,10 @@
 #include "common/theme.h"
 #include "coprocessor_management.h"
 #include "custom_certificates.h"
+#include "device_settings.h"
 #include "driver/gpio.h"
 #include "esp_err.h"
+#include "esp_heap_caps.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
 #include "esp_log.h"
@@ -111,7 +113,7 @@ static void wifi_task(void* pvParameters) {
     }
     wifi_stack_task_done = true;
 
-    if (ntp_get_enabled()) {
+    if (ntp_get_enabled() && wifi_stack_initialized) {
         if (wifi_connect_try_all() == ESP_OK) {
             esp_err_t res = ntp_start_service("pool.ntp.org");
             if (res == ESP_OK) {
@@ -129,6 +131,13 @@ static void wifi_task(void* pvParameters) {
         } else {
             ESP_LOGW(TAG, "Could not connect to network for NTP");
         }
+    }
+
+    while (1) {
+        printf("free:%lu min-free:%lu lfb-dma:%u lfb-def:%u lfb-8bit:%u\n", esp_get_free_heap_size(),
+               esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DMA),
+               heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+        vTaskDelay(pdMS_TO_TICKS(2000));
     }
 
     vTaskDelete(NULL);
@@ -219,7 +228,14 @@ void app_main(void) {
     ESP_ERROR_CHECK(res);
 
     // Initialize the Board Support Package
-    esp_err_t bsp_init_result = bsp_device_initialize();
+    const bsp_configuration_t bsp_configuration = {
+        .display =
+            {
+                .requested_color_format = LCD_COLOR_PIXEL_FORMAT_RGB565,
+                .num_fbs                = 1,
+            },
+    };
+    esp_err_t bsp_init_result = bsp_device_initialize(&bsp_configuration);
 
     if (bsp_init_result == ESP_OK) {
         ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
@@ -237,6 +253,15 @@ void app_main(void) {
         return;
     }
 
+    // Apply settings
+    startup_screen("Applying settings...");
+    device_settings_apply();
+
+    // Configure LEDs
+    bsp_led_clear();
+    bsp_led_set_mode(true);
+
+    // Initialize filesystems
     startup_screen("Mounting FAT filesystem...");
 
     esp_vfs_fat_mount_config_t fat_mount_config = {
@@ -326,7 +351,7 @@ void app_main(void) {
 #endif
 #endif
 
-    xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, 1);
+    xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, CONFIG_SOC_CPU_CORES_NUM - 1);
 
     badgelink_init();
     usb_initialize();

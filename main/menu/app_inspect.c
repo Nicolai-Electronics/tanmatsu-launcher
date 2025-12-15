@@ -25,7 +25,7 @@
 #define FOOTER_RIGHT NULL, 0
 #define TEXT_FONT    pax_font_sky_mono
 #define TEXT_SIZE    18
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{NULL, "🅱 Back"}}), 1
 #define FOOTER_RIGHT NULL, 0
 #define TEXT_FONT    pax_font_sky_mono
@@ -70,7 +70,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
         }
 
         if (app->version) {
-            snprintf(text_buffer, sizeof(text_buffer), "Version: %" PRIu32, app->version);
+            snprintf(text_buffer, sizeof(text_buffer), "Version: %s", app->version);
             pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                           position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
         }

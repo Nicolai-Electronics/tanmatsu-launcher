@@ -22,7 +22,7 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
                                   gui_element_icontext_t* footer_right, size_t footer_right_count);
 
 void message_dialog(pax_buf_t* icon, const char* title, const char* message, const char* action_text);
-void busy_dialog(pax_buf_t* icon, const char* title, const char* message);
+void busy_dialog(pax_buf_t* icon, const char* title, const char* message, bool header);
 
 bsp_input_navigation_key_t adv_dialog(pax_buf_t* icon, const char* title, const char* message,
                                       gui_element_icontext_t* headers, int header_count);
@@ -47,7 +47,7 @@ message_dialog_return_type_t adv_dialog_yes_no_cancel(pax_buf_t* icon, const cha
 #define ADV_DIALOG_FOOTER_OK_TEXT(...) \
     ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), __VA_ARGS__}}), 2
 
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
 #define ADV_DIALOG_FOOTER_OK     ((gui_element_icontext_t[]){{NULL, "🅱"}, {NULL, "Ok"}}), 2
 #define ADV_DIALOG_FOOTER_GOBACK ((gui_element_icontext_t[]){{NULL, "🅱"}, {NULL, "Go back"}}), 2
 #define ADV_DIALOG_FOOTER_YES_NO ((gui_element_icontext_t[]){{NULL, "🅰"}, {NULL, "Yes"}, {NULL, "🅱"}, {NULL, "No"}}), 4
