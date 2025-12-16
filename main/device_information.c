@@ -56,7 +56,7 @@ esp_err_t read_device_identity(device_identity_t* out_identity) {
         return res;
     }
 
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 6
+#if ESP_IDF_VERSION_MAJOR >= 6 || (ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR >= 5)
     res = esp_efuse_read_field_blob(ESP_EFUSE_WAFER_VERSION_MAJOR_LO, &out_identity->waver_rev_major, 2);
     if (res != ESP_OK) {
         return res;
