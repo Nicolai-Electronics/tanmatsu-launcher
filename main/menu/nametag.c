@@ -4,6 +4,7 @@
 #include "common/display.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "fastopen.h"
 #include "freertos/idf_additions.h"
 #include "gui_element_footer.h"
 #include "gui_style.h"
@@ -14,7 +15,6 @@
 #include "pax_matrix.h"
 #include "pax_text.h"
 #include "pax_types.h"
-#include "sdcard.h"
 
 static const char* TAG = "nametag";
 
@@ -36,40 +36,21 @@ pax_buf_t nametag_pax_buf = {0};
 // void*     nametag_buffer  = NULL;
 
 static bool load_nametag(void) {
-    /*nametag_buffer = heap_caps_calloc(1, 800 * 480 * 4, MALLOC_CAP_SPIRAM);
-    if (nametag_buffer == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate memory for nametag");
-        return false;
-    }*/
-    bool  from_sd = true;
-    FILE* fd      = sd_fopen("/sd/nametag.png", "rb");
+    // Try SD card first, then fall back to internal storage
+    FILE* fd = fastopen("/sd/nametag.png", "rb");
     if (fd == NULL) {
-        from_sd = false;
-        fd      = fopen("/int/nametag.png", "rb");
+        fd = fastopen("/int/nametag.png", "rb");
         if (fd == NULL) {
             ESP_LOGE(TAG, "Failed to open file");
-            // free(nametag_buffer);
-            // nametag_buffer = NULL;
             return false;
         }
     }
-    // pax_buf_init(&nametag_pax_buf, &nametag_buffer, 800, 480, PAX_BUF_32_8888ARGB);
-    if (!pax_decode_png_fd(&nametag_pax_buf, fd, PAX_BUF_32_8888ARGB, 0)) {  // CODEC_FLAG_EXISTING)) {
+    if (!pax_decode_png_fd(&nametag_pax_buf, fd, PAX_BUF_32_8888ARGB, 0)) {
         ESP_LOGE(TAG, "Failed to decode png file");
-        // free(nametag_buffer);
-        // nametag_buffer = NULL;
-        if (from_sd) {
-            sd_fclose(fd);
-        } else {
-            fclose(fd);
-        }
+        fastclose(fd);
         return false;
     }
-    if (from_sd) {
-        sd_fclose(fd);
-    } else {
-        fclose(fd);
-    }
+    fastclose(fd);
     return true;
 }
 
