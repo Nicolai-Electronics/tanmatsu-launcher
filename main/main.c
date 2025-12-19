@@ -19,6 +19,7 @@
 #include "driver/gpio.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
+#include "esp_hosted_custom.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
 #include "esp_log.h"
@@ -102,6 +103,14 @@ bool wifi_stack_get_task_done(void) {
     return wifi_stack_task_done;
 }
 
+static void radio_callback(uint8_t type, uint8_t* payload, uint16_t payload_length) {
+    ESP_LOGI(TAG, "Received message from radio: type: %d, payload length: %d", type, payload_length);
+    for (int i = 0; i < payload_length; i++) {
+        printf("%02X ", payload[i]);
+    }
+    printf("\r\n");
+}
+
 static void wifi_task(void* pvParameters) {
     if (wifi_remote_initialize() == ESP_OK) {
         wifi_connection_init_stack();
@@ -133,10 +142,17 @@ static void wifi_task(void* pvParameters) {
         }
     }
 
-    while (1) {
+    /*while (1) {
         printf("free:%lu min-free:%lu lfb-dma:%u lfb-def:%u lfb-8bit:%u\n", esp_get_free_heap_size(),
                esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DMA),
                heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+        vTaskDelay(pdMS_TO_TICKS(2000));
+    }*/
+
+    esp_hosted_set_custom_callback(radio_callback);
+
+    while (1) {
+        esp_hosted_send_custom(3, (uint8_t*)"Hello from Tanmatsu!", 20);
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
 
