@@ -7,6 +7,9 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "sd_pwr_ctrl.h"
 #include "esp_vfs.h"
 #include "esp_vfs_fat.h"
 #include "sd_pwr_ctrl_by_on_chip_ldo.h"
@@ -40,6 +43,17 @@ esp_err_t sd_mount(sd_pwr_ctrl_handle_t pwr_ctrl_handle) {
     sdmmc_card_t* card;
     const char    mount_point[] = "/sd";
     ESP_LOGI(TAG, "Initializing SD card");
+
+    // Power cycle the SD card to ensure it's in a known state
+    // This prevents issues when the card was left in SDMMC mode from a previous session
+    if (pwr_ctrl_handle != NULL) {
+        ESP_LOGI(TAG, "Power cycling SD card...");
+        sd_pwr_ctrl_set_io_voltage(pwr_ctrl_handle, 0);      // Power off
+        vTaskDelay(pdMS_TO_TICKS(150));                      // Wait 150ms
+        sd_pwr_ctrl_set_io_voltage(pwr_ctrl_handle, 3300);   // Power on at 3.3V
+        vTaskDelay(pdMS_TO_TICKS(150));                      // Wait 150ms for card to stabilize
+        ESP_LOGI(TAG, "SD card power cycle complete");
+    }
 
     sdmmc_host_t host    = SDMMC_HOST_DEFAULT();
     host.slot            = SDMMC_HOST_SLOT_0;     // Use SLOT0 for native IOMUX pins
