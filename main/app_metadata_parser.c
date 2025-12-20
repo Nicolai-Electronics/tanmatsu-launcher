@@ -8,6 +8,7 @@
 #include "esp_log.h"
 #include "esp_vfs.h"
 #include "esp_vfs_fat.h"
+#include "fastopen.h"
 #include "icons.h"
 #include "pax_codecs.h"
 #include "pax_gfx.h"
@@ -50,14 +51,14 @@ bool get_executable_revision(const char* path, const char* slug, uint32_t* out_r
 
     char path_buffer[256] = {0};
     snprintf(path_buffer, sizeof(path_buffer), "%s/%s/metadata.json", path, slug);
-    FILE* fd = fopen(path_buffer, "r");
+    FILE* fd = fastopen(path_buffer, "r");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open metadata file %s", path_buffer);
         return app;
     }
 
     char* json_data = (char*)load_file_to_ram(fd);
-    fclose(fd);
+    fastclose(fd);
 
     if (json_data == NULL) {
         ESP_LOGE(TAG, "Failed to read from metadata file %s", path_buffer);
@@ -143,14 +144,14 @@ app_t* create_app(const char* path, const char* slug, bool sdcard) {
 
     char path_buffer[256] = {0};
     snprintf(path_buffer, sizeof(path_buffer), "%s/%s/metadata.json", path, slug);
-    FILE* fd = fopen(path_buffer, "r");
+    FILE* fd = fastopen(path_buffer, "r");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open metadata file %s", path_buffer);
         return app;
     }
 
     char* json_data = (char*)load_file_to_ram(fd);
-    fclose(fd);
+    fastclose(fd);
 
     if (json_data == NULL) {
         ESP_LOGE(TAG, "Failed to read from metadata file %s", path_buffer);
@@ -201,7 +202,7 @@ app_t* create_app(const char* path, const char* slug, bool sdcard) {
         cJSON* icon32_obj = cJSON_GetObjectItem(icon_obj, "32x32");
         if (icon32_obj && cJSON_IsString(icon32_obj)) {
             snprintf(path_buffer, sizeof(path_buffer), "%s/%s/%s", path, slug, icon32_obj->valuestring);
-            FILE* icon_fd = fopen(path_buffer, "rb");
+            FILE* icon_fd = fastopen(path_buffer, "rb");
             app->icon     = calloc(1, sizeof(pax_buf_t));
             if (app->icon != NULL) {
                 if (!pax_decode_png_fd(app->icon, icon_fd, PAX_BUF_32_8888ARGB, 0)) {
@@ -212,7 +213,7 @@ app_t* create_app(const char* path, const char* slug, bool sdcard) {
             } else {
                 ESP_LOGE(TAG, "Failed to open icon file for app %s", slug);
             }
-            fclose(icon_fd);
+            fastclose(icon_fd);
         } else {
             ESP_LOGE(TAG, "No 32x32 icon object for app %s", slug);
         }

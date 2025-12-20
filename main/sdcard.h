@@ -17,4 +17,5 @@ sd_pwr_ctrl_handle_t initialize_sd_ldo(void);
 esp_err_t            sd_mount(sd_pwr_ctrl_handle_t pwr_ctrl_handle);
 esp_err_t            sd_mount_spi(sd_pwr_ctrl_handle_t pwr_ctrl_handle);
 void                 test_sd(void);
+void                 sd_speedtest(void);
 sd_status_t          sd_status(void);
