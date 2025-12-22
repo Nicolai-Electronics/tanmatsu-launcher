@@ -30,6 +30,7 @@
 #include "gui_style.h"
 #include "hal/lcd_types.h"
 #include "icons.h"
+#include "lora.h"
 #include "menu/home.h"
 #include "ntp.h"
 #include "nvs_flash.h"
@@ -104,11 +105,15 @@ bool wifi_stack_get_task_done(void) {
 }
 
 static void radio_callback(uint8_t type, uint8_t* payload, uint16_t payload_length) {
-    ESP_LOGI(TAG, "Received message from radio: type: %d, payload length: %d", type, payload_length);
-    for (int i = 0; i < payload_length; i++) {
-        printf("%02X ", payload[i]);
+    if (type == 1) {
+        lora_transaction_receive(payload, payload_length);
+    } else {
+        ESP_LOGI(TAG, "Received message from radio: type: %d, payload length: %d", type, payload_length);
+        for (int i = 0; i < payload_length; i++) {
+            printf("%02X ", payload[i]);
+        }
+        printf("\r\n");
     }
-    printf("\r\n");
 }
 
 static void wifi_task(void* pvParameters) {
@@ -151,9 +156,54 @@ static void wifi_task(void* pvParameters) {
 
     esp_hosted_set_custom_callback(radio_callback);
 
-    while (1) {
+    /*while (1) {
         esp_hosted_send_custom(3, (uint8_t*)"Hello from Tanmatsu!", 20);
         vTaskDelay(pdMS_TO_TICKS(2000));
+    }*/
+
+    lora_protocol_mode_t mode;
+    esp_err_t            res = lora_get_mode(&mode);
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa mode: %d", (int)mode);
+    } else {
+        ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
+    }
+
+    lora_protocol_config_params_t config = {
+        .frequency                  = 869.618,  // MHz
+        .spreading_factor           = 8,        // SF8
+        .bandwidth                  = 62,       // 62.5 kHz
+        .coding_rate                = 8,        // 4/8
+        .sync_word                  = 0x12,     // private
+        .preamble_length            = 16,       // symbols
+        .power                      = 22,       // +22 dBm
+        .ramp_time                  = 40,       // us
+        .crc_enabled                = true,     // CRC enabled
+        .invert_iq                  = false,    // normal IQ
+        .low_data_rate_optimization = false,    // disabled
+    };
+
+    res = lora_set_config(&config);
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa configuration set");
+    } else {
+        ESP_LOGE(TAG, "Failed to set LoRa configuration: %s", esp_err_to_name(res));
+    }
+
+    res = lora_set_mode(LORA_PROTOCOL_MODE_RX);
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa set to RX mode");
+    } else {
+        ESP_LOGE(TAG, "Failed to set LoRa mode: %s", esp_err_to_name(res));
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    res = lora_get_mode(&mode);
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa mode (after setting to RX): %d", (int)mode);
+    } else {
+        ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
     }
 
     vTaskDelete(NULL);
@@ -366,6 +416,8 @@ void app_main(void) {
     python_initialize();
 #endif
 #endif
+
+    ESP_ERROR_CHECK(lora_init(NULL));
 
     xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, CONFIG_SOC_CPU_CORES_NUM - 1);
 
