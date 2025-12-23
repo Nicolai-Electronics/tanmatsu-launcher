@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <time.h>
+#include "addon.h"
 #include "appfs.h"
 #include "badgelink.h"
 #include "bsp/device.h"
@@ -17,6 +18,7 @@
 #include "custom_certificates.h"
 #include "device_settings.h"
 #include "driver/gpio.h"
+#include "eeprom.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
 #include "esp_lcd_panel_ops.h"
@@ -133,12 +135,17 @@ static void wifi_task(void* pvParameters) {
         }
     }
 
+    addon_detect_internal();
+    addon_detect_catt();
+
+#if 0
     while (1) {
         printf("free:%lu min-free:%lu lfb-dma:%u lfb-def:%u lfb-8bit:%u\n", esp_get_free_heap_size(),
                esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DMA),
                heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
+#endif
 
     vTaskDelete(NULL);
 }
