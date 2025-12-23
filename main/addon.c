@@ -5,17 +5,26 @@
 #include "eeprom.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "sdkconfig.h"
 
 const char TAG[] = "Add-on";
 
 esp_err_t addon_detect_internal(void) {
     i2c_master_bus_handle_t i2c_bus_handle = NULL;
-    ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle));
+    esp_err_t               res            = bsp_i2c_primary_bus_get_handle(&i2c_bus_handle);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get I2C bus handle: %s", esp_err_to_name(res));
+        return res;
+    }
     SemaphoreHandle_t i2c_bus_semaphore = NULL;
-    ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_semaphore(&i2c_bus_semaphore));
+    res                                 = bsp_i2c_primary_bus_get_semaphore(&i2c_bus_semaphore);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get I2C bus semaphore: %s", esp_err_to_name(res));
+        return res;
+    }
 
     eeprom_handle_t eeprom_handle;
-    esp_err_t       res = eeprom_init(&eeprom_handle, i2c_bus_handle, i2c_bus_semaphore, 0x50, 32, false);
+    res = eeprom_init(&eeprom_handle, i2c_bus_handle, i2c_bus_semaphore, 0x50, 32, false);
     if (res != ESP_OK) {
         ESP_LOGI(TAG, "No internal add-on detected");
         return ESP_FAIL;
@@ -37,7 +46,7 @@ esp_err_t addon_detect_internal(void) {
 }
 
 void addon_detect_catt(void) {
-
+#ifdef CONFIG_BSP_TARGET_TANMATSU
     i2c_master_bus_handle_t sao_i2c_bus_handle = NULL;
     SemaphoreHandle_t       sao_i2c_semaphore  = NULL;
 
@@ -82,4 +91,5 @@ void addon_detect_catt(void) {
 
     i2c_del_master_bus(sao_i2c_bus_handle);
     vSemaphoreDelete(sao_i2c_semaphore);
+#endif
 }
