@@ -16,7 +16,9 @@ idf_component_register(
 		
 		# Menus
 		"menu/home.c"
-		"menu/menu_settings.c"
+		"menu/settings.c"
+		"menu/information.c"
+		"menu/tools.c"
 		"menu/about.c"
 		"menu/wifi.c"
 		"menu/wifi_edit.c"
