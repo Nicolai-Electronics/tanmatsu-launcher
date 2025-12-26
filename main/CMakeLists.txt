@@ -49,6 +49,7 @@ idf_component_register(
 
 		# Fonts
 		"chakrapetchmedium.c"
+		"rajdhani.c"
 
 		# Libraries
 		"coprocessor_management.c"
@@ -57,6 +58,7 @@ idf_component_register(
 		"usb_device.c"
 		"esp_efuse_custom_table.c"
 		"sdcard.c"
+		"addon.c"
 		"app_metadata_parser.c"
 		"python.c"
 		"http_download.c"
@@ -90,6 +92,7 @@ idf_component_register(
 		badgelink
 		tanmatsu-wifi
 		lwip
+		eeprom
 		${extra_requires}
 	INCLUDE_DIRS
 		"."
