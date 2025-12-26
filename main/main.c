@@ -133,12 +133,14 @@ static void wifi_task(void* pvParameters) {
         }
     }
 
+#if 0
     while (1) {
         printf("free:%lu min-free:%lu lfb-dma:%u lfb-def:%u lfb-8bit:%u\n", esp_get_free_heap_size(),
                esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DMA),
                heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
+#endif
 
     vTaskDelete(NULL);
 }
@@ -231,7 +233,7 @@ void app_main(void) {
     const bsp_configuration_t bsp_configuration = {
         .display =
             {
-                .requested_color_format = LCD_COLOR_PIXEL_FORMAT_RGB565,
+                .requested_color_format = LCD_COLOR_PIXEL_FORMAT_RGB888,
                 .num_fbs                = 1,
             },
     };

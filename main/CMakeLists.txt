@@ -49,6 +49,7 @@ idf_component_register(
 
 		# Fonts
 		"chakrapetchmedium.c"
+		"rajdhani.c"
 
 		# Libraries
 		"coprocessor_management.c"
