@@ -4,7 +4,7 @@
 #include "sdkconfig.h"
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
+    defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
 const gui_theme_t theme = {
     .palette =
         {
