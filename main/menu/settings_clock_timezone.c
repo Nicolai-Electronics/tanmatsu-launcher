@@ -95,6 +95,18 @@ void menu_clock_timezone(pax_buf_t* buffer, gui_theme_t* theme) {
                                 menu_navigate_next(&menu);
                                 render(buffer, theme, &menu, position, true, false);
                                 break;
+                            case BSP_INPUT_NAVIGATION_KEY_LEFT:
+                                for (int i = 0; i < 5; i++) {
+                                    menu_navigate_previous(&menu);
+                                }
+                                render(buffer, theme, &menu, position, true, false);
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_RIGHT:
+                                for (int i = 0; i < 5; i++) {
+                                    menu_navigate_next(&menu);
+                                }
+                                render(buffer, theme, &menu, position, true, false);
+                                break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
