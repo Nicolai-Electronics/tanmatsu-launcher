@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <time.h>
+#include "addon.h"
 #include "appfs.h"
 #include "badgelink.h"
 #include "bsp/device.h"
@@ -17,6 +18,7 @@
 #include "custom_certificates.h"
 #include "device_settings.h"
 #include "driver/gpio.h"
+#include "eeprom.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
 #include "esp_lcd_panel_ops.h"
@@ -132,6 +134,9 @@ static void wifi_task(void* pvParameters) {
             ESP_LOGW(TAG, "Could not connect to network for NTP");
         }
     }
+
+    addon_detect_internal();
+    addon_detect_catt();
 
 #if 0
     while (1) {
