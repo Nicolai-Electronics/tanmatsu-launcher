@@ -1,5 +1,5 @@
 if (CONFIG_BSP_TARGET_TANMATSU OR CONFIG_BSP_TARGET_KONSOOL OR CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-list(APPEND files "tanmatsu_coprocessor.bin")
+list(APPEND files "tanmatsu_coprocessor.bin" "splash.png")
 endif()
 
 idf_build_get_property(idf_target IDF_TARGET)
