@@ -46,8 +46,7 @@
 #include "wifi_connection.h"
 #include "wifi_remote.h"
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "bsp/tanmatsu.h"
 #include "tanmatsu_coprocessor.h"
 #endif
@@ -153,8 +152,7 @@ static void wifi_task(void* pvParameters) {
 esp_err_t check_i2c_bus(void) {
     i2c_master_bus_handle_t i2c_bus_handle_internal;
     ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal));
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     esp_err_t ret_codec  = i2c_master_probe(i2c_bus_handle_internal, 0x08, 50);
     esp_err_t ret_bmi270 = i2c_master_probe(i2c_bus_handle_internal, 0x68, 50);
 
@@ -341,8 +339,7 @@ void app_main(void) {
 
     if (sdcard_inserted) {
         printf("SD card detected\r\n");
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
         sd_pwr_ctrl_handle_t sd_pwr_handle = initialize_sd_ldo();
         sd_mount_spi(sd_pwr_handle);
         test_sd();

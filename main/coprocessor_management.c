@@ -11,8 +11,7 @@
 
 static const char* TAG = "Coprocessor management";
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 
 #include "bsp/tanmatsu.h"
 #include "rvswd_ch32v20x.h"
