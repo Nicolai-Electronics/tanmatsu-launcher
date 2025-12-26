@@ -16,6 +16,7 @@
 #include "common/theme.h"
 #include "coprocessor_management.h"
 #include "custom_certificates.h"
+#include "device_information.h"
 #include "device_settings.h"
 #include "driver/gpio.h"
 #include "eeprom.h"
@@ -34,6 +35,7 @@
 #include "menu/home.h"
 #include "ntp.h"
 #include "nvs_flash.h"
+#include "pax_codecs.h"
 #include "pax_fonts.h"
 #include "pax_gfx.h"
 #include "pax_text.h"
@@ -41,6 +43,7 @@
 #include "python.h"
 #include "sdcard.h"
 #include "sdkconfig.h"
+#include "shapes/pax_misc.h"
 #include "timezone.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
@@ -54,6 +57,9 @@
 
 // Constants
 static char const TAG[] = "main";
+
+extern uint8_t const splash_png_start[] asm("_binary_splash_png_start");
+extern uint8_t const splash_png_end[] asm("_binary_splash_png_end");
 
 // Global variables
 static QueueHandle_t input_event_queue      = NULL;
@@ -93,6 +99,13 @@ void startup_screen(const char* text) {
     pax_background(fb, theme->palette.color_background);
     gui_header_draw(fb, theme, ((gui_element_icontext_t[]){{NULL, (char*)text}}), 1, NULL, 0);
     gui_footer_draw(fb, theme, NULL, 0, NULL, 0);
+    display_blit_buffer(fb);
+}
+
+void splash_screen(void) {
+    pax_buf_t* fb = display_get_buffer();
+    pax_background(fb, 0xFF000000);
+    pax_insert_png_buf(fb, (void*)splash_png_start, splash_png_end - splash_png_start, 0, 0, 0);
     display_blit_buffer(fb);
 }
 
@@ -260,8 +273,26 @@ void app_main(void) {
         return;
     }
 
+    bool is_tanmatsu = false;
+
+    device_identity_t identity = {0};
+    if (read_device_identity(&identity) == ESP_OK) {
+        const char* name   = "Tanmatsu";
+        const char* vendor = "Nicolai";
+        if (strlen(identity.name) == strlen(name) && strncmp(identity.name, name, strlen(name)) == 0 &&
+            strlen(identity.vendor) == strlen(vendor) && strncmp(identity.vendor, vendor, strlen(vendor)) == 0) {
+            is_tanmatsu = true;
+        }
+    }
+
+    if (is_tanmatsu) {
+        splash_screen();
+    }
+
     // Apply settings
-    startup_screen("Applying settings...");
+    if (!is_tanmatsu) {
+        startup_screen("Applying settings...");
+    }
     device_settings_apply();
 
     // Configure LEDs
@@ -269,7 +300,9 @@ void app_main(void) {
     bsp_led_set_mode(true);
 
     // Initialize filesystems
-    startup_screen("Mounting FAT filesystem...");
+    if (!is_tanmatsu) {
+        startup_screen("Mounting FAT filesystem...");
+    }
 
     esp_vfs_fat_mount_config_t fat_mount_config = {
         .format_if_mount_failed   = false,
@@ -290,12 +323,16 @@ void app_main(void) {
         return;
     }
 
-    startup_screen("Checking I2C bus...");
+    if (!is_tanmatsu) {
+        startup_screen("Checking I2C bus...");
+    }
     if (check_i2c_bus() != ESP_OK) {
         return;
     }
 
-    startup_screen("Initializing coprocessor...");
+    if (!is_tanmatsu) {
+        startup_screen("Initializing coprocessor...");
+    }
     coprocessor_flash(false);
 
     if (bsp_init_result != ESP_OK || bsp_device_get_initialized_without_coprocessor()) {
@@ -306,7 +343,9 @@ void app_main(void) {
         return;
     }
 
-    startup_screen("Mounting AppFS filesystem...");
+    if (!is_tanmatsu) {
+        startup_screen("Mounting AppFS filesystem...");
+    }
     res = appfsInit(APPFS_PART_TYPE, APPFS_PART_SUBTYPE);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize AppFS: %s", esp_err_to_name(res));
