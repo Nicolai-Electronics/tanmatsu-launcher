@@ -73,6 +73,20 @@ const gui_theme_t theme = {
                     .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
                 },
         },
+    .progressbar =
+        {
+            .vertical_margin    = 5,
+            .horizontal_margin  = 5,
+            .vertical_padding   = 5,
+            .horizontal_padding = 5,
+            .palette =
+                {
+                    .color_foreground        = 0xFF340132,  // #340132
+                    .color_background        = 0xFFEEEAEE,  // #EEEAEE
+                    .color_active_foreground = 0xFF01BC99,  // #01BC99
+                    .color_active_background = 0xFFFFFFFF,  // #FFFFFF
+                },
+        },
 };
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 const gui_theme_t theme = {
@@ -141,6 +155,20 @@ const gui_theme_t theme = {
                     .color_highlight_primary   = 0xFF01BC99,  // #01BC99
                     .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
                     .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
+                },
+        },
+    .progressbar =
+        {
+            .vertical_margin    = 5,
+            .horizontal_margin  = 5,
+            .vertical_padding   = 5,
+            .horizontal_padding = 5,
+            .palette =
+                {
+                    .color_foreground        = 0xFF340132,  // #340132
+                    .color_background        = 0xFFEEEAEE,  // #EEEAEE
+                    .color_active_foreground = 0xFF01BC99,  // #01BC99
+                    .color_active_background = 0xFFFFFFFF,  // #FFFFFF
                 },
         },
 };
@@ -217,6 +245,20 @@ const gui_theme_t theme = {
                     .color_highlight_primary   = 2,
                     .color_highlight_secondary = 2,
                     .color_highlight_tertiary  = 2,
+                },
+        },
+    .progressbar =
+        {
+            .vertical_margin    = 5,
+            .horizontal_margin  = 5,
+            .vertical_padding   = 5,
+            .horizontal_padding = 5,
+            .palette =
+                {
+                    .color_foreground        = 0xFF340132,  // #340132
+                    .color_background        = 0xFFEEEAEE,  // #EEEAEE
+                    .color_active_foreground = 0xFF01BC99,  // #01BC99
+                    .color_active_background = 0xFFFFFFFF,  // #FFFFFF
                 },
         },
 };
