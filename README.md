@@ -15,3 +15,22 @@ This application supports the following boards:
 ## License
 
 This project is made available under the terms of the [MIT license](LICENSE).
+
+# Documentation
+For help with launching and finding documetation please visit [our documentation website](https://docs.tanmatsu.cloud/software/)
+
+# Getting started Arch / Manjaro
+Make sure your user has access rights to the usb port
+```
+sudo usermod -aG uucp erik
+```
+Log your user out and back in after this command:
+
+To get started using the firmware please execute the following commands:
+```
+git clone https://github.com/Nicolai-Electronics/tanmatsu-launcher.git
+cd tanmatsu-launcher
+make prepare
+make build
+make flashmonitor
+```
