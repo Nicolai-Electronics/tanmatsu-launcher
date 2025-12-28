@@ -6,9 +6,10 @@ A launcher firmware for ESP32 based devices which allows users to configure WiFi
 
 This application supports the following boards:
 
- - Tanmatsu (including Konsool and Hackerhotel 2026 variants)
+ - Tanmatsu (including Konsool variant)
  - MCH2022 badge
  - Hackerhotel 2024 badge
+ - Kami epaper badge
  - ESP32-P4 function EV board
 
 
