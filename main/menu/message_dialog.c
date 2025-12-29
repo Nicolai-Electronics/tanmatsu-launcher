@@ -20,8 +20,7 @@
 #include "sdkconfig.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "bsp/tanmatsu.h"
 #include "tanmatsu_coprocessor.h"
 #endif
@@ -41,8 +40,7 @@ static gui_element_icontext_t battery_indicator(void) {
     bsp_power_battery_information_t information = {0};
     bsp_power_get_battery_information(&information);
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
     bsp_tanmatsu_coprocessor_get_handle(&coprocessor_handle);
     tanmatsu_coprocessor_pmic_faults_t faults = {0};
@@ -56,8 +54,7 @@ static gui_element_icontext_t battery_indicator(void) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_CHARGING), ""};
     }
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     if (faults.watchdog || faults.chrg_input || faults.chrg_thermal || faults.chrg_safety || faults.batt_ovp ||
         faults.ntc_cold || faults.ntc_hot) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_ERROR), ""};

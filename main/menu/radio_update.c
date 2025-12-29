@@ -269,8 +269,7 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
 void radio_update(char* path, bool compressed, uint32_t uncompressed_size) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     pax_background(buffer, theme->palette.color_background);
     gui_header_draw(buffer, theme, ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Radio update"}}), 1,
                     NULL, 0);
@@ -310,8 +309,7 @@ void radio_update(char* path, bool compressed, uint32_t uncompressed_size) {
 void radio_install(const char* instructions_filename) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     pax_background(buffer, theme->palette.color_background);
     gui_header_draw(buffer, theme,
                     ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Radio firmware installation"}}), 1,

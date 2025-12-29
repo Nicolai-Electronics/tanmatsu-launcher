@@ -1,4 +1,4 @@
-#include "menu_settings.h"
+#include "information.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
 #include "common/display.h"
@@ -23,8 +23,7 @@
 #include "settings_clock.h"
 #include "settings_repository.h"
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
@@ -37,42 +36,13 @@
 
 typedef enum {
     ACTION_NONE,
-    ACTION_BRIGHTNESS,
-    ACTION_WIFI,
-    ACTION_CLOCK,
-    ACTION_FIRMWARE_UPDATE,
     ACTION_DEVICE_INFO,
     ACTION_ABOUT,
-    ACTION_LAST,
-    ACTION_RADIO_UPDATE,
     ACTION_POWER_INFORMATION,
-    ACTION_HARDWARE_TEST,
-    ACTION_REPOSITORY,
 } menu_home_action_t;
-
-static void radio_update_v2(void) {
-    char filename[260] = "";
-    bool result =
-        menu_filebrowser("/sd", (const char*[]){"trf"}, 1, filename, sizeof(filename), "Select radio firmware");
-    if (result) {
-        radio_install(filename);
-    }
-}
 
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
     switch (action) {
-        case ACTION_BRIGHTNESS:
-            menu_brightness();
-            break;
-        case ACTION_WIFI:
-            menu_wifi(fb, theme);
-            break;
-        case ACTION_CLOCK:
-            menu_settings_clock(fb, theme);
-            break;
-        case ACTION_FIRMWARE_UPDATE:
-            menu_firmware_update(fb, theme);
-            break;
         case ACTION_DEVICE_INFO:
             menu_device_information(fb, theme);
             break;
@@ -80,17 +50,8 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             menu_about();
             break;
         }
-        case ACTION_RADIO_UPDATE:
-            radio_update_v2();
-            break;
         case ACTION_POWER_INFORMATION:
             menu_power_information();
-            break;
-        case ACTION_HARDWARE_TEST:
-            menu_hardware_test();
-            break;
-        case ACTION_REPOSITORY:
-            menu_settings_repository(fb, theme);
             break;
         default:
             break;
@@ -103,35 +64,23 @@ static void render(menu_t* menu, pax_vec2_t position, bool partial, bool icons) 
 
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_SETTINGS), "Settings"}}), 1,
-                                     FOOTER_LEFT, FOOTER_RIGHT);
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "Information"}}), 1, FOOTER_LEFT,
+                                     FOOTER_RIGHT);
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
 }
 
-void menu_settings(void) {
+void menu_information(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
     menu_t menu = {0};
     menu_initialize(&menu);
-    menu_insert_item_icon(&menu, "Brightness", NULL, (void*)ACTION_BRIGHTNESS, -1, get_icon(ICON_BRIGHTNESS));
-    menu_insert_item_icon(&menu, "WiFi configuration", NULL, (void*)ACTION_WIFI, -1, get_icon(ICON_WIFI));
-    menu_insert_item_icon(&menu, "Clock configuration", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
-    menu_insert_item_icon(&menu, "Firmware update", NULL, (void*)ACTION_FIRMWARE_UPDATE, -1,
-                          get_icon(ICON_SYSTEM_UPDATE));
     menu_insert_item_icon(&menu, "Device information", NULL, (void*)ACTION_DEVICE_INFO, -1, get_icon(ICON_DEVICE_INFO));
     menu_insert_item_icon(&menu, "Power information", NULL, (void*)ACTION_POWER_INFORMATION, -1,
                           get_icon(ICON_BATTERY_UNKNOWN));
-    menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
-    menu_insert_item_icon(&menu, "Install radio firmware from SD card", NULL, (void*)ACTION_RADIO_UPDATE, -1,
-                          get_icon(ICON_RELEASE_ALERT));
-#endif
-    menu_insert_item_icon(&menu, "Hardware test", NULL, (void*)ACTION_HARDWARE_TEST, -1, get_icon(ICON_DEV));
 
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();

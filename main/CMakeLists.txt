@@ -1,4 +1,4 @@
-if (CONFIG_BSP_TARGET_TANMATSU OR CONFIG_BSP_TARGET_KONSOOL OR CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+if (CONFIG_BSP_TARGET_TANMATSU OR CONFIG_BSP_TARGET_KONSOOL)
 list(APPEND files "tanmatsu_coprocessor.bin")
 endif()
 
@@ -16,7 +16,9 @@ idf_component_register(
 		
 		# Menus
 		"menu/home.c"
-		"menu/menu_settings.c"
+		"menu/settings.c"
+		"menu/information.c"
+		"menu/tools.c"
 		"menu/about.c"
 		"menu/wifi.c"
 		"menu/wifi_edit.c"
@@ -49,6 +51,7 @@ idf_component_register(
 
 		# Fonts
 		"chakrapetchmedium.c"
+		"rajdhani.c"
 
 		# Libraries
 		"coprocessor_management.c"
@@ -57,6 +60,7 @@ idf_component_register(
 		"usb_device.c"
 		"esp_efuse_custom_table.c"
 		"sdcard.c"
+		"addon.c"
 		"app_metadata_parser.c"
 		"python.c"
 		"http_download.c"
@@ -90,6 +94,7 @@ idf_component_register(
 		badgelink
 		tanmatsu-wifi
 		lwip
+		eeprom
 		${extra_requires}
 	INCLUDE_DIRS
 		"."

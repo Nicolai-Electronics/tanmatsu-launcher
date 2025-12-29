@@ -5,6 +5,8 @@ idf_component_register(
 		gui_element_header.c
 		gui_element_footer.c
 		gui_element_icontext.c
+		gui_element_progressbar.c
+		gui_element_cyberdeck.c
 		gui_osk.c
 		gui_osk_edit.c
 		gui_edit.c

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <time.h>
+#include "addon.h"
 #include "appfs.h"
 #include "badgelink.h"
 #include "bsp/device.h"
@@ -17,6 +18,7 @@
 #include "custom_certificates.h"
 #include "device_settings.h"
 #include "driver/gpio.h"
+#include "eeprom.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
 #include "esp_lcd_panel_ops.h"
@@ -44,8 +46,7 @@
 #include "wifi_connection.h"
 #include "wifi_remote.h"
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "bsp/tanmatsu.h"
 #include "tanmatsu_coprocessor.h"
 #endif
@@ -133,12 +134,17 @@ static void wifi_task(void* pvParameters) {
         }
     }
 
+    addon_detect_internal();
+    addon_detect_catt();
+
+#if 0
     while (1) {
         printf("free:%lu min-free:%lu lfb-dma:%u lfb-def:%u lfb-8bit:%u\n", esp_get_free_heap_size(),
                esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DMA),
                heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
+#endif
 
     vTaskDelete(NULL);
 }
@@ -146,8 +152,7 @@ static void wifi_task(void* pvParameters) {
 esp_err_t check_i2c_bus(void) {
     i2c_master_bus_handle_t i2c_bus_handle_internal;
     ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal));
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     esp_err_t ret_codec  = i2c_master_probe(i2c_bus_handle_internal, 0x08, 50);
     esp_err_t ret_bmi270 = i2c_master_probe(i2c_bus_handle_internal, 0x68, 50);
 
@@ -231,7 +236,7 @@ void app_main(void) {
     const bsp_configuration_t bsp_configuration = {
         .display =
             {
-                .requested_color_format = LCD_COLOR_PIXEL_FORMAT_RGB565,
+                .requested_color_format = LCD_COLOR_PIXEL_FORMAT_RGB888,
                 .num_fbs                = 1,
             },
     };
@@ -334,8 +339,7 @@ void app_main(void) {
 
     if (sdcard_inserted) {
         printf("SD card detected\r\n");
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
         sd_pwr_ctrl_handle_t sd_pwr_handle = initialize_sd_ldo();
         sd_mount(sd_pwr_handle);
         // sd_speedtest();  // Uncomment to run SD card benchmark
