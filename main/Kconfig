@@ -1,0 +1,25 @@
+menu "Fast FATFS I/O"
+
+    config FATFS_USE_FASTOPEN
+        bool "Enable fast file I/O with DMA buffers"
+        default n
+        help
+            Allocate stdio buffers in internal DMA-capable RAM for faster
+            SD card and internal flash access, avoiding PSRAM cache overhead.
+
+    config FATFS_MAX_FILES_OPEN
+        int "Maximum files with fast I/O buffers"
+        depends on FATFS_USE_FASTOPEN
+        default 8
+        range 1 32
+        help
+            Maximum number of concurrently open files using fast I/O buffers.
+
+    config FATFS_STDIO_BUF_SIZE
+        int "Fast I/O buffer size (bytes)"
+        depends on FATFS_USE_FASTOPEN
+        default 8192
+        help
+            Size of stdio buffer for fast file I/O. Must be power of 2.
+
+endmenu
