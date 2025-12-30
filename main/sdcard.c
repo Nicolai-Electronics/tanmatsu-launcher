@@ -71,7 +71,7 @@ esp_err_t sd_mount(sd_pwr_ctrl_handle_t pwr_ctrl_handle) {
     slot_config.d2    = GPIO_NUM_41;
     slot_config.d3    = GPIO_NUM_42;
     slot_config.width = 4;  // 4-bit mode
-    slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
+    //slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
     ESP_LOGI(TAG, "Mounting filesystem");
     res = esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card);
