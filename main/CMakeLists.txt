@@ -44,6 +44,11 @@ idf_component_register(
 		"menu/menu_hardware_test.c"
 		"menu/menu_brightness.c"
 		"menu/settings_repository.c"
+		"menu/owner.c"
+		"menu/chat/chat.c"
+		"menu/chat/lora_settings.c"
+		"menu/chat/lora_presets.c"
+		"menu/chat/messages.c"
 
 		# Tests
 		"hardware_test/test_keyboard_stuck_keys.c"
