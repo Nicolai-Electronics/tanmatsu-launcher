@@ -7,6 +7,7 @@
 #include "bsp/input.h"
 #include "bsp/power.h"
 #include "charging_mode.h"
+#include "chat/chat.h"
 #include "common/display.h"
 #include "common/theme.h"
 #include "coprocessor_management.h"
@@ -40,6 +41,7 @@ typedef enum {
     ACTION_TOOLS,
     ACTION_INFORMATION,
     ACTION_RFTEST,
+    ACTION_CHAT,
 } menu_home_action_t;
 
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
@@ -64,6 +66,9 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             break;
         case ACTION_RFTEST:
             menu_rftest();
+            break;
+        case ACTION_CHAT:
+            menu_chat();
             break;
         default:
             break;
@@ -142,6 +147,7 @@ void menu_home(void) {
     if (access("/int/rftest_local.bin", F_OK) == 0) {
         menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_DEV));
     }
+    menu_insert_item_icon(&menu, "Chat", NULL, (void*)ACTION_CHAT, -1, get_icon(ICON_GLOBE));
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
