@@ -12,6 +12,11 @@
 #include "bsp/led.h"
 #include "bsp/power.h"
 #include "bsp/rtc.h"
+
+// Audio test beep headers
+#include "bsp/audio.h"
+#include "driver/i2s_std.h"
+
 #include "chakrapetchmedium.h"
 #include "common/display.h"
 #include "common/theme.h"

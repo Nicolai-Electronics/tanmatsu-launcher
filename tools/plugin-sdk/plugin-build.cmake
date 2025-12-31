@@ -61,6 +61,7 @@ function(build_tanmatsu_plugin PLUGIN_NAME PLUGIN_SOURCES)
     )
 
     # Custom command to link the shared object
+    # Note: Using COMMAND_EXPAND_LISTS to properly handle multiple object files
     add_custom_command(
         OUTPUT ${PLUGIN_OUTPUT}
         COMMAND ${CMAKE_C_COMPILER}
@@ -71,13 +72,16 @@ function(build_tanmatsu_plugin PLUGIN_NAME PLUGIN_SOURCES)
             -Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/${PLUGIN_NAME}.map
             -Wl,--no-as-needed
             -L${BADGE_ELF_FAKELIB_DIR}
+            $<TARGET_OBJECTS:${PLUGIN_NAME}_obj>
             -lbadge
             -lpax-gfx
+            -lpthread
             -lc
+            -lgcc
             -o ${PLUGIN_OUTPUT}
-            $<TARGET_OBJECTS:${PLUGIN_NAME}_obj>
         DEPENDS ${PLUGIN_NAME}_obj
         COMMENT "Linking plugin ${PLUGIN_NAME}.plugin"
+        COMMAND_EXPAND_LISTS
     )
 
     # Custom target for the plugin
