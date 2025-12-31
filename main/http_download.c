@@ -5,6 +5,7 @@
 #include "esp_system.h"
 #include "esp_vfs.h"
 #include "esp_vfs_fat.h"
+#include "fastopen.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
@@ -99,7 +100,7 @@ static bool download_success(esp_err_t err, http_download_info_t* info) {
 }
 
 static bool _download_file(const char* url, const char* path) {
-    FILE* fd = fopen(path, "w");
+    FILE* fd = fastopen(path, "w");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open file");
         return false;
@@ -120,7 +121,7 @@ static bool _download_file(const char* url, const char* path) {
                                        .user_agent          = user_agent};
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t                err    = esp_http_client_perform(client);
-    fclose(fd);
+    fastclose(fd);
     esp_http_client_cleanup(client);
     return download_success(err, &info);
 }
