@@ -461,6 +461,37 @@ bool asp_power_get_usb_boost(bool* out_enabled);
 // Returns: true on success
 bool asp_power_set_usb_boost(bool enable);
 
+// ============================================
+// Host API: Dialog System
+// ============================================
+
+// Dialog result type
+typedef enum {
+    PLUGIN_DIALOG_RESULT_OK = 0,
+    PLUGIN_DIALOG_RESULT_CANCEL = 1,
+    PLUGIN_DIALOG_RESULT_TIMEOUT = 2,
+} plugin_dialog_result_t;
+
+// Show an information dialog with title and message
+// Blocks until user dismisses (ESC/F1) or timeout (0 = no timeout)
+// Returns: dialog result indicating how it was closed
+plugin_dialog_result_t asp_plugin_show_info_dialog(
+    const char* title,
+    const char* message,
+    uint32_t timeout_ms
+);
+
+// Show a multi-line text dialog
+// lines: array of strings to display
+// line_count: number of lines
+// Returns: dialog result
+plugin_dialog_result_t asp_plugin_show_text_dialog(
+    const char* title,
+    const char** lines,
+    size_t line_count,
+    uint32_t timeout_ms
+);
+
 #ifdef __cplusplus
 }
 #endif

@@ -847,3 +847,155 @@ bool asp_power_get_usb_boost(bool* out_enabled) {
 bool asp_power_set_usb_boost(bool enable) {
     return bsp_power_set_usb_host_boost_enabled(enable) == ESP_OK;
 }
+
+// ============================================
+// Dialog API Implementation
+// ============================================
+
+#include "common/theme.h"
+#include "menu/message_dialog.h"
+#include "icons.h"
+
+plugin_dialog_result_t asp_plugin_show_info_dialog(
+    const char* title,
+    const char* message,
+    uint32_t timeout_ms
+) {
+    if (!title || !message) {
+        return PLUGIN_DIALOG_RESULT_CANCEL;
+    }
+
+    pax_buf_t* buffer = display_get_buffer();
+    gui_theme_t* theme = get_theme();
+    QueueHandle_t input_event_queue = NULL;
+    ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
+
+    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
+
+    // Draw dialog background and header
+    render_base_screen_statusbar(buffer, theme, true, true, true,
+        ((gui_element_icontext_t[]){{get_icon(ICON_LOUDSPEAKER), (char*)title}}), 1,
+        ADV_DIALOG_FOOTER_OK, NULL, 0);
+
+    // Draw message in content area
+    int content_y = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding;
+    int content_x = theme->menu.horizontal_margin + theme->menu.horizontal_padding;
+
+    pax_draw_text(buffer, theme->palette.color_foreground,
+                  theme->menu.text_font, 16, content_x, content_y, message);
+
+    display_blit_buffer(buffer);
+
+    // Wait for input or timeout
+    TickType_t wait_ticks = timeout_ms > 0 ? pdMS_TO_TICKS(timeout_ms) : portMAX_DELAY;
+    TickType_t start_time = xTaskGetTickCount();
+
+    while (1) {
+        bsp_input_event_t event;
+        TickType_t elapsed = xTaskGetTickCount() - start_time;
+        TickType_t remaining = (elapsed < wait_ticks) ? (wait_ticks - elapsed) : 0;
+
+        if (timeout_ms > 0 && remaining == 0) {
+            return PLUGIN_DIALOG_RESULT_TIMEOUT;
+        }
+
+        TickType_t poll_time = (timeout_ms > 0 && remaining < pdMS_TO_TICKS(1000))
+                               ? remaining : pdMS_TO_TICKS(1000);
+
+        if (xQueueReceive(input_event_queue, &event, poll_time) == pdTRUE) {
+            if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.state) {
+                switch (event.args_navigation.key) {
+                    case BSP_INPUT_NAVIGATION_KEY_ESC:
+                    case BSP_INPUT_NAVIGATION_KEY_F1:
+                    case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                        return PLUGIN_DIALOG_RESULT_OK;
+                    default:
+                        break;
+                }
+            }
+        } else {
+            // Refresh status bar on timeout (clock, battery, etc.)
+            render_base_screen_statusbar(buffer, theme, false, true, false,
+                ((gui_element_icontext_t[]){{get_icon(ICON_LOUDSPEAKER), (char*)title}}), 1,
+                NULL, 0, NULL, 0);
+            display_blit_buffer(buffer);
+        }
+    }
+}
+
+plugin_dialog_result_t asp_plugin_show_text_dialog(
+    const char* title,
+    const char** lines,
+    size_t line_count,
+    uint32_t timeout_ms
+) {
+    if (!title || !lines || line_count == 0) {
+        return PLUGIN_DIALOG_RESULT_CANCEL;
+    }
+
+    pax_buf_t* buffer = display_get_buffer();
+    gui_theme_t* theme = get_theme();
+    QueueHandle_t input_event_queue = NULL;
+    ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
+
+    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
+
+    // Draw dialog
+    render_base_screen_statusbar(buffer, theme, true, true, true,
+        ((gui_element_icontext_t[]){{get_icon(ICON_LOUDSPEAKER), (char*)title}}), 1,
+        ADV_DIALOG_FOOTER_OK, NULL, 0);
+
+    // Draw lines in content area
+    int content_y = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding;
+    int content_x = theme->menu.horizontal_margin + theme->menu.horizontal_padding;
+    int line_height = 20;
+
+    // Limit to 10 lines max to avoid overflow
+    size_t max_lines = (line_count > 10) ? 10 : line_count;
+
+    for (size_t i = 0; i < max_lines; i++) {
+        if (lines[i]) {
+            pax_draw_text(buffer, theme->palette.color_foreground,
+                          theme->menu.text_font, 16, content_x,
+                          content_y + (i * line_height), lines[i]);
+        }
+    }
+
+    display_blit_buffer(buffer);
+
+    // Wait for input or timeout
+    TickType_t wait_ticks = timeout_ms > 0 ? pdMS_TO_TICKS(timeout_ms) : portMAX_DELAY;
+    TickType_t start_time = xTaskGetTickCount();
+
+    while (1) {
+        bsp_input_event_t event;
+        TickType_t elapsed = xTaskGetTickCount() - start_time;
+        TickType_t remaining = (elapsed < wait_ticks) ? (wait_ticks - elapsed) : 0;
+
+        if (timeout_ms > 0 && remaining == 0) {
+            return PLUGIN_DIALOG_RESULT_TIMEOUT;
+        }
+
+        TickType_t poll_time = (timeout_ms > 0 && remaining < pdMS_TO_TICKS(1000))
+                               ? remaining : pdMS_TO_TICKS(1000);
+
+        if (xQueueReceive(input_event_queue, &event, poll_time) == pdTRUE) {
+            if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.state) {
+                switch (event.args_navigation.key) {
+                    case BSP_INPUT_NAVIGATION_KEY_ESC:
+                    case BSP_INPUT_NAVIGATION_KEY_F1:
+                    case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                        return PLUGIN_DIALOG_RESULT_OK;
+                    default:
+                        break;
+                }
+            }
+        } else {
+            // Refresh status bar on timeout
+            render_base_screen_statusbar(buffer, theme, false, true, false,
+                ((gui_element_icontext_t[]){{get_icon(ICON_LOUDSPEAKER), (char*)title}}), 1,
+                NULL, 0, NULL, 0);
+            display_blit_buffer(buffer);
+        }
+    }
+}
