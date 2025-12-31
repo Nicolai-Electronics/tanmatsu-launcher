@@ -104,6 +104,7 @@ void menu_textedit(pax_buf_t* buffer, gui_theme_t* theme, const char* title, cha
                 force_flush = true;
                 render(buffer, theme, true, true, title);
             }
+
             bool flush = false;
             gui_osk_edit_loop(&kb_ctx, buffer, &flush);
             if (flush || force_flush) {
