@@ -1,28 +1,16 @@
-#include "settings.h"
-#include "bsp/display.h"
+#include "chat.h"
 #include "bsp/input.h"
 #include "common/display.h"
 #include "common/theme.h"
-#include "firmware_update.h"
 #include "freertos/idf_additions.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
-#include "menu/about.h"
-#include "menu/menu_power_information.h"
 #include "menu/message_dialog.h"
-#include "menu/owner.h"
-#include "menu/wifi.h"
-#include "menu_brightness.h"
-#include "menu_device_information.h"
-#include "menu_filebrowser.h"
-#include "menu_hardware_test.h"
+#include "messages.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
-#include "radio_update.h"
-#include "settings_clock.h"
-#include "settings_repository.h"
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
@@ -37,30 +25,16 @@
 
 typedef enum {
     ACTION_NONE,
-    ACTION_OWNER,
-    ACTION_BRIGHTNESS,
-    ACTION_WIFI,
-    ACTION_CLOCK,
-    ACTION_REPOSITORY,
+    ACTION_FIXME,
+    ACTION_MESSAGES
 } menu_home_action_t;
 
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
     switch (action) {
-        case ACTION_OWNER:
-            menu_owner();
+        case ACTION_MESSAGES:
+            menu_messages();
             break;
-        case ACTION_BRIGHTNESS:
-            menu_brightness();
-            break;
-        case ACTION_WIFI:
-            menu_wifi(fb, theme);
-            break;
-        case ACTION_CLOCK:
-            menu_settings_clock(fb, theme);
-            break;
-        case ACTION_REPOSITORY:
-            menu_settings_repository(fb, theme);
-            break;
+        case ACTION_FIXME:
         default:
             break;
     }
@@ -72,24 +46,24 @@ static void render(menu_t* menu, pax_vec2_t position, bool partial, bool icons) 
 
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_SETTINGS), "Settings"}}), 1,
-                                     FOOTER_LEFT, FOOTER_RIGHT);
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_SETTINGS), "Chat"}}), 1, FOOTER_LEFT,
+                                     FOOTER_RIGHT);
     }
     menu_render_grid(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
 }
 
-void menu_settings(void) {
+void menu_chat(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
     menu_t menu = {0};
     menu_initialize(&menu);
-    menu_insert_item_icon(&menu, "Owner", NULL, (void*)ACTION_OWNER, -1, get_icon(ICON_TAG));
-    menu_insert_item_icon(&menu, "Brightness", NULL, (void*)ACTION_BRIGHTNESS, -1, get_icon(ICON_BRIGHTNESS));
-    menu_insert_item_icon(&menu, "WiFi", NULL, (void*)ACTION_WIFI, -1, get_icon(ICON_WIFI));
-    menu_insert_item_icon(&menu, "Clock", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
-    menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
+    menu_insert_item_icon(&menu, "Contacts", NULL, (void*)ACTION_FIXME, -1, get_icon(ICON_TAG));
+    menu_insert_item_icon(&menu, "Channels", NULL, (void*)ACTION_MESSAGES, -1, get_icon(ICON_APPS));
+    menu_insert_item_icon(&menu, "Map", NULL, (void*)ACTION_FIXME, -1, get_icon(ICON_GLOBE_LOCATION));
+    menu_insert_item_icon(&menu, "Configuration", NULL, (void*)ACTION_FIXME, -1, get_icon(ICON_SETTINGS));
+    menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_FIXME, -1, get_icon(ICON_EXTENSION));
 
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
