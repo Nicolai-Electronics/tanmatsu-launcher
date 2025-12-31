@@ -16,35 +16,62 @@ static const char* NVS_NAMESPACE = "system";
 #define DEFAULT_REPO_SERVER   "https://apps.tanmatsu.cloud"
 #define DEFAULT_REPO_BASE_URI "/v1"
 
-static esp_err_t device_settings_get_percentage(const char* key, uint8_t default_value, uint8_t minimum_value,
-                                                uint8_t* out_percentage) {
-    if (key == NULL || out_percentage == NULL) {
+static esp_err_t device_settings_get_u8(const char* key, uint8_t default_value, uint8_t* out_value) {
+    if (key == NULL || out_value == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
     nvs_handle_t nvs_handle;
     esp_err_t    res = nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs_handle);
     if (res != ESP_OK) {
-        *out_percentage = default_value;
+        *out_value = default_value;
         return res;
     }
     uint8_t value;
     res = nvs_get_u8(nvs_handle, key, &value);
     if (res != ESP_OK) {
-        *out_percentage = default_value;
+        *out_value = default_value;
         nvs_close(nvs_handle);
         return res;
     }
     nvs_close(nvs_handle);
 
-    if (value > 100) {
-        value = 100;
+    *out_value = value;
+    return res;
+}
+
+static esp_err_t device_settings_set_u8(const char* key, uint8_t value) {
+    if (key == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    nvs_handle_t nvs_handle;
+    esp_err_t    res = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (res != ESP_OK) {
+        return res;
+    }
+    res = nvs_set_u8(nvs_handle, key, value);
+    if (res != ESP_OK) {
+        nvs_close(nvs_handle);
+        return res;
+    }
+    nvs_close(nvs_handle);
+    return res;
+}
+
+static esp_err_t device_settings_get_percentage(const char* key, uint8_t default_value, uint8_t minimum_value,
+                                                uint8_t* out_percentage) {
+    esp_err_t res = device_settings_get_u8(key, default_value, out_percentage);
+    if (res != ESP_OK) {
+        return res;
     }
 
-    if (value < minimum_value) {
-        value = minimum_value;
+    if (*out_percentage > 100) {
+        *out_percentage = 100;
     }
 
-    *out_percentage = value;
+    if (*out_percentage < minimum_value) {
+        *out_percentage = minimum_value;
+    }
+
     return res;
 }
 
@@ -58,18 +85,7 @@ static esp_err_t device_settings_set_percentage(const char* key, uint8_t minimum
     if (percentage < minimum_value) {
         percentage = minimum_value;
     }
-    nvs_handle_t nvs_handle;
-    esp_err_t    res = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
-    if (res != ESP_OK) {
-        return res;
-    }
-    res = nvs_set_u8(nvs_handle, key, percentage);
-    if (res != ESP_OK) {
-        nvs_close(nvs_handle);
-        return res;
-    }
-    nvs_close(nvs_handle);
-    return res;
+    return device_settings_set_u8(key, percentage);
 }
 
 static esp_err_t device_settings_get_string(const char* key, const char* default_value, char* out_value,
@@ -184,8 +200,8 @@ esp_err_t device_settings_set_repo_base_uri(const char* value) {
 }
 
 void device_settings_get_default_http_user_agent(char* out_value, size_t max_length) {
-    char                    device_name[64]  = {0};
-    const esp_app_desc_t*   app_description  = esp_app_get_description();
+    char                  device_name[64] = {0};
+    const esp_app_desc_t* app_description = esp_app_get_description();
     bsp_device_get_name(device_name, sizeof(device_name));
     snprintf(out_value, max_length, "%s/%s", device_name, app_description->version);
 }
@@ -198,4 +214,30 @@ esp_err_t device_settings_get_http_user_agent(char* out_value, size_t max_length
 
 esp_err_t device_settings_set_http_user_agent(const char* value) {
     return device_settings_set_string("http.ua", value);
+}
+
+// Owner settings
+
+esp_err_t device_settings_get_owner_nickname(char* out_value, size_t max_length) {
+    return device_settings_get_string("owner.nickname", "John Smith", out_value, max_length);
+}
+
+esp_err_t device_settings_set_owner_nickname(const char* value) {
+    return device_settings_set_string("owner.nickname", value);
+}
+
+esp_err_t device_settings_get_owner_birthday_day(uint8_t* out_day) {
+    return device_settings_get_u8("owner.bday.day", 1, out_day);
+}
+
+esp_err_t device_settings_set_owner_birthday_day(uint8_t day) {
+    return device_settings_set_u8("owner.bday.day", day);
+}
+
+esp_err_t device_settings_get_owner_birthday_month(uint8_t* out_month) {
+    return device_settings_get_u8("owner.bday.month", 1, out_month);
+}
+
+esp_err_t device_settings_set_owner_birthday_month(uint8_t month) {
+    return device_settings_set_u8("owner.bday.month", month);
 }
