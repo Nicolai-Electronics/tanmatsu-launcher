@@ -15,7 +15,10 @@
 #include "coprocessor_management.h"
 #include "device_information.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/idf_additions.h"
+#include "freertos/projdefs.h"
 #include "freertos/queue.h"
 #include "gui_menu.h"
 #include "gui_style.h"
@@ -27,7 +30,10 @@
 #include "menu/message_dialog.h"
 #include "menu/nametag.h"
 #include "menu_repository_client.h"
+#include "menu/menu_plugins.h"
 #include "pax_gfx.h"
+#include "plugin_manager.h"
+#include "esp_wifi.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
 #include "radio_ota.h"
@@ -50,6 +56,7 @@ typedef enum {
     ACTION_NAMETAG,
     ACTION_REPOSITORY,
     ACTION_SETTINGS,
+    ACTION_PLUGINS,
     ACTION_TOOLS,
     ACTION_INFORMATION,
     ACTION_RFTEST,
@@ -63,10 +70,12 @@ static void execute_action(menu_home_action_t action) {
     switch (action) {
         case ACTION_RADIO_OTA:
             radio_ota_update();
+            plugin_manager_shutdown();
             esp_restart();
             break;
         case ACTION_DOWNLOAD_ICONS:
             download_icons(true);
+            plugin_manager_shutdown();
             esp_restart();
         case ACTION_APPS:
             menu_apps(fb, theme);
@@ -79,6 +88,9 @@ static void execute_action(menu_home_action_t action) {
             break;
         case ACTION_SETTINGS:
             menu_settings();
+            break;
+        case ACTION_PLUGINS:
+            menu_plugins(fb, theme);
             break;
         case ACTION_TOOLS:
             menu_tools();
@@ -284,8 +296,7 @@ void menu_home(void) {
     }
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_STOREFRONT));
     menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
-    //  menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_EXTENSION));
-    //  menu_insert_item_icon(&menu, "Information", NULL, (void*)ACTION_INFORMATION, -1, get_icon(ICON_INFO));
+    menu_insert_item_icon(&menu, "Plugins", NULL, (void*)ACTION_PLUGINS, -1, get_icon(ICON_EXTENSION));
     if (access("/int/rftest_local.bin", F_OK) == 0) {
         menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_BUG_REPORT));
     }

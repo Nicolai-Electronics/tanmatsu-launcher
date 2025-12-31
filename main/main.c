@@ -52,6 +52,7 @@
 #include "usb_device.h"
 #include "wifi_connection.h"
 #include "wifi_remote.h"
+#include "plugin_manager.h"
 
 #if defined(CONFIG_IDF_TARGET_ESP32P4)
 #include "esp_hosted_custom.h"
@@ -348,9 +349,9 @@ void app_main(void) {
     startup_dialog("Applying settings...");
     device_settings_apply();
 
-    // Configure LEDs
+    // Configure LEDs - use manual mode so plugins can control individual LEDs
     bsp_led_clear();
-    bsp_led_set_mode(true);
+    bsp_led_set_mode(false);
 
     // Initialize filesystems
     startup_dialog("Mounting FAT filesystem...");
@@ -531,6 +532,10 @@ void app_main(void) {
     python_initialize();
 #endif
 #endif
+
+    startup_dialog("Initializing plugins...");
+    plugin_manager_init();
+    plugin_manager_load_autostart();
 
     menu_home();
 }
