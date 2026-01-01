@@ -1,0 +1,121 @@
+#include "lora_presets.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+const mesh_lora_preset_t lora_presets[] = {
+    {
+        .name             = "Australia",
+        .frequency        = 915.800f,
+        .bandwidth        = 250,
+        .spreading_factor = 10,
+        .coding_rate      = 5,
+        .low_frequency    = false,
+    },
+    {
+        .name             = "Australia: Victoria",
+        .frequency        = 916.575f,
+        .bandwidth        = 62,
+        .spreading_factor = 7,
+        .coding_rate      = 8,
+        .low_frequency    = false,
+    },
+    {
+        .name             = "EU868 (Narrow)",
+        .frequency        = 869.618f,
+        .bandwidth        = 62,
+        .spreading_factor = 8,
+        .coding_rate      = 8,
+        .low_frequency    = false,
+    },
+    {
+        .name             = "EU868  (Long Range)",
+        .frequency        = 869.618f,
+        .bandwidth        = 250,
+        .spreading_factor = 11,
+        .coding_rate      = 5,
+        .low_frequency    = false,
+    },
+    {
+        .name             = "EU868 (Medium Range)",
+        .frequency        = 869.618f,
+        .bandwidth        = 250,
+        .spreading_factor = 10,
+        .coding_rate      = 5,
+        .low_frequency    = false,
+    },
+    {
+        .name             = "Czech Republic (Narrow)",
+        .frequency        = 869.525f,
+        .bandwidth        = 62,
+        .spreading_factor = 7,
+        .coding_rate      = 5,
+        .low_frequency    = false,
+    },
+    {
+        .name             = "EU433",
+        .frequency        = 433.650f,
+        .bandwidth        = 250,
+        .spreading_factor = 11,
+        .coding_rate      = 5,
+        .low_frequency    = true,
+    },
+    {
+        .name             = "New Zealand",
+        .frequency        = 917.375f,
+        .bandwidth        = 250,
+        .spreading_factor = 11,
+        .coding_rate      = 5,
+        .low_frequency    = false,
+    },
+    {
+        .name             = "New Zealand (Narrow)",
+        .frequency        = 917.375f,
+        .bandwidth        = 62,
+        .spreading_factor = 7,
+        .coding_rate      = 5,
+        .low_frequency    = false,
+    },
+    {
+        .name             = "Portugal 433",
+        .frequency        = 433.375f,
+        .bandwidth        = 62,
+        .spreading_factor = 9,
+        .coding_rate      = 6,
+        .low_frequency    = true,
+    },
+    {
+        .name             = "Portugal 868",
+        .frequency        = 869.618f,
+        .bandwidth        = 62,
+        .spreading_factor = 7,
+        .coding_rate      = 6,
+        .low_frequency    = false,
+    },
+    {
+        .name             = "Switzerland",
+        .frequency        = 869.618f,
+        .bandwidth        = 62,
+        .spreading_factor = 8,
+        .coding_rate      = 6,
+        .low_frequency    = false,
+    },
+    {
+        .name             = "USA / Canada",
+        .frequency        = 910.525f,
+        .bandwidth        = 125,
+        .spreading_factor = 7,
+        .coding_rate      = 5,
+        .low_frequency    = false,
+    },
+    {
+        .name             = "Vietnam",
+        .frequency        = 920.250f,
+        .bandwidth        = 250,
+        .spreading_factor = 11,
+        .coding_rate      = 5,
+        .low_frequency    = false,
+    },
+};
+
+const size_t lora_presets_count = sizeof(lora_presets) / sizeof(lora_presets[0]);

@@ -121,6 +121,22 @@ bool menu_insert_item_icon(menu_t* menu, const char* label, menu_callback_t call
     return true;
 }
 
+bool menu_insert_item_value_icon(menu_t* menu, const char* label, const char* value, menu_callback_t callback,
+                                 void* callback_arguments, size_t position, pax_buf_t* icon) {
+    if (!menu_insert_item_value(menu, label, value, callback, callback_arguments, position)) {
+        return false;
+    }
+    menu_item_t* item;
+    if (position >= menu->length - 1) {
+        item = menu_find_last_item(menu);
+    } else {
+        item = menu_find_item(menu, position);
+    }
+
+    item->icon = icon;
+    return true;
+}
+
 bool menu_remove_item(menu_t* menu, size_t position) {
     if (menu == NULL) return false;              // Can't delete an item from a menu that doesn't exist
     if (menu->length <= position) return false;  // Can't delete an item that doesn't exist

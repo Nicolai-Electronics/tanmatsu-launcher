@@ -1,4 +1,4 @@
-if (CONFIG_BSP_TARGET_TANMATSU OR CONFIG_BSP_TARGET_KONSOOL OR CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+if (CONFIG_BSP_TARGET_TANMATSU OR CONFIG_BSP_TARGET_KONSOOL)
 list(APPEND files "tanmatsu_coprocessor.bin")
 endif()
 
@@ -16,7 +16,9 @@ idf_component_register(
 		
 		# Menus
 		"menu/home.c"
-		"menu/menu_settings.c"
+		"menu/settings.c"
+		"menu/information.c"
+		"menu/tools.c"
 		"menu/about.c"
 		"menu/wifi.c"
 		"menu/wifi_edit.c"
@@ -42,6 +44,11 @@ idf_component_register(
 		"menu/menu_hardware_test.c"
 		"menu/menu_brightness.c"
 		"menu/settings_repository.c"
+		"menu/owner.c"
+		"menu/chat/chat.c"
+		"menu/chat/lora_settings.c"
+		"menu/chat/lora_presets.c"
+		"menu/chat/messages.c"
 
 		# Tests
 		"hardware_test/test_keyboard_stuck_keys.c"
@@ -80,6 +87,7 @@ idf_component_register(
 		"ntp.c"
 		"device_settings.c"
 		"lora.c"
+		"fastopen.c"
 
 	PRIV_REQUIRES
 		esp_lcd

@@ -64,4 +64,5 @@ typedef struct {
     gui_element_style_t     menu;
     gui_scrollbar_style_t   scrollbar;
     gui_progressbar_style_t progressbar;
+    gui_element_style_t     chat;
 } gui_theme_t;

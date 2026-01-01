@@ -1,6 +1,7 @@
 #include "icons.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "fastopen.h"
 #include "pax_codecs.h"
 
 static char const TAG[] = "icons";
@@ -88,7 +89,7 @@ pax_buf_t EXT_RAM_BSS_ATTR icons[ICON_LAST] = {0};
 
 void load_icons(void) {
     for (int i = 0; i < ICON_LAST; i++) {
-        FILE* fd = fopen(icon_paths[i], "rb");
+        FILE* fd = fastopen(icon_paths[i], "rb");
         if (fd == NULL) {
             ESP_LOGE(TAG, "Failed to open icon file %s", icon_paths[i]);
             continue;
@@ -96,7 +97,7 @@ void load_icons(void) {
         void* buffer = heap_caps_calloc(1, ICON_BUFFER_SIZE, MALLOC_CAP_SPIRAM);
         if (buffer == NULL) {
             ESP_LOGE(TAG, "Failed to allocate memory for icon %s", icon_paths[i]);
-            fclose(fd);
+            fastclose(fd);
             continue;
         }
         pax_buf_init(&icons[i], buffer, ICON_WIDTH, ICON_HEIGHT, ICON_COLOR_FORMAT);
@@ -107,7 +108,7 @@ void load_icons(void) {
         if (!pax_insert_png_fd(&icons[i], fd, 0, 0, 0)) {
             ESP_LOGE(TAG, "Failed to decode icon file %s", icon_paths[i]);
         }
-        fclose(fd);
+        fastclose(fd);
     }
 }
 

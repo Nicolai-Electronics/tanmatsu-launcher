@@ -1,10 +1,222 @@
 #include "chakrapetchmedium.h"
 #include "gui_style.h"
 #include "pax_gfx.h"
+#include "rajdhani.h"
 #include "sdkconfig.h"
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
+    defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
+const gui_theme_t theme_dark = {
+    // dark
+    .palette =
+        {
+            .color_foreground          = 0xFFEEEAEE,  // #EEEAEE
+            .color_background          = 0xFF000000,  // #000000
+            .color_active_foreground   = 0xFFFFFFFF,  // #FFFFFF
+            .color_active_background   = 0xFF000000,  // #000000
+            .color_highlight_primary   = 0xFF71B7B4,  // #71B7B4
+            .color_highlight_secondary = 0xFFCFED58,  // #CFED58
+            .color_highlight_tertiary  = 0xFFFE6158,  // #FE6158
+        },
+    .footer =
+        {
+            .height             = 32,
+            .vertical_margin    = 7,
+            .horizontal_margin  = 20,
+            .text_height        = 16,
+            .vertical_padding   = 20,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+            .palette =
+                {
+                    .color_foreground        = 0xFFEEEAEE,  // #EEEAEE
+                    .color_background        = 0xFF000000,  // #000000
+                    .color_active_foreground = 0xFFFFFFFF,  // #FFFFFF
+                    .color_active_background = 0xFF000000,  // #000000
+                },
+        },
+    .header =
+        {
+            .height             = 32,
+            .vertical_margin    = 7,
+            .horizontal_margin  = 20,
+            .text_height        = 16,
+            .vertical_padding   = 20,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+            .palette =
+                {
+                    .color_foreground        = 0xFFEEEAEE,  // #EEEAEE
+                    .color_background        = 0xFF000000,  // #000000
+                    .color_active_foreground = 0xFFFFFFFF,  // #FFFFFF
+                    .color_active_background = 0xFF000000,  // #000000
+                },
+        },
+    .menu =
+        {
+            .height                = 480 - 64,
+            .vertical_margin       = 20,
+            .horizontal_margin     = 30,
+            .text_height           = 16,
+            .vertical_padding      = 6,
+            .horizontal_padding    = 6,
+            .text_font             = &chakrapetchmedium,
+            .list_entry_height     = 32,
+            .grid_horizontal_count = 4,
+            .grid_vertical_count   = 3,
+            .palette =
+                {
+                    .color_foreground          = 0xFFEEEAEE,  // #EEEAEE
+                    .color_background          = 0xFF000000,  // #000000
+                    .color_active_foreground   = 0xFFFFFFFF,  // #FFFFFF
+                    .color_active_background   = 0xFF000000,  // #000000
+                    .color_highlight_primary   = 0xFF71B7B4,  // #71B7B4
+                    .color_highlight_secondary = 0xFFCFED58,  // #CFED58
+                    .color_highlight_tertiary  = 0xFFFE6158,  // #FE6158
+                },
+        },
+    .progressbar =
+        {
+            .vertical_margin    = 5,
+            .horizontal_margin  = 5,
+            .vertical_padding   = 5,
+            .horizontal_padding = 5,
+            .palette =
+                {
+                    .color_foreground        = 0xFFEEEAEE,  // #EEEAEE
+                    .color_background        = 0xFF000000,  // #000000
+                    .color_active_foreground = 0xFF71B7B4,  // #71B7B4
+                    .color_active_background = 0xFF000000,  // #000000
+                },
+        },
+    .chat =
+        {
+            .height             = 480 - 64,
+            .vertical_margin    = 20,
+            .horizontal_margin  = 30,
+            .text_height        = 24,
+            .vertical_padding   = 6,
+            .horizontal_padding = 6,
+            .text_font          = &rajdhani,
+            .list_entry_height  = 64,
+            .palette =
+                {
+                    .color_foreground          = 0xFFEEEAEE,  // #EEEAEE
+                    .color_background          = 0xFF000000,  // #000000
+                    .color_active_foreground   = 0xFFFFFFFF,  // #FFFFFF
+                    .color_active_background   = 0xFF000000,  // #000000
+                    .color_highlight_primary   = 0xFF71B7B4,  // #71B7B4
+                    .color_highlight_secondary = 0xFFCFED58,  // #CFED58
+                    .color_highlight_tertiary  = 0xFFFE6158,  // #FE6158
+                },
+        },
+};
+
+const gui_theme_t theme_dark_red = {
+    .palette =
+        {
+            .color_foreground          = 0xFF601E20,  // #601E20
+            .color_background          = 0xFF000000,  // #000000
+            .color_active_foreground   = 0xFFFE6158,  // #FE6158
+            .color_active_background   = 0xFF000000,  // #000000
+            .color_highlight_primary   = 0xFFFE6158,  // #FE6158
+            .color_highlight_secondary = 0xFFCFED58,  // #CFED58
+            .color_highlight_tertiary  = 0xFFFE6158,  // #FE6158
+        },
+    .footer =
+        {
+            .height             = 32,
+            .vertical_margin    = 7,
+            .horizontal_margin  = 20,
+            .text_height        = 16,
+            .vertical_padding   = 20,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+            .palette =
+                {
+                    .color_foreground        = 0xFF601E20,  // #601E20
+                    .color_background        = 0xFF000000,  // #000000
+                    .color_active_foreground = 0xFFFE6158,  // #FE6158
+                    .color_active_background = 0xFF000000,  // #000000
+                },
+        },
+    .header =
+        {
+            .height             = 32,
+            .vertical_margin    = 7,
+            .horizontal_margin  = 20,
+            .text_height        = 16,
+            .vertical_padding   = 20,
+            .horizontal_padding = 0,
+            .text_font          = &chakrapetchmedium,
+            .palette =
+                {
+                    .color_foreground        = 0xFF601E20,  // #601E20
+                    .color_background        = 0xFF000000,  // #000000
+                    .color_active_foreground = 0xFFFE6158,  // #FE6158
+                    .color_active_background = 0xFF000000,  // #000000
+                },
+        },
+    .menu =
+        {
+            .height                = 480 - 64,
+            .vertical_margin       = 20,
+            .horizontal_margin     = 30,
+            .text_height           = 16,
+            .vertical_padding      = 6,
+            .horizontal_padding    = 6,
+            .text_font             = &chakrapetchmedium,
+            .list_entry_height     = 32,
+            .grid_horizontal_count = 4,
+            .grid_vertical_count   = 3,
+            .palette =
+                {
+                    .color_foreground          = 0xFF601E20,  // #601E20
+                    .color_background          = 0xFF000000,  // #000000
+                    .color_active_foreground   = 0xFFFE6158,  // #FE6158
+                    .color_active_background   = 0xFF000000,  // #000000
+                    .color_highlight_primary   = 0xFFFE6158,  // #FE6158
+                    .color_highlight_secondary = 0xFFCFED58,  // #CFED58
+                    .color_highlight_tertiary  = 0xFFFE6158,  // #FE6158
+                },
+        },
+    .progressbar =
+        {
+            .vertical_margin    = 5,
+            .horizontal_margin  = 5,
+            .vertical_padding   = 5,
+            .horizontal_padding = 5,
+            .palette =
+                {
+                    .color_foreground        = 0xFF601E20,  // #601E20
+                    .color_background        = 0xFF000000,  // #000000
+                    .color_active_foreground = 0xFFFE6158,  // #FE6158
+                    .color_active_background = 0xFF000000,  // #000000
+                },
+        },
+    .chat =
+        {
+            .height             = 480 - 64,
+            .vertical_margin    = 20,
+            .horizontal_margin  = 30,
+            .text_height        = 24,
+            .vertical_padding   = 6,
+            .horizontal_padding = 6,
+            .text_font          = &rajdhani,
+            .list_entry_height  = 64,
+            .palette =
+                {
+                    .color_foreground          = 0xFFEEEAEE,  // #EEEAEE
+                    .color_background          = 0xFF000000,  // #000000
+                    .color_active_foreground   = 0xFFFFFFFF,  // #FFFFFF
+                    .color_active_background   = 0xFF000000,  // #000000
+                    .color_highlight_primary   = 0xFF71B7B4,  // #71B7B4
+                    .color_highlight_secondary = 0xFFCFED58,  // #CFED58
+                    .color_highlight_tertiary  = 0xFFFE6158,  // #FE6158
+                },
+        },
+};
+
 const gui_theme_t theme = {
     .palette =
         {
@@ -85,6 +297,27 @@ const gui_theme_t theme = {
                     .color_background        = 0xFFEEEAEE,  // #EEEAEE
                     .color_active_foreground = 0xFF01BC99,  // #01BC99
                     .color_active_background = 0xFFFFFFFF,  // #FFFFFF
+                },
+        },
+    .chat =
+        {
+            .height             = 480 - 64,
+            .vertical_margin    = 20,
+            .horizontal_margin  = 30,
+            .text_height        = 24,
+            .vertical_padding   = 6,
+            .horizontal_padding = 6,
+            .text_font          = &rajdhani,
+            .list_entry_height  = 64,
+            .palette =
+                {
+                    .color_foreground          = 0xFF340132,  // #340132
+                    .color_background          = 0xFFEEEAEE,  // #EEEAEE
+                    .color_active_foreground   = 0xFF340132,  // #340132
+                    .color_active_background   = 0xFFFFFFFF,  // #FFFFFF
+                    .color_highlight_primary   = 0xFF01BC99,  // #01BC99
+                    .color_highlight_secondary = 0xFFFFCF53,  // #FFCF53
+                    .color_highlight_tertiary  = 0xFFFF017F,  // #FF017F
                 },
         },
 };
