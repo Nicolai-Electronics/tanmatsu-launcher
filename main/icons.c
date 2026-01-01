@@ -1,6 +1,7 @@
 #include "icons.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "fastopen.h"
 #include "pax_codecs.h"
 
 static char const TAG[] = "icons";
@@ -81,14 +82,28 @@ const char* icon_paths[] = {
     [ICON_GLOBE_LOCATION]      = "/int/icons/menu/globe_location.png",
     [ICON_APP]                 = "/int/icons/menu/app.png",
     [ICON_ERROR]               = "/int/icons/menu/error.png",
-    [ICON_BRIGHTNESS]          = "/int/icons/menu/brightness.png",  // Missing!
+    [ICON_BRIGHTNESS]          = "/int/icons/menu/brightness.png",
+    [ICON_CHAT]                = "/int/icons/menu/chat.png",
+    [ICON_CONTACT]             = "/int/icons/menu/contact.png",
+    [ICON_DATA_TABLE]          = "/int/icons/menu/data_table.png",
+    [ICON_DATABASE]            = "/int/icons/menu/database.png",
+    [ICON_FILE]                = "/int/icons/menu/file.png",
+    [ICON_FOLDER]              = "/int/icons/menu/folder.png",
+    [ICON_IMAGE]               = "/int/icons/menu/image.png",
+    [ICON_LOCATION_OFF]        = "/int/icons/menu/location_off.png",
+    [ICON_LOCATION_ON]         = "/int/icons/menu/location_on.png",
+    [ICON_MAIL]                = "/int/icons/menu/mail.png",
+    [ICON_MAP]                 = "/int/icons/menu/map.png",
+    [ICON_PAINTBUCKET]         = "/int/icons/menu/paintbucket.png",
+    [ICON_SEND]                = "/int/icons/menu/send.png",
+    [ICON_WORKSPACES]          = "/int/icons/menu/workspaces.png",
 };
 
 pax_buf_t EXT_RAM_BSS_ATTR icons[ICON_LAST] = {0};
 
 void load_icons(void) {
     for (int i = 0; i < ICON_LAST; i++) {
-        FILE* fd = fopen(icon_paths[i], "rb");
+        FILE* fd = fastopen(icon_paths[i], "rb");
         if (fd == NULL) {
             ESP_LOGE(TAG, "Failed to open icon file %s", icon_paths[i]);
             continue;
@@ -96,7 +111,7 @@ void load_icons(void) {
         void* buffer = heap_caps_calloc(1, ICON_BUFFER_SIZE, MALLOC_CAP_SPIRAM);
         if (buffer == NULL) {
             ESP_LOGE(TAG, "Failed to allocate memory for icon %s", icon_paths[i]);
-            fclose(fd);
+            fastclose(fd);
             continue;
         }
         pax_buf_init(&icons[i], buffer, ICON_WIDTH, ICON_HEIGHT, ICON_COLOR_FORMAT);
@@ -107,7 +122,7 @@ void load_icons(void) {
         if (!pax_insert_png_fd(&icons[i], fd, 0, 0, 0)) {
             ESP_LOGE(TAG, "Failed to decode icon file %s", icon_paths[i]);
         }
-        fclose(fd);
+        fastclose(fd);
 
 #if 0
         if (i < ICON_F1 || i >= ICON_EXTENSION) {

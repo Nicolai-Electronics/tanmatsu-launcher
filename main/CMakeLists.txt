@@ -75,6 +75,7 @@ idf_component_register(
 		"app_management.c"
 		"ntp.c"
 		"device_settings.c"
+		"fastopen.c"
 
 	PRIV_REQUIRES
 		esp_lcd
