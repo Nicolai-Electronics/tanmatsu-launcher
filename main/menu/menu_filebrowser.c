@@ -1,3 +1,4 @@
+#include "menu_filebrowser.h"
 #include <dirent.h>
 #include <string.h>
 #include "bsp/display.h"
@@ -8,7 +9,6 @@
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
-#include "menu_settings.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"

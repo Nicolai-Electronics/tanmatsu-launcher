@@ -26,38 +26,39 @@ void menu_render_item(pax_buf_t* pax_buffer, menu_item_t* item, gui_theme_t* the
         float y  = current_position_y;
         float w  = (width / 2);
         float h  = theme->menu.list_entry_height;
-        pax_simple_rect(pax_buffer, theme->palette.color_background, xl, y, w, h);
-        pax_draw_text(pax_buffer, theme->palette.color_foreground, theme->menu.text_font, theme->menu.text_height,
+        pax_simple_rect(pax_buffer, theme->menu.palette.color_background, xl, y, w, h);
+        pax_draw_text(pax_buffer, theme->menu.palette.color_foreground, theme->menu.text_font, theme->menu.text_height,
                       xl + horizontal_padding + icon_width, y + text_offset, item->label);
         if (selected) {
-            pax_simple_rect(pax_buffer, theme->palette.color_active_background, xv, y, w, h);
-            pax_outline_rect(pax_buffer, theme->palette.color_highlight_primary, xv + 1, y + 1, w - 2, h - 2);
-            pax_draw_text(pax_buffer, theme->palette.color_active_foreground, theme->menu.text_font,
+            pax_simple_rect(pax_buffer, theme->menu.palette.color_active_background, xv, y, w, h);
+            pax_outline_rect(pax_buffer, theme->menu.palette.color_highlight_primary, xv + 1, y + 1, w - 2, h - 2);
+            pax_draw_text(pax_buffer, theme->menu.palette.color_active_foreground, theme->menu.text_font,
                           theme->menu.text_height, xv + horizontal_padding, y + text_offset, item->value);
         } else {
-            pax_simple_rect(pax_buffer, theme->palette.color_background, xv, y, w, h);
-            pax_draw_text(pax_buffer, theme->palette.color_foreground, theme->menu.text_font, theme->menu.text_height,
-                          xv + horizontal_padding, y + text_offset, item->value);
+            pax_simple_rect(pax_buffer, theme->menu.palette.color_background, xv, y, w, h);
+            pax_draw_text(pax_buffer, theme->menu.palette.color_foreground, theme->menu.text_font,
+                          theme->menu.text_height, xv + horizontal_padding, y + text_offset, item->value);
         }
     } else {
         if (selected) {
-            pax_simple_rect(pax_buffer, theme->palette.color_active_background, position.x0 + 1, current_position_y,
-                            (width)-2, theme->menu.list_entry_height);
-            pax_outline_rect(pax_buffer, theme->palette.color_highlight_primary, position.x0 + 1,
+            pax_simple_rect(pax_buffer, theme->menu.palette.color_active_background, position.x0 + 1,
+                            current_position_y, (width)-2, theme->menu.list_entry_height);
+            pax_outline_rect(pax_buffer, theme->menu.palette.color_highlight_primary, position.x0 + 1,
                              current_position_y + 1, (width)-3, theme->menu.list_entry_height - 1);
             // pax_clip(pax_buffer, position.x0 + 1, current_position_y + text_offset, (width) -
             // 4, theme->menu.text_height);
-            pax_draw_text(pax_buffer, theme->palette.color_active_foreground, theme->menu.text_font,
+            pax_draw_text(pax_buffer, theme->menu.palette.color_active_foreground, theme->menu.text_font,
                           theme->menu.text_height, position.x0 + horizontal_padding + icon_width,
                           current_position_y + text_offset, item->label);
             // pax_noclip(pax_buffer);
         } else {
-            pax_simple_rect(pax_buffer, theme->palette.color_background, position.x0 + 1, current_position_y, (width)-2,
-                            theme->menu.list_entry_height);
+            pax_simple_rect(pax_buffer, theme->menu.palette.color_background, position.x0 + 1, current_position_y,
+                            (width)-2, theme->menu.list_entry_height);
             // pax_clip(pax_buffer, position.x0 + 1, current_position_y + text_offset, (width) -
             // 4, theme->menu.text_height);
-            pax_draw_text(pax_buffer, theme->palette.color_foreground, theme->menu.text_font, theme->menu.text_height,
-                          position.x0 + horizontal_padding + icon_width, current_position_y + text_offset, item->label);
+            pax_draw_text(pax_buffer, theme->menu.palette.color_foreground, theme->menu.text_font,
+                          theme->menu.text_height, position.x0 + horizontal_padding + icon_width,
+                          current_position_y + text_offset, item->label);
             // pax_noclip(pax_buffer);
         }
     }
@@ -65,7 +66,8 @@ void menu_render_item(pax_buf_t* pax_buffer, menu_item_t* item, gui_theme_t* the
     if (item->icon != NULL) {
         // pax_clip(pax_buffer, position.x0 + 1, current_position_y, theme->menu.list_entry_height,
         // theme->menu.list_entry_height);
-        pax_draw_image(pax_buffer, item->icon, position.x0 + 1, current_position_y);
+        pax_draw_image(pax_buffer, item->icon, position.x0 + 1,
+                       current_position_y + ((theme->menu.list_entry_height - pax_buf_get_height(item->icon)) / 2));
         // pax_noclip(pax_buffer);
     }
 }
@@ -121,9 +123,9 @@ void menu_render(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, gui_t
         float scrollbarHeight = (position.y1 - position.y0) - 2;
         float scrollbarStart  = scrollbarHeight * fractionStart;
         float scrollbarEnd    = scrollbarHeight * fractionEnd;
-        pax_simple_rect(pax_buffer, theme->palette.color_active_background, position.x1 - 5, position.y0 + 1, 4,
+        pax_simple_rect(pax_buffer, theme->menu.palette.color_active_background, position.x1 - 5, position.y0 + 1, 4,
                         scrollbarHeight);
-        pax_simple_rect(pax_buffer, theme->palette.color_highlight_primary, position.x1 - 5,
+        pax_simple_rect(pax_buffer, theme->menu.palette.color_highlight_primary, position.x1 - 5,
                         position.y0 + 1 + scrollbarStart, 4, scrollbarEnd - scrollbarStart);
         // pax_noclip(pax_buffer);
     }
@@ -170,21 +172,21 @@ void menu_render_grid(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, 
 
         pax_vec1_t text_size = pax_text_size(theme->menu.text_font, theme->menu.text_height, item->label);
         if (index == menu->position) {
-            pax_simple_rect(pax_buffer, theme->palette.color_active_background, item_position_x, item_position_y,
+            pax_simple_rect(pax_buffer, theme->menu.palette.color_active_background, item_position_x, item_position_y,
                             entry_width, entry_height);
-            pax_outline_rect(pax_buffer, theme->palette.color_highlight_primary, item_position_x + 1,
+            pax_outline_rect(pax_buffer, theme->menu.palette.color_highlight_primary, item_position_x + 1,
                              item_position_y + 1, entry_width - 2, entry_height - 2);
             // pax_clip(pax_buffer, item_position_x, item_position_y, entry_width, entry_height);
-            pax_draw_text(pax_buffer, theme->palette.color_active_foreground, theme->menu.text_font,
+            pax_draw_text(pax_buffer, theme->menu.palette.color_active_foreground, theme->menu.text_font,
                           theme->menu.text_height, item_position_x + ((entry_width - text_size.x) / 2),
                           item_position_y + text_offset, item->label);
         } else {
-            pax_simple_rect(pax_buffer, theme->palette.color_background, item_position_x, item_position_y, entry_width,
-                            entry_height);
+            pax_simple_rect(pax_buffer, theme->menu.palette.color_background, item_position_x, item_position_y,
+                            entry_width, entry_height);
             // pax_clip(pax_buffer, item_position_x, item_position_y, entry_width, entry_height);
-            pax_draw_text(pax_buffer, theme->palette.color_foreground, theme->menu.text_font, theme->menu.text_height,
-                          item_position_x + ((entry_width - text_size.x) / 2), item_position_y + text_offset,
-                          item->label);
+            pax_draw_text(pax_buffer, theme->menu.palette.color_foreground, theme->menu.text_font,
+                          theme->menu.text_height, item_position_x + ((entry_width - text_size.x) / 2),
+                          item_position_y + text_offset, item->label);
         }
 
         if (item->icon != NULL) {

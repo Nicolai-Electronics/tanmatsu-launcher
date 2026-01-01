@@ -14,6 +14,7 @@
 #include "esp_log.h"
 #include "esp_log_level.h"
 #include "esp_wifi.h"
+#include "fastopen.h"
 #include "freertos/idf_additions.h"
 #include "gui_element_footer.h"
 #include "gui_element_header.h"
@@ -108,7 +109,7 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
 #ifdef CONFIG_IDF_TARGET_ESP32P4
     radio_update_callback("Opening update file...");
 
-    FILE* fd = fopen(path, "rb");
+    FILE* fd = fastopen(path, "rb");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open file: %s", strerror(errno));
         radio_update_callback("Failed to open firmware file");
@@ -125,7 +126,7 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
         ESP_LOGE(TAG, "Failed to allocate memory for firmware data");
         radio_update_callback("Failed to allocate memory");
         vTaskDelay(pdMS_TO_TICKS(2000));
-        fclose(fd);
+        fastclose(fd);
         return ESP_FAIL;
     }
 
@@ -134,7 +135,7 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
         radio_update_callback("Failed to start transfer");
         vTaskDelay(pdMS_TO_TICKS(2000));
         free(data);
-        fclose(fd);
+        fastclose(fd);
         return res;
     }
     size_t   position = 0;
@@ -151,7 +152,7 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
             radio_update_callback("Failed to read firmware data");
             vTaskDelay(pdMS_TO_TICKS(2000));
             free(data);
-            fclose(fd);
+            fastclose(fd);
             return ESP_FAIL;
         }
         char buffer[128] = {0};
@@ -164,7 +165,7 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
             radio_update_callback("Failed to write data to radio");
             vTaskDelay(pdMS_TO_TICKS(2000));
             free(data);
-            fclose(fd);
+            fastclose(fd);
             return ESP_FAIL;
         }
         seq++;
@@ -173,7 +174,7 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
     res = et2_cmd_deflate_finish(false);
 
     free(data);
-    fclose(fd);
+    fastclose(fd);
 
     return res;
 #else
@@ -188,7 +189,7 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
     radio_update_callback("Opening update file...");
     printf("Opening update file...\r\n");
 
-    FILE* fd = fopen(path, "rb");
+    FILE* fd = fastopen(path, "rb");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open file: %s", strerror(errno));
         radio_update_callback("Failed to open firmware file");
@@ -205,7 +206,7 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
         ESP_LOGE(TAG, "Failed to allocate memory for firmware data");
         radio_update_callback("Failed to allocate memory");
         vTaskDelay(pdMS_TO_TICKS(2000));
-        fclose(fd);
+        fastclose(fd);
         return ESP_FAIL;
     }
 
@@ -214,7 +215,7 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
         radio_update_callback("Failed to start transfer");
         vTaskDelay(pdMS_TO_TICKS(2000));
         free(data);
-        fclose(fd);
+        fastclose(fd);
         return res;
     }
 
@@ -232,7 +233,7 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
             radio_update_callback("Failed to read firmware data");
             vTaskDelay(pdMS_TO_TICKS(2000));
             free(data);
-            fclose(fd);
+            fastclose(fd);
             return ESP_FAIL;
         }
         char buffer[128] = {0};
@@ -245,7 +246,7 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
             radio_update_callback("Failed to write data to radio");
             vTaskDelay(pdMS_TO_TICKS(2000));
             free(data);
-            fclose(fd);
+            fastclose(fd);
             return ESP_FAIL;
         }
         seq++;
@@ -255,7 +256,7 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
     res = et2_cmd_flash_finish(false);
 
     free(data);
-    fclose(fd);
+    fastclose(fd);
 
     return res;
 #else
@@ -268,8 +269,7 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
 void radio_update(char* path, bool compressed, uint32_t uncompressed_size) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     pax_background(buffer, theme->palette.color_background);
     gui_header_draw(buffer, theme, ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Radio update"}}), 1,
                     NULL, 0);
@@ -309,8 +309,7 @@ void radio_update(char* path, bool compressed, uint32_t uncompressed_size) {
 void radio_install(const char* instructions_filename) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_HACKERHOTEL_2026)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     pax_background(buffer, theme->palette.color_background);
     gui_header_draw(buffer, theme,
                     ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Radio firmware installation"}}), 1,
@@ -326,7 +325,7 @@ void radio_install(const char* instructions_filename) {
     }
 
     radio_update_callback("Reading instructions...");
-    FILE* fd = fopen(instructions_filename, "rb");
+    FILE* fd = fastopen(instructions_filename, "rb");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open file: %s", strerror(errno));
         radio_update_callback("Failed to open instructions");
@@ -342,7 +341,7 @@ void radio_install(const char* instructions_filename) {
         ESP_LOGE(TAG, "Failed to allocate memory for instructions");
         radio_update_callback("Failed to allocate memory");
         vTaskDelay(pdMS_TO_TICKS(2000));
-        fclose(fd);
+        fastclose(fd);
         return;
     }
     size_t read_bytes = fread(instructions_data, 1, instructions_size, fd);
@@ -351,10 +350,10 @@ void radio_install(const char* instructions_filename) {
         radio_update_callback("Failed to read instructions data");
         vTaskDelay(pdMS_TO_TICKS(2000));
         free(instructions_data);
-        fclose(fd);
+        fastclose(fd);
         return;
     }
-    fclose(fd);
+    fastclose(fd);
 
     cJSON* instructions_json = cJSON_ParseWithLength(instructions_data, instructions_size);
 
