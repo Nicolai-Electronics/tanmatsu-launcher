@@ -6,3 +6,7 @@
 	path = components/tanmatsu-wifi
 	url = git@github.com:Nicolai-Electronics/esp32-component-tanmatsu-wifi.git
 	branch = renze/esp-hosted-update
+[submodule "components/esp-hosted-tanmatsu"]
+	path = components/esp-hosted-tanmatsu
+	url = git@github.com:Nicolai-Electronics/esp-hosted-mcu.git
+	branch = feat/custom-packets
