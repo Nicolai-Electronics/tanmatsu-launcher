@@ -51,6 +51,17 @@ idf_component_register(
 		"chakrapetchmedium.c"
 		"rajdhani.c"
 
+		# Meshcore
+		"meshcore/packet.c"
+		"meshcore/chat/grp_payload.c"
+		"meshcore/payload/ack.c"
+		"meshcore/payload/advert.c"
+		"meshcore/payload/grp_txt.c"
+		"meshcore/payload/request.c"
+		"crypto/aes.c"
+		"crypto/sha256.c"
+		"crypto/hmac_sha256.c"
+
 		# Libraries
 		"coprocessor_management.c"
 		"wifi_ota.c"
