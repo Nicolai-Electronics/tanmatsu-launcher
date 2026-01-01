@@ -44,6 +44,11 @@ idf_component_register(
 		"menu/menu_hardware_test.c"
 		"menu/menu_brightness.c"
 		"menu/settings_repository.c"
+		"menu/owner.c"
+		"menu/chat/chat.c"
+		"menu/chat/lora_settings.c"
+		"menu/chat/lora_presets.c"
+		"menu/chat/messages.c"
 
 		# Tests
 		"hardware_test/test_keyboard_stuck_keys.c"
@@ -70,6 +75,7 @@ idf_component_register(
 		"app_management.c"
 		"ntp.c"
 		"device_settings.c"
+		"fastopen.c"
 
 	PRIV_REQUIRES
 		esp_lcd

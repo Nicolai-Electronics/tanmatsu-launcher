@@ -42,6 +42,8 @@ bool         menu_insert_item(menu_t* menu, const char* label, menu_callback_t c
                               size_t position);
 bool         menu_insert_item_icon(menu_t* menu, const char* label, menu_callback_t callback, void* callback_arguments,
                                    size_t position, pax_buf_t* icon);
+bool         menu_insert_item_value_icon(menu_t* menu, const char* label, const char* value, menu_callback_t callback,
+                                         void* callback_arguments, size_t position, pax_buf_t* icon);
 bool         menu_remove_item(menu_t* menu, size_t position);
 bool         menu_navigate_to(menu_t* menu, size_t position);
 void         menu_navigate_previous(menu_t* menu);
