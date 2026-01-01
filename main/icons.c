@@ -123,6 +123,19 @@ void load_icons(void) {
             ESP_LOGE(TAG, "Failed to decode icon file %s", icon_paths[i]);
         }
         fastclose(fd);
+
+#if 0
+        if (i < ICON_F1 || i >= ICON_EXTENSION) {
+            for (size_t y = 0; y < ICON_HEIGHT; y++) {
+                for (size_t x = 0; x < ICON_WIDTH; x++) {
+                    pax_col_t col  = pax_get_pixel(&icons[i], x, y);
+                    col           ^= 0x00FFFFFF;  // Invert color
+                    // col           &= 0xFFFF0000;  // Red :-)
+                    pax_set_pixel(&icons[i], col, x, y);
+                }
+            }
+        }
+#endif
     }
 }
 
