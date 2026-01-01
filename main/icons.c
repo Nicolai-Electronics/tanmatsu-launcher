@@ -82,7 +82,21 @@ const char* icon_paths[] = {
     [ICON_GLOBE_LOCATION]      = "/int/icons/menu/globe_location.png",
     [ICON_APP]                 = "/int/icons/menu/app.png",
     [ICON_ERROR]               = "/int/icons/menu/error.png",
-    [ICON_BRIGHTNESS]          = "/int/icons/menu/brightness.png",  // Missing!
+    [ICON_BRIGHTNESS]          = "/int/icons/menu/brightness.png",
+    [ICON_CHAT]                = "/int/icons/menu/chat.png",
+    [ICON_CONTACT]             = "/int/icons/menu/contact.png",
+    [ICON_DATA_TABLE]          = "/int/icons/menu/data_table.png",
+    [ICON_DATABASE]            = "/int/icons/menu/database.png",
+    [ICON_FILE]                = "/int/icons/menu/file.png",
+    [ICON_FOLDER]              = "/int/icons/menu/folder.png",
+    [ICON_IMAGE]               = "/int/icons/menu/image.png",
+    [ICON_LOCATION_OFF]        = "/int/icons/menu/location_off.png",
+    [ICON_LOCATION_ON]         = "/int/icons/menu/location_on.png",
+    [ICON_MAIL]                = "/int/icons/menu/mail.png",
+    [ICON_MAP]                 = "/int/icons/menu/map.png",
+    [ICON_PAINTBUCKET]         = "/int/icons/menu/paintbucket.png",
+    [ICON_SEND]                = "/int/icons/menu/send.png",
+    [ICON_WORKSPACES]          = "/int/icons/menu/workspaces.png",
 };
 
 pax_buf_t EXT_RAM_BSS_ATTR icons[ICON_LAST] = {0};
@@ -109,6 +123,19 @@ void load_icons(void) {
             ESP_LOGE(TAG, "Failed to decode icon file %s", icon_paths[i]);
         }
         fastclose(fd);
+
+#if 0
+        if (i < ICON_F1 || i >= ICON_EXTENSION) {
+            for (size_t y = 0; y < ICON_HEIGHT; y++) {
+                for (size_t x = 0; x < ICON_WIDTH; x++) {
+                    pax_col_t col  = pax_get_pixel(&icons[i], x, y);
+                    col           ^= 0x00FFFFFF;  // Invert color
+                    // col           &= 0xFFFF0000;  // Red :-)
+                    pax_set_pixel(&icons[i], col, x, y);
+                }
+            }
+        }
+#endif
     }
 }
 
