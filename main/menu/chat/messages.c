@@ -1,6 +1,8 @@
+#include "messages.h"
 #include "bsp/input.h"
 #include "chat.h"
-#include "chat_types.h"
+#include "chatdb_contacts.h"
+#include "chatdb_messages.h"
 #include "common/display.h"
 #include "common/theme.h"
 #include "freertos/idf_additions.h"
@@ -25,18 +27,18 @@
 #define FOOTER_RIGHT NULL, 0
 #endif
 
-typedef struct {
+/*typedef struct {
     char*               title;
     pax_buf_t*          icon;
     chat_network_type_t network;
     chat_message_t      messages[64];
     size_t              message_count;
-} chat_data_t;
+} chat_data_t;*/
 
 pax_buf_t icon_alice;
 pax_buf_t icon_bob;
 pax_buf_t icon_user;
-
+/*
 static chat_contact_t chat_contacts[16] = {{
                                                .name     = "Alice",
                                                .network  = CHAT_CONTACT_TYPE_MESHCORE,
@@ -50,7 +52,7 @@ static chat_contact_t chat_contacts[16] = {{
                                                .location = {.latitude = 0, .longitude = 0},
                                            }};
 
-static chat_data_t chat_data = {0};
+static chat_data_t chat_data = {0};*/
 
 static void render(menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
     pax_buf_t*   buffer = display_get_buffer();
@@ -90,7 +92,7 @@ void menu_messages(void) {
     menu_t menu = {0};
     menu_initialize(&menu);
 
-    chat_data.title         = "Public";
+    /*chat_data.title         = "Public";
     chat_data.network       = CHAT_CONTACT_TYPE_MESHCORE;
     chat_data.message_count = 6;
     chat_data.messages[0]   = (chat_message_t){.message_id   = 1,
@@ -122,9 +124,9 @@ void menu_messages(void) {
                                                .timestamp    = 1625247840,
                                                .message      = "Hi there! This is Bob.",
                                                .sent_by_user = false,
-                                               .sender       = &chat_contacts[1]};
+                                               .sender       = &chat_contacts[1]};*/
 
-    for (size_t i = 0; i < chat_data.message_count; i++) {
+    /*for (size_t i = 0; i < chat_data.message_count; i++) {
         gui_chat_message_metadata_t* metadata = malloc(sizeof(gui_chat_message_metadata_t));
         if (!metadata) {
             break;
@@ -142,6 +144,24 @@ void menu_messages(void) {
                 : (chat_data.messages[i].sender != NULL ? chat_data.messages[i].sender->avatar : get_icon(ICON_ERROR));
         menu_insert_item_value_icon(&menu, chat_data.messages[i].message, sender_name, (void*)metadata,
                                     (void*)chat_data.messages[i].message_id, -1, sender_avatar);
+    }*/
+
+    size_t message_count = 0;
+    chat_message_get_amount("/sd/messages.dat", &message_count);
+    for (size_t i = 0; i < message_count; i++) {
+        chat_message_t message;
+        if (chat_message_load("/sd/messages.dat", i, &message) != 0) {
+            continue;
+        }
+        gui_chat_message_metadata_t* metadata = malloc(sizeof(gui_chat_message_metadata_t));
+        if (!metadata) {
+            break;
+        }
+        metadata->timestamp    = message.timestamp;
+        metadata->sent_by_user = false;
+        metadata->message      = NULL;
+
+        menu_insert_item_value_icon(&menu, message.text, message.name, (void*)metadata, (void*)0, -1, NULL);
     }
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
@@ -166,6 +186,11 @@ void menu_messages(void) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                             case BSP_INPUT_NAVIGATION_KEY_HOME:
+                                for (size_t i = 0; i < menu_get_length(&menu); i++) {
+                                    gui_chat_message_metadata_t* metadata =
+                                        (gui_chat_message_metadata_t*)menu_get_callback_args(&menu, i);
+                                    free(metadata);
+                                }
                                 menu_free(&menu);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:

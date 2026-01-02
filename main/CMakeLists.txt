@@ -69,6 +69,10 @@ idf_component_register(
 		"crypto/sha256.c"
 		"crypto/hmac_sha256.c"
 
+		# Chat database
+		"chat_database/contacts.c"
+		"chat_database/messages.c"
+
 		# Libraries
 		"coprocessor_management.c"
 		"wifi_ota.c"
@@ -117,6 +121,7 @@ idf_component_register(
 		"."
 		"include"
 		"hardware_test"
+		"chat_database/include"
 	EMBED_FILES
 		${files}
 )

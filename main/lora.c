@@ -1,6 +1,7 @@
 #include "lora.h"
 #include <string.h>
 #include "bsp/tanmatsu.h"
+#include "chatdb_messages.h"
 #include "crypto/aes.h"
 #include "crypto/hmac_sha256.h"
 #include "esp_err.h"
@@ -112,7 +113,10 @@ const char* role_to_string(meshcore_device_role_t role) {
     }
 }
 
-uint8_t key[16] = {0x8b, 0x33, 0x87, 0xe9, 0xc5, 0xcd, 0xea, 0x6a, 0xc9, 0xe5, 0xed, 0xba, 0xa1, 0x15, 0xcd, 0x72};
+static uint8_t mc_keys[2][16] = {
+    {0x8b, 0x33, 0x87, 0xe9, 0xc5, 0xcd, 0xea, 0x6a, 0xc9, 0xe5, 0xed, 0xba, 0xa1, 0x15, 0xcd, 0x72},
+    {0x16, 0xf1, 0xb7, 0xa6, 0xa9, 0x61, 0xce, 0x16, 0xd0, 0x8b, 0xfa, 0xd7, 0xbd, 0x6f, 0x47, 0x47},
+};
 
 void meshcore_parse(uint8_t* packet, size_t packet_length) {
     meshcore_message_t message;
@@ -201,50 +205,74 @@ void meshcore_parse(uint8_t* packet, size_t packet_length) {
 
             // TO-DO: all of this MAC verification and decryption should be moved somewhere else
 
-            uint8_t out[128];
-            size_t  out_len =
-                hmac_sha256(key, sizeof(key), grp_txt.data, grp_txt.data_length, out, MESHCORE_CIPHER_MAC_SIZE);
+            for (uint8_t i = 0; i < 2; i++) {
+                uint8_t* key = mc_keys[i];
 
-            printf("Calculated MAC [%d]: ", out_len);
-            for (unsigned int i = 0; i < out_len; i++) {
-                printf("%02X", out[i]);
-            }
-            printf("\n");
+                uint8_t out[128];
+                size_t out_len = hmac_sha256(key, 16, grp_txt.data, grp_txt.data_length, out, MESHCORE_CIPHER_MAC_SIZE);
 
-            if (memcmp(out, grp_txt.mac, MESHCORE_CIPHER_MAC_SIZE) == 0) {
-                printf("MAC verification: SUCCESS\n");
-
-                // Copy encrypted data to buffer for decryption, AES works in-place
-                grp_txt.decrypted.data_length = grp_txt.data_length;
-                memcpy(grp_txt.decrypted.data, grp_txt.data, grp_txt.data_length);
-
-                struct AES_ctx ctx;
-                AES_init_ctx(&ctx, key);
-                for (uint8_t i = 0; i < (grp_txt.decrypted.data_length / 16); i++) {
-                    AES_ECB_decrypt(&ctx, &grp_txt.decrypted.data[i * 16]);
-                }
-
-                printf("Data [%d]: ", grp_txt.decrypted.data_length);
-                for (unsigned int i = 0; i < grp_txt.decrypted.data_length; i++) {
-                    printf("%02X", grp_txt.decrypted.data[i]);
+                printf("Calculated MAC [%d]: ", out_len);
+                for (unsigned int i = 0; i < out_len; i++) {
+                    printf("%02X", out[i]);
                 }
                 printf("\n");
 
-                uint8_t position = 0;
-                memcpy(&grp_txt.decrypted.timestamp, grp_txt.decrypted.data, sizeof(uint32_t));
-                position                            += sizeof(uint32_t);
-                grp_txt.decrypted.text_type          = grp_txt.decrypted.data[position];
-                position                            += sizeof(uint8_t);
-                size_t text_length                   = grp_txt.decrypted.data_length - position;
-                grp_txt.decrypted.text               = (char*)&grp_txt.decrypted.data[position];
-                grp_txt.decrypted.text[text_length]  = '\0';
+                if (memcmp(out, grp_txt.mac, MESHCORE_CIPHER_MAC_SIZE) == 0) {
+                    printf("MAC verification: SUCCESS\n");
 
-                printf("Timestamp: %" PRIu32 "\n", grp_txt.decrypted.timestamp);
-                printf("Text Type: %u\n", grp_txt.decrypted.text_type);
-                printf("Message: '%s'\n", grp_txt.decrypted.text);
+                    // Copy encrypted data to buffer for decryption, AES works in-place
+                    grp_txt.decrypted.data_length = grp_txt.data_length;
+                    memcpy(grp_txt.decrypted.data, grp_txt.data, grp_txt.data_length);
 
-            } else {
-                printf("MAC verification: FAILURE\n");
+                    struct AES_ctx ctx;
+                    AES_init_ctx(&ctx, key);
+                    for (uint8_t i = 0; i < (grp_txt.decrypted.data_length / 16); i++) {
+                        AES_ECB_decrypt(&ctx, &grp_txt.decrypted.data[i * 16]);
+                    }
+
+                    printf("Data [%d]: ", grp_txt.decrypted.data_length);
+                    for (unsigned int i = 0; i < grp_txt.decrypted.data_length; i++) {
+                        printf("%02X", grp_txt.decrypted.data[i]);
+                    }
+                    printf("\n");
+
+                    uint8_t position = 0;
+                    memcpy(&grp_txt.decrypted.timestamp, grp_txt.decrypted.data, sizeof(uint32_t));
+                    position                            += sizeof(uint32_t);
+                    grp_txt.decrypted.text_type          = grp_txt.decrypted.data[position];
+                    position                            += sizeof(uint8_t);
+                    size_t text_length                   = grp_txt.decrypted.data_length - position;
+                    grp_txt.decrypted.text               = (char*)&grp_txt.decrypted.data[position];
+                    grp_txt.decrypted.text[text_length]  = '\0';
+
+                    printf("Timestamp: %" PRIu32 "\n", grp_txt.decrypted.timestamp);
+                    printf("Text Type: %u\n", grp_txt.decrypted.text_type);
+                    printf("Message: '%s'\n", grp_txt.decrypted.text);
+
+                    char*  ptr      = grp_txt.decrypted.text;
+                    char*  text_ptr = grp_txt.decrypted.text;
+                    size_t len      = strlen(ptr);
+
+                    for (size_t i = 0; i < len; i++) {
+                        ptr = &grp_txt.decrypted.text[i];
+                        if (*ptr == ':') {
+                            *ptr = '\0';
+                            if (i + 2 < len) {
+                                text_ptr = ptr + 2;
+                            }
+                            break;
+                        }
+                    }
+
+                    chat_message_t chat_message = {0};
+                    snprintf(chat_message.name, CHAT_MESSAGE_NAME_SIZE, "%s", grp_txt.decrypted.text);
+                    snprintf(chat_message.text, CHAT_MESSAGE_TEXT_SIZE, "%s", text_ptr);
+                    chat_message.timestamp = grp_txt.decrypted.timestamp;
+                    chat_message_store("/sd/messages.dat", &chat_message);
+                    break;
+                } else {
+                    printf("MAC verification: FAILURE (key %u)\n", i);
+                }
             }
         } else {
             printf("Failed to decode group text message payload.\n");
@@ -268,11 +296,10 @@ esp_err_t lora_transaction_receive(uint8_t* packet, size_t length) {
         printf("\r\n");
         tanmatsu_coprocessor_handle_t handle;
         bsp_tanmatsu_coprocessor_get_handle(&handle);
+        meshcore_parse(&packet[sizeof(lora_protocol_header_t)], length - sizeof(lora_protocol_header_t));
         tanmatsu_coprocessor_set_message(handle, true, false, false, true, false, false, false, false);
         vTaskDelay(pdMS_TO_TICKS(500));
         tanmatsu_coprocessor_set_message(handle, false, false, false, false, false, false, false, false);
-
-        meshcore_parse(&packet[sizeof(lora_protocol_header_t)], length - sizeof(lora_protocol_header_t));
         return ESP_OK;
     }
     // Else it's a response to a transaction
