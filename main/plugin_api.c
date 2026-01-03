@@ -51,24 +51,33 @@ static volatile bool display_refresh_requested = false;
 // ============================================
 
 void asp_log_info(const char* tag, const char* fmt, ...) {
+    char buf[256];
     va_list args;
     va_start(args, fmt);
-    esp_log_writev(ESP_LOG_INFO, tag, fmt, args);
+    vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
+    esp_log(ESP_LOG_CONFIG_INIT(ESP_LOG_INFO), tag, LOG_FORMAT(I, "%s"),
+            esp_log_timestamp(), tag, buf);
 }
 
 void asp_log_warn(const char* tag, const char* fmt, ...) {
+    char buf[256];
     va_list args;
     va_start(args, fmt);
-    esp_log_writev(ESP_LOG_WARN, tag, fmt, args);
+    vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
+    esp_log(ESP_LOG_CONFIG_INIT(ESP_LOG_WARN), tag, LOG_FORMAT(W, "%s"),
+            esp_log_timestamp(), tag, buf);
 }
 
 void asp_log_error(const char* tag, const char* fmt, ...) {
+    char buf[256];
     va_list args;
     va_start(args, fmt);
-    esp_log_writev(ESP_LOG_ERROR, tag, fmt, args);
+    vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
+    esp_log(ESP_LOG_CONFIG_INIT(ESP_LOG_ERROR), tag, LOG_FORMAT(E, "%s"),
+            esp_log_timestamp(), tag, buf);
 }
 
 // ============================================
