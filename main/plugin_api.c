@@ -25,7 +25,6 @@
 
 #include "common/display.h"
 #include "bsp/input.h"
-#include "bsp/power.h"
 #include "fastopen.h"
 
 static const char* TAG = "plugin_api";
@@ -792,61 +791,9 @@ bool asp_plugin_settings_set_int(plugin_context_t* ctx, const char* key, int32_t
 }
 
 // ============================================
-// Power Information API Implementation
+// Power Information API - Moved to badge-elf-api
 // ============================================
-
-bool asp_power_get_battery_info(plugin_battery_info_t* out_info) {
-    if (!out_info) return false;
-
-    bsp_power_battery_information_t bsp_info = {0};
-    if (bsp_power_get_battery_information(&bsp_info) != ESP_OK) {
-        return false;
-    }
-
-    out_info->power_supply_available = bsp_info.power_supply_available;
-    out_info->battery_available = bsp_info.battery_available;
-    out_info->charging_disabled = bsp_info.charging_disabled;
-    out_info->battery_charging = bsp_info.battery_charging;
-    out_info->voltage = bsp_info.voltage;
-    out_info->charging_target_voltage = bsp_info.charging_target_voltage;
-    out_info->maximum_charging_current = bsp_info.maximum_charging_current;
-    out_info->current_charging_current = bsp_info.current_charging_current;
-    out_info->remaining_percentage = (uint8_t)bsp_info.remaining_percentage;
-
-    return true;
-}
-
-bool asp_power_get_system_voltage(uint16_t* out_millivolt) {
-    if (!out_millivolt) return false;
-    return bsp_power_get_system_voltage(out_millivolt) == ESP_OK;
-}
-
-bool asp_power_get_battery_voltage(uint16_t* out_millivolt) {
-    if (!out_millivolt) return false;
-    return bsp_power_get_battery_voltage(out_millivolt) == ESP_OK;
-}
-
-bool asp_power_get_input_voltage(uint16_t* out_millivolt) {
-    if (!out_millivolt) return false;
-    return bsp_power_get_input_voltage(out_millivolt) == ESP_OK;
-}
-
-bool asp_power_get_charging_config(bool* out_disabled, uint16_t* out_current_ma) {
-    return bsp_power_get_charging_configuration(out_disabled, out_current_ma) == ESP_OK;
-}
-
-bool asp_power_set_charging(bool disable, uint16_t current_ma) {
-    return bsp_power_configure_charging(disable, current_ma) == ESP_OK;
-}
-
-bool asp_power_get_usb_boost(bool* out_enabled) {
-    if (!out_enabled) return false;
-    return bsp_power_get_usb_host_boost_enabled(out_enabled) == ESP_OK;
-}
-
-bool asp_power_set_usb_boost(bool enable) {
-    return bsp_power_set_usb_host_boost_enabled(enable) == ESP_OK;
-}
+// See: components/badgeteam__badge-elf-api/include/asp/power.h
 
 // ============================================
 // Dialog API Implementation
