@@ -414,52 +414,7 @@ bool asp_plugin_settings_set_int(plugin_context_t* ctx, const char* key, int32_t
 // ============================================
 // Host API: Power Information
 // ============================================
-
-// Battery information structure
-typedef struct {
-    bool        power_supply_available;    // Power supply attached
-    bool        battery_available;         // Battery installed
-    bool        charging_disabled;         // Charging disabled
-    bool        battery_charging;          // Currently charging
-    uint16_t    voltage;                   // Battery voltage (mV)
-    uint16_t    charging_target_voltage;   // Target voltage (mV)
-    uint16_t    maximum_charging_current;  // Max charging current (mA)
-    uint16_t    current_charging_current;  // Current charging current (mA)
-    uint8_t     remaining_percentage;      // Battery percentage (0-100)
-} plugin_battery_info_t;
-
-// Get comprehensive battery information
-// Returns: true on success, false on failure
-bool asp_power_get_battery_info(plugin_battery_info_t* out_info);
-
-// Get system voltage (main power rail)
-// out_millivolt: pointer to receive voltage in millivolts
-// Returns: true on success
-bool asp_power_get_system_voltage(uint16_t* out_millivolt);
-
-// Get battery voltage
-// Returns: true on success
-bool asp_power_get_battery_voltage(uint16_t* out_millivolt);
-
-// Get charger input voltage
-// Returns: true on success
-bool asp_power_get_input_voltage(uint16_t* out_millivolt);
-
-// Get charging configuration
-// Returns: true on success
-bool asp_power_get_charging_config(bool* out_disabled, uint16_t* out_current_ma);
-
-// Configure charging
-// Returns: true on success
-bool asp_power_set_charging(bool disable, uint16_t current_ma);
-
-// Get USB host boost status
-// Returns: true on success
-bool asp_power_get_usb_boost(bool* out_enabled);
-
-// Set USB host boost
-// Returns: true on success
-bool asp_power_set_usb_boost(bool enable);
+// Power API has moved to badge-elf-api: #include <asp/power.h>
 
 // ============================================
 // Host API: Dialog System

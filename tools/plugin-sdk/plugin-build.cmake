@@ -23,6 +23,7 @@ endif()
 # Include directories for plugin API
 set(PLUGIN_API_INCLUDE_DIRS
     "${LAUNCHER_DIR}/components/plugin-api/include"
+    "${LAUNCHER_DIR}/components/badgeteam__badge-elf-api/include"
     "${LAUNCHER_DIR}/managed_components/robotman2412__pax-gfx/core/include"
 )
 
