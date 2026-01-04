@@ -29,6 +29,9 @@
 
 static const char* TAG = "plugin_api";
 
+// Mutex for protecting plugin API registries during concurrent access
+static SemaphoreHandle_t plugin_api_mutex = NULL;
+
 // ============================================
 // Status Widget Registry
 // ============================================
@@ -39,6 +42,7 @@ typedef struct {
     bool active;
     plugin_status_widget_fn callback;
     void* user_data;
+    plugin_context_t* owner;  // Track which plugin owns this registration
 } status_widget_entry_t;
 
 static status_widget_entry_t status_widgets[MAX_STATUS_WIDGETS] = {0};
@@ -173,6 +177,7 @@ typedef struct {
     plugin_input_hook_fn callback;
     void* user_data;
     bool in_use;
+    plugin_context_t* owner;  // Track which plugin owns this registration
 } plugin_input_hook_entry_t;
 
 static plugin_input_hook_entry_t plugin_input_hooks[MAX_PLUGIN_INPUT_HOOKS] = {0};
@@ -508,7 +513,7 @@ long asp_plugin_storage_tell(plugin_file_t file) {
 
 void asp_plugin_storage_close(plugin_file_t file) {
     if (file) {
-        fclose((FILE*)file);
+        fastclose((FILE*)file);  // Must use fastclose to free DMA buffer
     }
 }
 
@@ -591,6 +596,7 @@ typedef struct {
     uint32_t event_mask;
     plugin_event_handler_t handler;
     void* arg;
+    plugin_context_t* owner;  // Track which plugin owns this registration
 } event_handler_entry_t;
 
 static event_handler_entry_t event_handlers[MAX_EVENT_HANDLERS] = {0};
@@ -953,5 +959,69 @@ plugin_dialog_result_t asp_plugin_show_text_dialog(
                 NULL, 0, NULL, 0);
             display_blit_buffer(buffer);
         }
+    }
+}
+
+// ============================================
+// Plugin API Initialization and Cleanup
+// ============================================
+
+void plugin_api_init(void) {
+    if (plugin_api_mutex == NULL) {
+        plugin_api_mutex = xSemaphoreCreateMutex();
+        if (plugin_api_mutex == NULL) {
+            ESP_LOGE(TAG, "Failed to create plugin API mutex");
+        }
+    }
+}
+
+void plugin_api_cleanup_for_plugin(plugin_context_t* ctx) {
+    if (ctx == NULL) return;
+
+    ESP_LOGI(TAG, "Cleaning up API registrations for plugin: %s",
+             ctx->plugin_slug ? ctx->plugin_slug : "unknown");
+
+    if (plugin_api_mutex) {
+        xSemaphoreTake(plugin_api_mutex, portMAX_DELAY);
+    }
+
+    // Clear all status widgets owned by this plugin
+    for (int i = 0; i < MAX_STATUS_WIDGETS; i++) {
+        if (status_widgets[i].active && status_widgets[i].owner == ctx) {
+            ESP_LOGI(TAG, "Auto-unregistering status widget %d", i);
+            status_widgets[i].active = false;
+            status_widgets[i].callback = NULL;
+            status_widgets[i].user_data = NULL;
+            status_widgets[i].owner = NULL;
+        }
+    }
+
+    // Clear all input hooks owned by this plugin
+    for (int i = 0; i < MAX_PLUGIN_INPUT_HOOKS; i++) {
+        if (plugin_input_hooks[i].in_use && plugin_input_hooks[i].owner == ctx) {
+            ESP_LOGI(TAG, "Auto-unregistering input hook %d", i);
+            bsp_input_hook_unregister(plugin_input_hooks[i].bsp_hook_id);
+            plugin_input_hooks[i].bsp_hook_id = -1;
+            plugin_input_hooks[i].callback = NULL;
+            plugin_input_hooks[i].user_data = NULL;
+            plugin_input_hooks[i].in_use = false;
+            plugin_input_hooks[i].owner = NULL;
+        }
+    }
+
+    // Clear all event handlers owned by this plugin
+    for (int i = 0; i < MAX_EVENT_HANDLERS; i++) {
+        if (event_handlers[i].active && event_handlers[i].owner == ctx) {
+            ESP_LOGI(TAG, "Auto-unregistering event handler %d", i);
+            event_handlers[i].active = false;
+            event_handlers[i].event_mask = 0;
+            event_handlers[i].handler = NULL;
+            event_handlers[i].arg = NULL;
+            event_handlers[i].owner = NULL;
+        }
+    }
+
+    if (plugin_api_mutex) {
+        xSemaphoreGive(plugin_api_mutex);
     }
 }
