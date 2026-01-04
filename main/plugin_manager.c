@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include "esp_log.h"
+#include "esp_heap_caps.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "cJSON.h"
@@ -39,9 +40,14 @@ static plugin_context_t* loaded_plugins[PLUGIN_MAX_LOADED] = {0};
 static size_t loaded_plugin_count = 0;
 static SemaphoreHandle_t plugin_mutex = NULL;
 
-// External function from plugin_api.c
+// External functions from plugin_api.c
 extern size_t plugin_api_get_status_widgets(plugin_icontext_t* out, size_t max, int start_x, int start_y);
 extern int plugin_api_dispatch_event(uint32_t event_type, void* event_data);
+extern void plugin_api_init(void);
+extern void plugin_api_cleanup_for_plugin(plugin_context_t* ctx);
+
+// Forward declaration of internal unload function
+static bool _plugin_manager_unload(plugin_context_t* ctx);
 
 // ============================================
 // Plugin Manager Lifecycle
@@ -55,6 +61,9 @@ bool plugin_manager_init(void) {
         ESP_LOGE(TAG, "Failed to create mutex");
         return false;
     }
+
+    // Initialize plugin API (creates mutex for registry protection)
+    plugin_api_init();
 
     // Create plugin directories if they don't exist
     for (const char** path = PLUGIN_PATHS; *path != NULL; path++) {
@@ -76,37 +85,10 @@ void plugin_manager_shutdown(void) {
 
     xSemaphoreTake(plugin_mutex, portMAX_DELAY);
 
-    // Unload all plugins
-    for (size_t i = 0; i < loaded_plugin_count; i++) {
-        if (loaded_plugins[i] != NULL) {
-            // Stop service if running
-            if (loaded_plugins[i]->state == PLUGIN_STATE_RUNNING) {
-                plugin_manager_stop_service(loaded_plugins[i]);
-            }
-
-            // Call cleanup
-            if (loaded_plugins[i]->registration &&
-                loaded_plugins[i]->registration->entry.cleanup) {
-                loaded_plugins[i]->registration->entry.cleanup(loaded_plugins[i]);
-            }
-
-            // Free resources
-            if (loaded_plugins[i]->elf_handle) {
-                kbelf_dyn dyn = (kbelf_dyn)loaded_plugins[i]->elf_handle;
-                kbelf_dyn_unload(dyn);
-                kbelf_dyn_destroy(dyn);
-            }
-
-            free(loaded_plugins[i]->plugin_path);
-            free(loaded_plugins[i]->plugin_slug);
-            free(loaded_plugins[i]->storage_base_path);
-            free(loaded_plugins[i]->settings_namespace);
-            free(loaded_plugins[i]);
-            loaded_plugins[i] = NULL;
-        }
+    // Unload all plugins (iterate backwards since _plugin_manager_unload modifies the array)
+    while (loaded_plugin_count > 0) {
+        _plugin_manager_unload(loaded_plugins[0]);
     }
-
-    loaded_plugin_count = 0;
 
     xSemaphoreGive(plugin_mutex);
     vSemaphoreDelete(plugin_mutex);
@@ -131,19 +113,19 @@ static bool parse_plugin_metadata(const char* path, plugin_discovery_info_t* inf
     fseek(fd, 0, SEEK_SET);
 
     if (size == 0 || size > 8192) {
-        fclose(fd);
+        fastclose(fd);  // Must use fastclose to free DMA buffer
         return false;
     }
 
     char* json_data = malloc(size + 1);
     if (json_data == NULL) {
-        fclose(fd);
+        fastclose(fd);  // Must use fastclose to free DMA buffer
         return false;
     }
 
     size_t read = fread(json_data, 1, size, fd);
     json_data[read] = '\0';
-    fclose(fd);
+    fastclose(fd);  // Must use fastclose to free DMA buffer
 
     cJSON* root = cJSON_Parse(json_data);
     free(json_data);
@@ -190,7 +172,9 @@ static bool parse_plugin_metadata(const char* path, plugin_discovery_info_t* inf
 // ============================================
 
 size_t plugin_manager_discover(plugin_discovery_info_t** out_plugins) {
-    ESP_LOGI(TAG, "Discovering plugins...");
+    // Memory debugging (commented out)
+    // size_t internal_before = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "Discovering plugins... (internal before: %u)", (unsigned)internal_before);
 
     // Allocate discovery list
     plugin_discovery_info_t* plugins = calloc(PLUGIN_MAX_LOADED,
@@ -229,12 +213,20 @@ size_t plugin_manager_discover(plugin_discovery_info_t** out_plugins) {
         closedir(dir);
     }
 
+    // Memory debugging (commented out)
+    // size_t internal_after = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "Discovery complete: %zu plugins, internal used: %u",
+    //          count, (unsigned)(internal_before - internal_after));
+
     *out_plugins = plugins;
     return count;
 }
 
 void plugin_manager_free_discovery(plugin_discovery_info_t* plugins, size_t count) {
     if (plugins == NULL) return;
+
+    // Memory debugging (commented out)
+    // size_t internal_before = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
 
     for (size_t i = 0; i < count; i++) {
         free(plugins[i].path);
@@ -243,6 +235,11 @@ void plugin_manager_free_discovery(plugin_discovery_info_t* plugins, size_t coun
         free(plugins[i].version);
     }
     free(plugins);
+
+    // Memory debugging (commented out)
+    // size_t internal_after = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "Discovery freed: internal recovered: %u",
+    //          (unsigned)(internal_after - internal_before));
 }
 
 // ============================================
@@ -286,6 +283,18 @@ static char* find_plugin_elf(const char* plugin_path) {
 
 plugin_context_t* plugin_manager_load(const char* plugin_path) {
     ESP_LOGI(TAG, "Loading plugin from: %s", plugin_path);
+
+    // Memory debugging (commented out)
+    // size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
+    // size_t largest_block = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
+    // size_t free_internal = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // size_t largest_internal = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "Heap before load: %u free (largest: %u), INTERNAL: %u free (largest: %u)",
+    //          (unsigned)free_heap, (unsigned)largest_block,
+    //          (unsigned)free_internal, (unsigned)largest_internal);
+    // if (!heap_caps_check_integrity_all(true)) {
+    //     ESP_LOGE(TAG, "HEAP CORRUPTED at start of plugin_manager_load!");
+    // }
 
     xSemaphoreTake(plugin_mutex, portMAX_DELAY);
 
@@ -357,11 +366,19 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
     free(discovery_info.version);
 
     // Load ELF using kbelf
+    // Memory debugging (commented out)
+    // size_t internal_before_create = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+
     kbelf_dyn dyn = kbelf_dyn_create(0);
     if (!dyn) {
         ESP_LOGE(TAG, "Failed to create kbelf context");
         goto error_cleanup;
     }
+
+    // Memory debugging (commented out)
+    // size_t internal_after_create = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "After kbelf_dyn_create: internal used %u",
+    //          (unsigned)(internal_before_create - internal_after_create));
 
     if (!kbelf_dyn_set_exec(dyn, elf_path, NULL)) {
         ESP_LOGE(TAG, "Failed to set executable: %s", elf_path);
@@ -369,13 +386,29 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
         goto error_cleanup;
     }
 
+    // Memory debugging (commented out)
+    // size_t internal_after_setexec = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "After kbelf_dyn_set_exec: internal used %u (total so far: %u)",
+    //          (unsigned)(internal_after_create - internal_after_setexec),
+    //          (unsigned)(internal_before_create - internal_after_setexec));
+
     if (!kbelf_dyn_load(dyn)) {
         ESP_LOGE(TAG, "Failed to load plugin ELF");
         kbelf_dyn_destroy(dyn);
         goto error_cleanup;
     }
 
+    // Memory debugging (commented out)
+    // size_t internal_after_load = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "After kbelf_dyn_load: internal used %u (total so far: %u)",
+    //          (unsigned)(internal_after_setexec - internal_after_load),
+    //          (unsigned)(internal_before_create - internal_after_load));
+    // if (!heap_caps_check_integrity_all(true)) {
+    //     ESP_LOGE(TAG, "HEAP CORRUPTED after kbelf_dyn_load!");
+    // }
+
     free(elf_path);
+    elf_path = NULL;  // Prevent double-free if we goto error_cleanup later
     ctx->elf_handle = dyn;
     ctx->state = PLUGIN_STATE_LOADED;
 
@@ -410,9 +443,20 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
             ctx->registration = reg;
             ESP_LOGI(TAG, "Found plugin registration at %p", (void*)reg_addr);
 
+            // Memory debugging (commented out)
+            // if (!heap_caps_check_integrity_all(true)) {
+            //     ESP_LOGE(TAG, "HEAP CORRUPTED before plugin init!");
+            // }
+
             // Call the plugin's init function if available
             if (reg->entry.init != NULL) {
                 int init_result = reg->entry.init(ctx);
+
+                // Memory debugging (commented out)
+                // if (!heap_caps_check_integrity_all(true)) {
+                //     ESP_LOGE(TAG, "HEAP CORRUPTED after plugin init!");
+                // }
+
                 if (init_result != 0) {
                     ESP_LOGE(TAG, "Plugin init failed with code %d", init_result);
                     goto error_cleanup;
@@ -438,29 +482,58 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
     return ctx;
 
 error_cleanup:
+    // Memory debugging (commented out)
+    // ESP_LOGE(TAG, "error_cleanup: checking heap before cleanup");
+    // if (!heap_caps_check_integrity_all(true)) {
+    //     ESP_LOGE(TAG, "HEAP CORRUPTED at start of error_cleanup!");
+    // }
+
+    // Clean up ELF if it was loaded
+    if (ctx && ctx->elf_handle) {
+        kbelf_dyn dyn = (kbelf_dyn)ctx->elf_handle;
+        kbelf_dyn_unload(dyn);
+        kbelf_dyn_destroy(dyn);
+        ctx->elf_handle = NULL;
+    }
+
     free(elf_path);
-    free(ctx->plugin_path);
-    free(ctx->plugin_slug);
-    free(ctx->storage_base_path);
-    free(ctx->settings_namespace);
-    free(ctx);
+
+    if (ctx) {
+        free(ctx->plugin_path);
+        free(ctx->plugin_slug);
+        free(ctx->storage_base_path);
+        free(ctx->settings_namespace);
+        free(ctx);
+    }
     xSemaphoreGive(plugin_mutex);
     return NULL;
 }
 
-bool plugin_manager_unload(plugin_context_t* ctx) {
+// Internal unload - caller must hold plugin_mutex
+static bool _plugin_manager_unload(plugin_context_t* ctx) {
     if (ctx == NULL) return false;
 
     ESP_LOGI(TAG, "Unloading plugin: %s", ctx->plugin_slug);
 
-    xSemaphoreTake(plugin_mutex, portMAX_DELAY);
+    // Memory debugging (commented out)
+    // size_t heap_before = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
+    // size_t internal_before = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "Unloading plugin: %s (heap: %u, internal: %u)",
+    //          ctx->plugin_slug, (unsigned)heap_before, (unsigned)internal_before);
+    // if (!heap_caps_check_integrity_all(true)) {
+    //     ESP_LOGE(TAG, "HEAP CORRUPTED at start of unload for %s!", ctx->plugin_slug);
+    // }
 
     // Stop service if running
     if (ctx->state == PLUGIN_STATE_RUNNING) {
         plugin_manager_stop_service(ctx);
     }
 
-    // Call cleanup if available
+    // Automatically clean up any API registrations (widgets, hooks, events)
+    // that the plugin may have forgotten to unregister
+    plugin_api_cleanup_for_plugin(ctx);
+
+    // Call cleanup if available (plugin may also try to unregister, which is fine)
     if (ctx->registration && ctx->registration->entry.cleanup) {
         ctx->registration->entry.cleanup(ctx);
     }
@@ -475,8 +548,24 @@ bool plugin_manager_unload(plugin_context_t* ctx) {
             func();
         }
 
+        // Memory debugging (commented out)
+        // size_t internal_before_unload = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+        // ESP_LOGI(TAG, "Before kbelf_dyn_unload: internal %u", (unsigned)internal_before_unload);
+
         kbelf_dyn_unload(dyn);
+
+        // Memory debugging (commented out)
+        // size_t internal_after_unload = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+        // ESP_LOGI(TAG, "After kbelf_dyn_unload: internal freed %u",
+        //          (unsigned)(internal_after_unload - internal_before_unload));
+
         kbelf_dyn_destroy(dyn);
+
+        // Memory debugging (commented out)
+        // size_t internal_after_destroy = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+        // ESP_LOGI(TAG, "After kbelf_dyn_destroy: internal freed %u (total kbelf freed: %u)",
+        //          (unsigned)(internal_after_destroy - internal_after_unload),
+        //          (unsigned)(internal_after_destroy - internal_before_unload));
     }
 
     // Remove from loaded plugins
@@ -491,6 +580,10 @@ bool plugin_manager_unload(plugin_context_t* ctx) {
         }
     }
 
+    // Free task memory if not already freed (e.g., task stopped on its own)
+    free(ctx->task_stack);
+    free(ctx->task_tcb);
+
     // Free context
     free(ctx->plugin_path);
     free(ctx->plugin_slug);
@@ -498,8 +591,33 @@ bool plugin_manager_unload(plugin_context_t* ctx) {
     free(ctx->settings_namespace);
     free(ctx);
 
-    xSemaphoreGive(plugin_mutex);
+    // Memory debugging (commented out)
+    // if (!heap_caps_check_integrity_all(true)) {
+    //     ESP_LOGE(TAG, "HEAP CORRUPTED at end of unload!");
+    // }
+    // size_t heap_after = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
+    // size_t largest_block = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
+    // size_t internal_after = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // size_t largest_internal = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "Heap after unload: %u free (largest: %u), INTERNAL: %u free (largest: %u)",
+    //          (unsigned)heap_after, (unsigned)largest_block,
+    //          (unsigned)internal_after, (unsigned)largest_internal);
+    // if (heap_after < heap_before) {
+    //     ESP_LOGW(TAG, "MEMORY LEAK: %u bytes not freed after unload!",
+    //              (unsigned)(heap_before - heap_after));
+    // }
+
     return true;
+}
+
+bool plugin_manager_unload(plugin_context_t* ctx) {
+    if (ctx == NULL) return false;
+
+    xSemaphoreTake(plugin_mutex, portMAX_DELAY);
+    bool result = _plugin_manager_unload(ctx);
+    xSemaphoreGive(plugin_mutex);
+
+    return result;
 }
 
 // ============================================
@@ -552,11 +670,19 @@ static void plugin_service_task(void* arg) {
     }
 
     ESP_LOGI(TAG, "Service task ended for plugin: %s", ctx->plugin_slug);
+
+    // Clear handle BEFORE marking as not running to prevent race with stop_service()
+    // This ensures stop_service() won't try to delete an already-deleting task
+    ctx->task_handle = NULL;
     ctx->task_running = false;
     ctx->state = PLUGIN_STATE_STOPPED;
-    ctx->task_handle = NULL;
+
+    // FreeRTOS idiom: vTaskDelete(NULL) deletes the calling task
     vTaskDelete(NULL);
 }
+
+// Stack size for service tasks (in StackType_t units, typically 4 bytes each)
+#define SERVICE_TASK_STACK_SIZE 8192
 
 bool plugin_manager_start_service(plugin_context_t* ctx) {
     if (ctx == NULL || ctx->state == PLUGIN_STATE_RUNNING) {
@@ -565,22 +691,58 @@ bool plugin_manager_start_service(plugin_context_t* ctx) {
 
     ESP_LOGI(TAG, "Starting service plugin: %s", ctx->plugin_slug);
 
+    // Memory debugging (commented out)
+    // size_t internal_before = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+
     // Initialize control flags
     ctx->stop_requested = false;
     ctx->task_running = false;
 
-    TaskHandle_t task;
-    BaseType_t ret = xTaskCreate(
+    // Allocate task stack and TCB - we own this memory, no cleanup race with FreeRTOS
+    ctx->task_stack = malloc(SERVICE_TASK_STACK_SIZE * sizeof(StackType_t));
+    if (ctx->task_stack == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate task stack");
+        return false;
+    }
+
+    // Memory debugging (commented out)
+    // size_t internal_after_stack = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "Task stack allocated: %u bytes at %p (internal used: %u)",
+    //          (unsigned)(SERVICE_TASK_STACK_SIZE * sizeof(StackType_t)),
+    //          ctx->task_stack,
+    //          (unsigned)(internal_before - internal_after_stack));
+
+    ctx->task_tcb = malloc(sizeof(StaticTask_t));
+    if (ctx->task_tcb == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate task TCB");
+        free(ctx->task_stack);
+        ctx->task_stack = NULL;
+        return false;
+    }
+
+    // Memory debugging (commented out)
+    // size_t internal_after_tcb = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "Task TCB allocated: %u bytes (internal used: %u)",
+    //          (unsigned)sizeof(StaticTask_t),
+    //          (unsigned)(internal_after_stack - internal_after_tcb));
+
+    // Use static task creation - FreeRTOS won't free our memory
+    TaskHandle_t task = xTaskCreateStatic(
         plugin_service_task,
         ctx->plugin_slug,
-        8192,  // Stack size
+        SERVICE_TASK_STACK_SIZE,
         ctx,
         5,     // Priority
-        &task
+        (StackType_t*)ctx->task_stack,
+        (StaticTask_t*)ctx->task_tcb
     );
 
-    if (ret != pdPASS) {
+    if (task == NULL) {
         ESP_LOGE(TAG, "Failed to create service task");
+        free(ctx->task_tcb);
+        free(ctx->task_stack);
+        ctx->task_tcb = NULL;
+        ctx->task_stack = NULL;
         return false;
     }
 
@@ -598,7 +760,8 @@ bool plugin_manager_stop_service(plugin_context_t* ctx) {
     // Check if already stopped (task may have ended on its own)
     if (ctx->state != PLUGIN_STATE_RUNNING && !ctx->task_running) {
         ESP_LOGI(TAG, "Service plugin already stopped: %s", ctx->plugin_slug);
-        return true;
+        // Still need to free stack/TCB if task ended on its own
+        goto cleanup_task_memory;
     }
 
     ESP_LOGI(TAG, "Stopping service plugin: %s", ctx->plugin_slug);
@@ -616,12 +779,47 @@ bool plugin_manager_stop_service(plugin_context_t* ctx) {
     if (ctx->task_running) {
         // Task didn't stop gracefully, force delete it
         ESP_LOGW(TAG, "Force stopping service plugin: %s", ctx->plugin_slug);
+
+        // Atomic read-and-clear to prevent race with task self-deletion
         TaskHandle_t task = (TaskHandle_t)ctx->task_handle;
+        ctx->task_handle = NULL;  // Clear immediately to prevent double-delete
+
         if (task != NULL) {
             vTaskDelete(task);
-            ctx->task_handle = NULL;
         }
+
+        ctx->task_running = false;
     }
+
+cleanup_task_memory:
+    // Free task stack and TCB that we allocated
+    // Since we used xTaskCreateStatic(), FreeRTOS doesn't touch this memory
+    // after vTaskDelete() - we own it and can free it immediately
+
+    // Memory debugging (commented out)
+    // size_t internal_before_free = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "Freeing task memory (internal before: %u)", (unsigned)internal_before_free);
+
+    if (ctx->task_stack) {
+        free(ctx->task_stack);
+        ctx->task_stack = NULL;
+    }
+
+    // Memory debugging (commented out)
+    // size_t internal_after_stack_free = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "After stack free: internal freed %u",
+    //          (unsigned)(internal_after_stack_free - internal_before_free));
+
+    if (ctx->task_tcb) {
+        free(ctx->task_tcb);
+        ctx->task_tcb = NULL;
+    }
+
+    // Memory debugging (commented out)
+    // size_t internal_after_tcb_free = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    // ESP_LOGI(TAG, "After TCB free: internal freed %u (total freed: %u)",
+    //          (unsigned)(internal_after_tcb_free - internal_after_stack_free),
+    //          (unsigned)(internal_after_tcb_free - internal_before_free));
 
     ctx->state = PLUGIN_STATE_STOPPED;
     ctx->stop_requested = false;

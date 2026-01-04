@@ -10,6 +10,10 @@
 extern "C" {
 #endif
 
+// Forward declare FreeRTOS types to avoid pulling in full headers
+struct tskTaskControlBlock;
+typedef struct tskTaskControlBlock* TaskHandle_t;
+
 // Plugin context structure (opaque to plugins, defined here for host implementation)
 struct plugin_context {
     // Plugin identification
@@ -35,6 +39,10 @@ struct plugin_context {
 
     // Service task handle (for PLUGIN_TYPE_SERVICE)
     void* task_handle;
+
+    // Static task allocation - we own this memory so no cleanup race with FreeRTOS
+    void* task_stack;           // Stack buffer (StackType_t*) allocated by us
+    void* task_tcb;             // StaticTask_t allocated by us
 
     // Service stop control
     volatile bool stop_requested;   // Set by stop_service to signal shutdown
