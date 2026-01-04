@@ -5,6 +5,11 @@
 #include "freertos/queue.h"
 #include "lora_protocol.h"
 
+typedef struct {
+    uint8_t data[256];
+    uint8_t length;
+} lora_packet_t;
+
 esp_err_t lora_transaction_receive(uint8_t* packet, size_t length);
 esp_err_t lora_init(QueueHandle_t packet_queue);
 

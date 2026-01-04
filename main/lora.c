@@ -4,6 +4,7 @@
 #include "chatdb_messages.h"
 #include "crypto/aes.h"
 #include "crypto/hmac_sha256.h"
+#include "ed25519/ed_25519.h"
 #include "esp_err.h"
 #include "esp_hosted_custom.h"
 #include "esp_log.h"
@@ -15,6 +16,7 @@
 #include "meshcore/payload/advert.h"
 #include "meshcore/payload/grp_txt.h"
 #include "portmacro.h"
+#include "projdefs.h"
 #include "tanmatsu_coprocessor.h"
 
 const char TAG[] = "lora";
@@ -118,6 +120,8 @@ static uint8_t mc_keys[2][16] = {
     {0x16, 0xf1, 0xb7, 0xa6, 0xa9, 0x61, 0xce, 0x16, 0xd0, 0x8b, 0xfa, 0xd7, 0xbd, 0x6f, 0x47, 0x47},
 };
 
+static uint8_t verification_data[MESHCORE_MAX_PAYLOAD_SIZE] = {0};
+
 void meshcore_parse(uint8_t* packet, size_t packet_length) {
     meshcore_message_t message;
     if (meshcore_deserialize(packet, packet_length, &message) < 0) {
@@ -180,6 +184,42 @@ void meshcore_parse(uint8_t* packet, size_t packet_length) {
                 printf("Name: %s\n", advert.name);
             } else {
                 printf("Name: (not available)\n");
+            }
+
+            memset(verification_data, 0, sizeof(verification_data));
+            size_t verification_data_size = 0;
+            memcpy(&verification_data[verification_data_size], advert.pub_key, MESHCORE_PUB_KEY_SIZE);
+            verification_data_size += MESHCORE_PUB_KEY_SIZE;
+            memcpy(&verification_data[verification_data_size], &advert.timestamp, sizeof(uint32_t));
+            verification_data_size += sizeof(uint32_t);
+            memcpy(&verification_data[verification_data_size],
+                   &message.payload[MESHCORE_PUB_KEY_SIZE + sizeof(uint32_t) + MESHCORE_SIGNATURE_SIZE],
+                   message.payload_length - MESHCORE_PUB_KEY_SIZE - sizeof(uint32_t) - MESHCORE_SIGNATURE_SIZE);
+            verification_data_size +=
+                message.payload_length - MESHCORE_PUB_KEY_SIZE - sizeof(uint32_t) - MESHCORE_SIGNATURE_SIZE;
+
+            printf("Key for signature verification: ");
+            for (size_t i = 0; i < MESHCORE_PUB_KEY_SIZE; i++) {
+                printf("%02X", advert.pub_key[i]);
+            }
+            printf("\r\n");
+
+            printf("Signature: ");
+            for (size_t i = 0; i < MESHCORE_SIGNATURE_SIZE; i++) {
+                printf("%02X", advert.signature[i]);
+            }
+            printf("\r\n");
+
+            printf("Data for signature verification: ");
+            for (size_t i = 0; i < verification_data_size; i++) {
+                printf("%02X", verification_data[i]);
+            }
+            printf("\r\n");
+
+            if (ed25519_verify(advert.signature, verification_data, verification_data_size, advert.pub_key)) {
+                printf("Advertisement signature verification SUCCESSFUL.\n");
+            } else {
+                printf("Warning: Advertisement signature verification FAILED!\n");
             }
         } else {
             printf("Failed to decode node advertisement payload.\n");
@@ -309,6 +349,16 @@ esp_err_t lora_transaction_receive(uint8_t* packet, size_t length) {
     return ESP_OK;
 }
 
+static void lora_task(void* pvParameters) {
+    while (1) {
+        lora_packet_t packet;
+        if (xQueueReceive(lora_packet_queue, &packet, portMAX_DELAY) == pdPASS) {
+            lora_transaction_receive(packet.data, packet.length);
+        }
+    }
+    vTaskDelete(NULL);
+}
+
 esp_err_t lora_init(QueueHandle_t packet_queue) {
     lora_packet_queue          = packet_queue;
     lora_mutex                 = xSemaphoreCreateMutex();
@@ -322,6 +372,9 @@ esp_err_t lora_init(QueueHandle_t packet_queue) {
         }
         return ESP_ERR_NO_MEM;
     }
+
+    xTaskCreatePinnedToCore(lora_task, TAG, 1024 * 16, NULL, 10, NULL, CONFIG_SOC_CPU_CORES_NUM - 1);
+
     return ESP_OK;
 }
 

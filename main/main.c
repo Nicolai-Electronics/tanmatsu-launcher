@@ -26,6 +26,7 @@
 #include "esp_lcd_types.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
+#include "freertos/idf_additions.h"
 #include "gui_element_footer.h"
 #include "gui_element_header.h"
 #include "gui_menu.h"
@@ -61,6 +62,7 @@ static QueueHandle_t input_event_queue      = NULL;
 static wl_handle_t   wl_handle              = WL_INVALID_HANDLE;
 static bool          wifi_stack_initialized = false;
 static bool          wifi_stack_task_done   = false;
+static QueueHandle_t lora_rx_queue          = NULL;
 
 static void fix_rtc_out_of_bounds(void) {
     time_t rtc_time = time(NULL);
@@ -105,9 +107,17 @@ bool wifi_stack_get_task_done(void) {
     return wifi_stack_task_done;
 }
 
+#define RADIO_CUSTOM_TYPE_LORA 1
+
 static void radio_callback(uint8_t type, uint8_t* payload, uint16_t payload_length) {
-    if (type == 1) {
-        lora_transaction_receive(payload, payload_length);
+    // This function runs in sdio_process_rx task context, forward events via queues
+    if (type == RADIO_CUSTOM_TYPE_LORA) {
+        lora_packet_t packet;
+        memcpy(packet.data, payload, payload_length);
+        packet.length = payload_length;
+        if (lora_rx_queue != NULL) {
+            xQueueSend(lora_rx_queue, &packet, portMAX_DELAY);
+        }
     } else {
         ESP_LOGI(TAG, "Received message from radio: type: %d, payload length: %d", type, payload_length);
         for (int i = 0; i < payload_length; i++) {
@@ -160,6 +170,7 @@ static void wifi_task(void* pvParameters) {
     }
 #endif
 
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
     esp_hosted_set_custom_callback(radio_callback);
 
     /*while (1) {
@@ -211,6 +222,7 @@ static void wifi_task(void* pvParameters) {
     } else {
         ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
     }
+#endif
 
     vTaskDelete(NULL);
 }
@@ -422,7 +434,9 @@ void app_main(void) {
 #endif
 #endif
 
-    ESP_ERROR_CHECK(lora_init(NULL));
+    lora_rx_queue = xQueueCreate(10, sizeof(lora_packet_t));
+
+    ESP_ERROR_CHECK(lora_init(lora_rx_queue));
 
     xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, CONFIG_SOC_CPU_CORES_NUM - 1);
 

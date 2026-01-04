@@ -68,6 +68,16 @@ idf_component_register(
 		"crypto/aes.c"
 		"crypto/sha256.c"
 		"crypto/hmac_sha256.c"
+		"ed25519/add_scalar.c"
+		"ed25519/fe.c"
+		"ed25519/ge.c"
+		"ed25519/keypair.c"
+		"ed25519/key_exchange.c"
+		"ed25519/sc.c"
+		"ed25519/seed.c"
+		"ed25519/sha512.c"
+		"ed25519/sign.c"
+		"ed25519/verify.c"
 
 		# Chat database
 		"chat_database/contacts.c"
