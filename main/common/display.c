@@ -88,6 +88,10 @@ void display_init(void) {
     asp_disp_fb      = pax_buf_get_pixels_rw(&fb);
     asp_disp_pax_buf = &fb;
 #endif
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+    bsp_display_set_tearing_effect_mode(BSP_DISPLAY_TE_V_BLANKING);
+#endif
 }
 
 pax_buf_t* display_get_buffer(void) {
