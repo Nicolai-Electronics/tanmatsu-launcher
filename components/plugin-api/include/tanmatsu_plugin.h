@@ -168,7 +168,7 @@ typedef int (*plugin_status_widget_fn)(pax_buf_t* buffer, int x_right, int y, in
 
 // Register a status widget to appear in header bar
 // Returns: widget_id (>=0) on success, -1 on error
-int asp_plugin_status_widget_register(plugin_status_widget_fn callback, void* user_data);
+int asp_plugin_status_widget_register(plugin_context_t* ctx, plugin_status_widget_fn callback, void* user_data);
 
 // Unregister a status widget
 void asp_plugin_status_widget_unregister(int widget_id);
@@ -219,7 +219,7 @@ typedef bool (*plugin_input_hook_fn)(plugin_input_event_t* event, void* user_dat
 // Hooks are called in registration order for every input event
 // If any hook returns true, the event is consumed and not queued
 // Returns: hook_id (>=0) on success, -1 on error
-int asp_plugin_input_hook_register(plugin_input_hook_fn callback, void* user_data);
+int asp_plugin_input_hook_register(plugin_context_t* ctx, plugin_input_hook_fn callback, void* user_data);
 
 // Unregister an input hook
 void asp_plugin_input_hook_unregister(int hook_id);
@@ -379,7 +379,7 @@ typedef int (*plugin_event_handler_t)(uint32_t event, void* data, void* arg);
 
 // Register event handler for specified event mask
 // Returns: handler_id (>=0) on success, -1 on error
-int asp_plugin_event_register(uint32_t event_mask, plugin_event_handler_t handler, void* arg);
+int asp_plugin_event_register(plugin_context_t* ctx, uint32_t event_mask, plugin_event_handler_t handler, void* arg);
 
 // Unregister event handler
 void asp_plugin_event_unregister(int handler_id);

@@ -102,12 +102,13 @@ bool plugin_api_is_led_claimed(uint32_t index) {
 // Status Bar Widget API Implementation
 // ============================================
 
-int asp_plugin_status_widget_register(plugin_status_widget_fn callback, void* user_data) {
+int asp_plugin_status_widget_register(plugin_context_t* ctx, plugin_status_widget_fn callback, void* user_data) {
     for (int i = 0; i < MAX_STATUS_WIDGETS; i++) {
         if (!status_widgets[i].active) {
             status_widgets[i].active = true;
             status_widgets[i].callback = callback;
             status_widgets[i].user_data = user_data;
+            status_widgets[i].owner = ctx;
             ESP_LOGI(TAG, "Registered status widget %d", i);
             return i;
         }
@@ -207,7 +208,7 @@ static bool plugin_input_hook_wrapper(bsp_input_event_t* bsp_event, void* user_d
     return entry->callback(&plugin_event, entry->user_data);
 }
 
-int asp_plugin_input_hook_register(plugin_input_hook_fn callback, void* user_data) {
+int asp_plugin_input_hook_register(plugin_context_t* ctx, plugin_input_hook_fn callback, void* user_data) {
     if (!callback) {
         return -1;
     }
@@ -237,6 +238,7 @@ int asp_plugin_input_hook_register(plugin_input_hook_fn callback, void* user_dat
     plugin_input_hooks[hook_index].callback = callback;
     plugin_input_hooks[hook_index].user_data = user_data;
     plugin_input_hooks[hook_index].in_use = true;
+    plugin_input_hooks[hook_index].owner = ctx;
 
     ESP_LOGI(TAG, "Registered plugin input hook %d (BSP hook %d)", hook_index, bsp_id);
     return hook_index;
@@ -472,13 +474,14 @@ typedef struct {
 
 static event_handler_entry_t event_handlers[MAX_EVENT_HANDLERS] = {0};
 
-int asp_plugin_event_register(uint32_t event_mask, plugin_event_handler_t handler, void* arg) {
+int asp_plugin_event_register(plugin_context_t* ctx, uint32_t event_mask, plugin_event_handler_t handler, void* arg) {
     for (int i = 0; i < MAX_EVENT_HANDLERS; i++) {
         if (!event_handlers[i].active) {
             event_handlers[i].active = true;
             event_handlers[i].event_mask = event_mask;
             event_handlers[i].handler = handler;
             event_handlers[i].arg = arg;
+            event_handlers[i].owner = ctx;
             ESP_LOGI(TAG, "Registered event handler %d for mask 0x%lx", i, (unsigned long)event_mask);
             return i;
         }
