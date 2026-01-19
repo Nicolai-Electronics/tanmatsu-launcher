@@ -14,7 +14,6 @@
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
-#include "esp_http_client.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "freertos/FreeRTOS.h"
@@ -47,70 +46,57 @@ typedef struct {
 
 static status_widget_entry_t status_widgets[MAX_STATUS_WIDGETS] = {0};
 
-// Display refresh control
-static volatile bool display_refresh_requested = false;
+// Logging API moved to badge-elf-api (asp/log.h)
 
 // ============================================
-// Logging API Implementation
+// LED Claim Tracking (Tanmatsu-specific)
 // ============================================
+// Plugins can claim specific LEDs to prevent the system from overwriting them.
+// The badge-elf-api LED functions write directly to BSP, so the system needs
+// to check claims before setting power/WiFi indicator LEDs.
 
-void asp_log_info(const char* tag, const char* fmt, ...) {
-    char buf[256];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, args);
-    va_end(args);
-    esp_log(ESP_LOG_CONFIG_INIT(ESP_LOG_INFO), tag, LOG_FORMAT(I, "%s"),
-            esp_log_timestamp(), tag, buf);
+#define LED_COUNT 6
+
+typedef struct {
+    bool claimed;
+    plugin_context_t* owner;
+} led_claim_t;
+
+static led_claim_t led_claims[LED_COUNT] = {0};
+
+bool asp_plugin_led_claim(plugin_context_t* ctx, uint32_t index) {
+    if (index >= LED_COUNT || ctx == NULL) return false;
+
+    // Can only claim if unclaimed or already owned by this plugin
+    if (!led_claims[index].claimed || led_claims[index].owner == ctx) {
+        led_claims[index].claimed = true;
+        led_claims[index].owner = ctx;
+        ESP_LOGI(TAG, "Plugin %s claimed LED %lu",
+                 ctx->plugin_slug ? ctx->plugin_slug : "unknown", (unsigned long)index);
+        return true;
+    }
+    return false;
 }
 
-void asp_log_warn(const char* tag, const char* fmt, ...) {
-    char buf[256];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, args);
-    va_end(args);
-    esp_log(ESP_LOG_CONFIG_INIT(ESP_LOG_WARN), tag, LOG_FORMAT(W, "%s"),
-            esp_log_timestamp(), tag, buf);
+void asp_plugin_led_release(plugin_context_t* ctx, uint32_t index) {
+    if (index >= LED_COUNT) return;
+
+    // Can only release if owned by this plugin (or ctx is NULL for force release)
+    if (led_claims[index].claimed &&
+        (ctx == NULL || led_claims[index].owner == ctx)) {
+        ESP_LOGI(TAG, "Released LED %lu", (unsigned long)index);
+        led_claims[index].claimed = false;
+        led_claims[index].owner = NULL;
+    }
 }
 
-void asp_log_error(const char* tag, const char* fmt, ...) {
-    char buf[256];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, args);
-    va_end(args);
-    esp_log(ESP_LOG_CONFIG_INIT(ESP_LOG_ERROR), tag, LOG_FORMAT(E, "%s"),
-            esp_log_timestamp(), tag, buf);
+bool plugin_api_is_led_claimed(uint32_t index) {
+    if (index >= LED_COUNT) return false;
+    return led_claims[index].claimed;
 }
 
-// ============================================
-// Display API Implementation
-// ============================================
-
-// REMOVED: plugin_display_get_buffer - use asp_disp_get_pax_buf from badge library instead
-
-void asp_disp_flush(void) {
-    // Just set the flag - menus will pick it up on their next timeout-based refresh
-    // This leverages the existing periodic refresh that updates WiFi/battery indicators
-    display_refresh_requested = true;
-}
-
-// Check if a plugin has requested a display refresh
-bool plugin_api_refresh_requested(void) {
-    return display_refresh_requested;
-}
-
-// Clear the refresh request flag (call after refreshing)
-void plugin_api_clear_refresh_request(void) {
-    display_refresh_requested = false;
-}
-
-void asp_disp_flush_region(int x, int y, int w, int h) {
-    // For now, just do a full flush
-    // TODO: Implement partial update if supported
-    display_blit_buffer(display_get_buffer());
-}
+// Display API moved to badge-elf-api (asp/display.h)
+// Use asp_disp_write() and asp_disp_write_part() for display updates
 
 // ============================================
 // Status Bar Widget API Implementation
@@ -341,122 +327,7 @@ bool asp_plugin_input_get_key_state(uint32_t key) {
     return false;
 }
 
-// ============================================
-// LED API Implementation
-// ============================================
-
-#include "bsp/led.h"
-
-// Plugin LED overlay system
-// Plugins set LEDs in this overlay; it's merged with system state before sending
-#define PLUGIN_LED_COUNT 6
-static uint8_t plugin_led_overlay[PLUGIN_LED_COUNT * 3] = {0};  // RGB values
-static uint8_t plugin_led_pending_clear = 0;  // LEDs that need to be explicitly cleared
-static uint8_t plugin_led_mask = 0;  // Bit mask: which LEDs are controlled by plugins
-
-bool asp_led_set_brightness(uint8_t percentage) {
-    return bsp_led_set_brightness(percentage) == ESP_OK;
-}
-
-bool asp_led_get_brightness(uint8_t* out_percentage) {
-    if (!out_percentage) return false;
-    return bsp_led_get_brightness(out_percentage) == ESP_OK;
-}
-
-bool asp_led_set_mode(bool automatic) {
-    return bsp_led_set_mode(automatic) == ESP_OK;
-}
-
-bool asp_led_get_mode(bool* out_automatic) {
-    if (!out_automatic) return false;
-    return bsp_led_get_mode(out_automatic) == ESP_OK;
-}
-
-bool asp_led_set_pixel(uint32_t index, uint32_t color) {
-    if (index >= PLUGIN_LED_COUNT) return false;
-    uint8_t red   = (color >> 16) & 0xFF;
-    uint8_t green = (color >> 8) & 0xFF;
-    uint8_t blue  = color & 0xFF;
-    return asp_led_set_pixel_rgb(index, red, green, blue);
-}
-
-bool asp_led_set_pixel_rgb(uint32_t index, uint8_t red, uint8_t green, uint8_t blue) {
-    if (index >= PLUGIN_LED_COUNT) return false;
-
-    // Store in plugin overlay
-    plugin_led_overlay[index * 3 + 0] = red;
-    plugin_led_overlay[index * 3 + 1] = green;
-    plugin_led_overlay[index * 3 + 2] = blue;
-
-    // Mark this LED as plugin-controlled (or mark for clear if setting to black)
-    if (red == 0 && green == 0 && blue == 0) {
-        // If LED was previously controlled, mark it for explicit clear
-        if (plugin_led_mask & (1 << index)) {
-            plugin_led_pending_clear |= (1 << index);
-        }
-        plugin_led_mask &= ~(1 << index);  // Clear mask bit
-    } else {
-        plugin_led_pending_clear &= ~(1 << index);  // Cancel any pending clear
-        plugin_led_mask |= (1 << index);   // Set mask bit
-    }
-
-    return true;
-}
-
-bool asp_led_set_pixel_hsv(uint32_t index, uint16_t hue, uint8_t saturation, uint8_t value) {
-    if (index >= PLUGIN_LED_COUNT) return false;
-    // Convert HSV to RGB and store in overlay
-    // Simplified conversion - use BSP function then read back
-    bsp_led_set_pixel_hsv(index, hue, saturation, value);
-    // The BSP already set it, just mark as plugin-controlled
-    plugin_led_mask |= (1 << index);
-    return true;
-}
-
-bool asp_led_send(void) {
-    // Apply plugin overlay to BSP LED data, then send
-    for (int i = 0; i < PLUGIN_LED_COUNT; i++) {
-        if (plugin_led_mask & (1 << i)) {
-            // This LED is controlled by a plugin - set it in the BSP buffer
-            bsp_led_set_pixel_rgb(i,
-                plugin_led_overlay[i * 3 + 0],
-                plugin_led_overlay[i * 3 + 1],
-                plugin_led_overlay[i * 3 + 2]);
-        } else if (plugin_led_pending_clear & (1 << i)) {
-            // This LED was just released by a plugin - explicitly set to black
-            bsp_led_set_pixel_rgb(i, 0, 0, 0);
-            plugin_led_pending_clear &= ~(1 << i);  // Clear the pending flag
-        }
-        // LEDs not in mask and not pending clear keep their BSP/system values
-    }
-    return bsp_led_send() == ESP_OK;
-}
-
-bool asp_led_clear(void) {
-    // Clear only plugin-controlled LEDs
-    for (int i = 0; i < PLUGIN_LED_COUNT; i++) {
-        if (plugin_led_mask & (1 << i)) {
-            plugin_led_overlay[i * 3 + 0] = 0;
-            plugin_led_overlay[i * 3 + 1] = 0;
-            plugin_led_overlay[i * 3 + 2] = 0;
-            bsp_led_set_pixel_rgb(i, 0, 0, 0);
-        }
-    }
-    plugin_led_mask = 0;
-    return bsp_led_send() == ESP_OK;
-}
-
-// Called by launcher before system LED updates to apply plugin overlay
-void plugin_api_apply_led_overlay(void) {
-    for (int i = 0; i < PLUGIN_LED_COUNT; i++) {
-        if (plugin_led_mask & (1 << i)) {
-            bsp_led_set_pixel_rgb(i,
-                plugin_led_overlay[i * 3 + 0],
-                plugin_led_overlay[i * 3 + 1],
-                plugin_led_overlay[i * 3 + 2]);
-        }
-    }
-}
+// LED API moved to badge-elf-api (asp/led.h)
 
 // ============================================
 // Storage API Implementation (Sandboxed)
@@ -638,92 +509,7 @@ int plugin_api_dispatch_event(uint32_t event_type, void* event_data) {
     return handled;
 }
 
-// ============================================
-// Network API Implementation
-// ============================================
-
-bool asp_net_is_connected(void) {
-    // TODO: Check actual WiFi connection status
-    // For now, just return if wifi manager says connected
-    extern bool wifi_connection_is_connected(void);
-    return wifi_connection_is_connected();
-}
-
-int asp_http_get(const char* url, char* response, size_t max_len) {
-    esp_http_client_config_t config = {
-        .url = url,
-        .timeout_ms = 10000,
-    };
-
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    if (!client) {
-        return -1;
-    }
-
-    esp_err_t err = esp_http_client_open(client, 0);
-    if (err != ESP_OK) {
-        esp_http_client_cleanup(client);
-        return -1;
-    }
-
-    int content_length = esp_http_client_fetch_headers(client);
-    int status_code = esp_http_client_get_status_code(client);
-
-    if (response && max_len > 0 && content_length > 0) {
-        size_t read_len = (size_t)content_length < max_len - 1 ? (size_t)content_length : max_len - 1;
-        int actual = esp_http_client_read(client, response, read_len);
-        if (actual >= 0) {
-            response[actual] = '\0';
-        }
-    }
-
-    esp_http_client_close(client);
-    esp_http_client_cleanup(client);
-
-    return status_code;
-}
-
-int asp_http_post(const char* url, const char* body, char* response, size_t max_len) {
-    esp_http_client_config_t config = {
-        .url = url,
-        .method = HTTP_METHOD_POST,
-        .timeout_ms = 10000,
-    };
-
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    if (!client) {
-        return -1;
-    }
-
-    esp_http_client_set_header(client, "Content-Type", "application/json");
-
-    int body_len = body ? strlen(body) : 0;
-    esp_err_t err = esp_http_client_open(client, body_len);
-    if (err != ESP_OK) {
-        esp_http_client_cleanup(client);
-        return -1;
-    }
-
-    if (body && body_len > 0) {
-        esp_http_client_write(client, body, body_len);
-    }
-
-    int content_length = esp_http_client_fetch_headers(client);
-    int status_code = esp_http_client_get_status_code(client);
-
-    if (response && max_len > 0 && content_length > 0) {
-        size_t read_len = (size_t)content_length < max_len - 1 ? (size_t)content_length : max_len - 1;
-        int actual = esp_http_client_read(client, response, read_len);
-        if (actual >= 0) {
-            response[actual] = '\0';
-        }
-    }
-
-    esp_http_client_close(client);
-    esp_http_client_cleanup(client);
-
-    return status_code;
-}
+// Network API moved to badge-elf-api (asp/http.h)
 
 // ============================================
 // Settings API Implementation
@@ -1018,6 +804,15 @@ void plugin_api_cleanup_for_plugin(plugin_context_t* ctx) {
             event_handlers[i].handler = NULL;
             event_handlers[i].arg = NULL;
             event_handlers[i].owner = NULL;
+        }
+    }
+
+    // Release all LED claims owned by this plugin
+    for (int i = 0; i < LED_COUNT; i++) {
+        if (led_claims[i].claimed && led_claims[i].owner == ctx) {
+            ESP_LOGI(TAG, "Auto-releasing LED claim %d", i);
+            led_claims[i].claimed = false;
+            led_claims[i].owner = NULL;
         }
     }
 

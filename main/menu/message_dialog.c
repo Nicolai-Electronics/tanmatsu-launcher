@@ -216,35 +216,38 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
     // Only update LEDs if WiFi stack is initialized (system is ready)
     if (wifi_stack_get_initialized()) {
         // WiFi LED (LED 0): Green if connected, off if not
-        if (wifi_connection_is_connected()) {
-            bsp_led_set_pixel_rgb(0, 0, 64, 0);  // Dim green when connected
-        } else {
-            bsp_led_set_pixel_rgb(0, 0, 0, 0);   // Off when disconnected
+        // Skip if claimed by a plugin
+        if (!plugin_api_is_led_claimed(0)) {
+            if (wifi_connection_is_connected()) {
+                bsp_led_set_pixel_rgb(0, 0, 64, 0);  // Dim green when connected
+            } else {
+                bsp_led_set_pixel_rgb(0, 0, 0, 0);   // Off when disconnected
+            }
         }
 
         // Power LED (LED 1): Color based on battery state
-        bsp_power_battery_information_t bat_info = {0};
-        bsp_power_get_battery_information(&bat_info);
+        // Skip if claimed by a plugin
+        if (!plugin_api_is_led_claimed(1)) {
+            bsp_power_battery_information_t bat_info = {0};
+            bsp_power_get_battery_information(&bat_info);
 
-        if (!bat_info.battery_available) {
-            // No battery - dim blue for external power
-            bsp_led_set_pixel_rgb(1, 0, 0, 64);
-        } else if (bat_info.battery_charging) {
-            // Charging - orange/amber
-            bsp_led_set_pixel_rgb(1, 64, 32, 0);
-        } else if (bat_info.remaining_percentage < 15) {
-            // Low battery - red
-            bsp_led_set_pixel_rgb(1, 64, 0, 0);
-        } else if (bat_info.remaining_percentage < 30) {
-            // Medium-low battery - yellow
-            bsp_led_set_pixel_rgb(1, 64, 64, 0);
-        } else {
-            // Good battery - green
-            bsp_led_set_pixel_rgb(1, 0, 64, 0);
+            if (!bat_info.battery_available) {
+                // No battery - dim blue for external power
+                bsp_led_set_pixel_rgb(1, 0, 0, 64);
+            } else if (bat_info.battery_charging) {
+                // Charging - orange/amber
+                bsp_led_set_pixel_rgb(1, 64, 32, 0);
+            } else if (bat_info.remaining_percentage < 15) {
+                // Low battery - red
+                bsp_led_set_pixel_rgb(1, 64, 0, 0);
+            } else if (bat_info.remaining_percentage < 30) {
+                // Medium-low battery - yellow
+                bsp_led_set_pixel_rgb(1, 64, 64, 0);
+            } else {
+                // Good battery - green
+                bsp_led_set_pixel_rgb(1, 0, 64, 0);
+            }
         }
-
-        // Apply plugin LED overlay (preserves plugin-controlled LEDs)
-        plugin_api_apply_led_overlay();
 
         // Send LED data to coprocessor
         bsp_led_send();

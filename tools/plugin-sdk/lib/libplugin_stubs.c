@@ -9,10 +9,7 @@ void asp_log_info(const char* tag, const char* format, ...) {}
 void asp_log_warn(const char* tag, const char* format, ...) {}
 void asp_log_error(const char* tag, const char* format, ...) {}
 
-// Display API
-// Note: asp_disp_get_pax_buf() is provided by the badge library
-void asp_disp_flush(void) {}
-void asp_disp_flush_region(int x, int y, int w, int h) {}
+// Display API - Use badge-elf-api: asp_disp_write(), asp_disp_write_part(), asp_disp_get_pax_buf()
 
 // Status Bar Widget API
 int asp_plugin_status_widget_register(void* callback, void* user_data) { return 0; }
@@ -40,6 +37,8 @@ int asp_led_set_pixel_rgb(unsigned int index, unsigned char r, unsigned char g, 
 int asp_led_set_pixel_hsv(unsigned int index, unsigned short hue, unsigned char sat, unsigned char val) { return 0; }
 int asp_led_send(void) { return 0; }
 int asp_led_clear(void) { return 0; }
+int asp_plugin_led_claim(void* ctx, unsigned int index) { return 0; }
+void asp_plugin_led_release(void* ctx, unsigned int index) {}
 
 // Storage API
 void* asp_plugin_storage_open(void* ctx, const char* path, const char* mode) { return 0; }

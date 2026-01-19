@@ -109,12 +109,6 @@ bool plugin_manager_has_running_services(void);
 // Load all plugins with autostart enabled
 void plugin_manager_load_autostart(void);
 
-// Check if a plugin has requested a display refresh
-bool plugin_api_refresh_requested(void);
-
-// Clear the refresh request flag (call after refreshing)
-void plugin_api_clear_refresh_request(void);
-
 // ============================================
 // Status Widget Integration
 // ============================================
@@ -125,12 +119,17 @@ void plugin_api_clear_refresh_request(void);
 int plugin_api_render_status_widgets(pax_buf_t* buffer, int x_right, int y, int height);
 
 // ============================================
-// LED Overlay Integration
+// LED Claim Tracking
 // ============================================
 
-// Apply plugin LED overlay to BSP LED buffer
-// Call this before bsp_led_send() to preserve plugin LED states
-void plugin_api_apply_led_overlay(void);
+// Check if an LED is claimed by a plugin (system code should skip claimed LEDs)
+bool plugin_api_is_led_claimed(uint32_t index);
+
+// Claim an LED for plugin use (prevents system from overwriting it)
+bool asp_plugin_led_claim(plugin_context_t* ctx, uint32_t index);
+
+// Release an LED claim
+void asp_plugin_led_release(plugin_context_t* ctx, uint32_t index);
 
 #ifdef __cplusplus
 }

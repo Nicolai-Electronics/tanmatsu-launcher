@@ -146,16 +146,11 @@ void asp_log_error(const char* tag, const char* fmt, ...);
 // ============================================
 // Host API: Display
 // ============================================
-
-// Get current display buffer for drawing
-// Note: Use asp_disp_get_pax_buf() from badge library (already exported)
-pax_buf_t* asp_disp_get_pax_buf(void);
-
-// Flush entire display buffer to screen
-void asp_disp_flush(void);
-
-// Flush rectangular region to screen
-void asp_disp_flush_region(int x, int y, int w, int h);
+// Display API is provided by badge-elf-api. Use:
+//   asp_disp_get_pax_buf() - Get PAX buffer for drawing
+//   asp_disp_write()       - Write full display buffer to screen
+//   asp_disp_write_part()  - Write partial region to screen
+// See: #include <asp/display.h>
 
 // ============================================
 // Host API: Status Bar Widgets
@@ -285,6 +280,17 @@ bool asp_led_send(void);
 // Clear all LEDs (sets all to black and sends to hardware)
 // Returns: true on success
 bool asp_led_clear(void);
+
+// Claim an LED for plugin use
+// Plugins MUST claim an LED before using it. This prevents conflicts
+// between multiple plugins and the system (which controls LEDs 0-1 for
+// WiFi and power indicators). Claimed LEDs won't be overwritten by
+// the system. Claims are automatically released when the plugin unloads.
+// Returns: true if claim succeeded, false if already claimed by another plugin
+bool asp_plugin_led_claim(plugin_context_t* ctx, uint32_t index);
+
+// Release an LED claim (allows system or other plugins to use it)
+void asp_plugin_led_release(plugin_context_t* ctx, uint32_t index);
 
 // ============================================
 // Host API: Storage (Sandboxed to plugin directory)
