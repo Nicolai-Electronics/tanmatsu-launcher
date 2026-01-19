@@ -12,7 +12,7 @@ void asp_log_error(const char* tag, const char* format, ...) {}
 // Display API - Use badge-elf-api: asp_disp_write(), asp_disp_write_part(), asp_disp_get_pax_buf()
 
 // Status Bar Widget API
-int asp_plugin_status_widget_register(void* callback, void* user_data) { return 0; }
+int asp_plugin_status_widget_register(void* ctx, void* callback, void* user_data) { return 0; }
 void asp_plugin_status_widget_unregister(int widget_id) {}
 
 // Drawing Primitives - Use PAX library directly (pax_draw_circle, pax_draw_rect, etc.)
@@ -23,7 +23,7 @@ int asp_plugin_input_poll(void* event, unsigned int timeout_ms) { return 0; }
 int asp_plugin_input_get_key_state(unsigned int key) { return 0; }
 
 // Input Hook API
-int asp_plugin_input_hook_register(void* callback, void* user_data) { return 0; }
+int asp_plugin_input_hook_register(void* ctx, void* callback, void* user_data) { return 0; }
 void asp_plugin_input_hook_unregister(int hook_id) {}
 int asp_plugin_input_inject(void* event) { return 0; }
 
@@ -64,7 +64,7 @@ int asp_plugin_menu_add_item(const char* label, void* icon, void* callback, void
 void asp_plugin_menu_remove_item(int item_id) {}
 
 // Event API
-int asp_plugin_event_register(unsigned int event_mask, void* callback, void* user_data) { return 0; }
+int asp_plugin_event_register(void* ctx, unsigned int event_mask, void* callback, void* user_data) { return 0; }
 void asp_plugin_event_unregister(int registration_id) {}
 
 // Network API
