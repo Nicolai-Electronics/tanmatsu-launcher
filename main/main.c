@@ -57,10 +57,11 @@
 static char const TAG[] = "main";
 
 // Global variables
-static QueueHandle_t input_event_queue      = NULL;
-static wl_handle_t   wl_handle              = WL_INVALID_HANDLE;
-static bool          wifi_stack_initialized = false;
-static bool          wifi_stack_task_done   = false;
+static QueueHandle_t input_event_queue           = NULL;
+static wl_handle_t   wl_handle                   = WL_INVALID_HANDLE;
+static bool          wifi_stack_initialized      = false;
+static bool          wifi_stack_task_done        = false;
+static bool          wifi_firmware_version_match = false;
 
 static void fix_rtc_out_of_bounds(void) {
     time_t rtc_time = time(NULL);
@@ -98,11 +99,26 @@ void startup_screen(const char* text) {
 }
 
 bool wifi_stack_get_initialized(void) {
-    return wifi_stack_initialized;
+    bsp_radio_state_t state;
+    bsp_power_get_radio_state(&state);
+    return wifi_stack_initialized && wifi_firmware_version_match && state == BSP_POWER_RADIO_STATE_APPLICATION;
+}
+
+bool wifi_stack_get_version_mismatch(void) {
+    return wifi_stack_get_initialized() && (!wifi_firmware_version_match);
 }
 
 bool wifi_stack_get_task_done(void) {
     return wifi_stack_task_done;
+}
+
+static void radio_firmware_callback(uint32_t version) {
+    ESP_LOGI(TAG, "Radio firmware version: 0x%" PRIX32, version);
+    if (version == 0x00020703) {
+        wifi_firmware_version_match = true;
+    } else {
+        ESP_LOGE(TAG, "Incompatible radio firmware version detected, expected 0x00020703");
+    }
 }
 
 static void radio_callback(uint8_t type, uint8_t* payload, uint16_t payload_length) {
@@ -118,6 +134,9 @@ static void radio_callback(uint8_t type, uint8_t* payload, uint16_t payload_leng
 }
 
 static void wifi_task(void* pvParameters) {
+    esp_hosted_set_custom_callback(radio_callback);
+    esp_hosted_set_firmware_version_callback(radio_firmware_callback);
+
     if (wifi_remote_initialize() == ESP_OK) {
         wifi_connection_init_stack();
         wifi_stack_initialized = true;
@@ -128,7 +147,14 @@ static void wifi_task(void* pvParameters) {
     }
     wifi_stack_task_done = true;
 
-    if (ntp_get_enabled() && wifi_stack_initialized) {
+    addon_detect_internal();
+    addon_detect_catt();
+
+    while (!wifi_stack_get_initialized()) {
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+
+    if (ntp_get_enabled()) {
         if (wifi_connect_try_all() == ESP_OK) {
             esp_err_t res = ntp_start_service("pool.ntp.org");
             if (res == ESP_OK) {
@@ -148,9 +174,6 @@ static void wifi_task(void* pvParameters) {
         }
     }
 
-    addon_detect_internal();
-    addon_detect_catt();
-
 #if 0
     while (1) {
         printf("free:%lu min-free:%lu lfb-dma:%u lfb-def:%u lfb-8bit:%u\n", esp_get_free_heap_size(),
@@ -159,8 +182,6 @@ static void wifi_task(void* pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
 #endif
-
-    esp_hosted_set_custom_callback(radio_callback);
 
     /*while (1) {
         esp_hosted_send_custom(3, (uint8_t*)"Hello from Tanmatsu!", 20);
@@ -368,6 +389,33 @@ void app_main(void) {
         pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 0, "Failed to initialize coprocessor");
         display_blit_buffer(buffer);
         return;
+    }
+
+    bool radio_recovery_requested = false;
+    res = bsp_input_read_navigation_key(BSP_INPUT_NAVIGATION_KEY_VOLUME_UP, &radio_recovery_requested);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read volume up key state: %s", esp_err_to_name(res));
+    }
+    if (radio_recovery_requested) {
+        bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_BOOTLOADER);
+        gui_theme_t* theme = get_theme();
+        pax_buf_t*   fb    = display_get_buffer();
+        pax_background(fb, theme->palette.color_background);
+        gui_header_draw(
+            fb, theme,
+            ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), (char*)"Radio firmware update mode"}}), 1, NULL,
+            0);
+        gui_footer_draw(fb, theme, NULL, 0, NULL, 0);
+        int x = theme->menu.horizontal_margin + theme->menu.horizontal_padding;
+        int y = theme->header.height + (theme->header.vertical_margin * 2) + theme->menu.vertical_margin +
+                theme->menu.vertical_padding;
+        pax_draw_text(fb, theme->palette.color_foreground, theme->menu.text_font, 16, x, y + 18 * 0,
+                      "Volume up was held down while starting the device. The radio is\nhas been started in bootloader "
+                      "mode to allow firmware recovery.\n\nGo to https://recovery.tanmatsu.cloud for instructions.");
+        display_blit_buffer(fb);
+        while (1) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
     }
 
     startup_screen("Mounting AppFS filesystem...");

@@ -32,6 +32,10 @@
 
 static const char TAG[] = "home menu";
 
+static bool wifi_stack_get_initialized(void);
+static bool wifi_stack_get_version_mismatch(void);
+static bool wifi_stack_get_task_done(void);
+
 typedef enum {
     ACTION_NONE,
     ACTION_APPS,
@@ -93,6 +97,22 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                                      FOOTER_RIGHT);
     }
     menu_render_grid(buffer, menu, position, theme, partial);
+
+    if (wifi_stack_get_task_done()) {
+        pax_simple_rect(buffer, theme->menu.palette.color_background, position.x0,
+                        pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                        pax_buf_get_width(buffer) - position.x0 * 2, 18 * 2);
+        if (wifi_stack_get_version_mismatch()) {
+            pax_draw_text(
+                buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
+                pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                "Radio firmware version mismatch!\r\nPlease flash the radio firmware using the recovery website.");
+        } else if (!wifi_stack_get_initialized()) {
+            pax_draw_text(buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
+                          pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                          "Radio communication error!\r\nPlease flash the radio firmware using the recovery website.");
+        }
+    }
     display_blit_buffer(buffer);
 }
 

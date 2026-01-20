@@ -11,7 +11,7 @@
 #include "portmacro.h"
 #include "tanmatsu_coprocessor.h"
 
-const char TAG[] = "lora";
+static const char TAG[] = "lora";
 
 QueueHandle_t     lora_packet_queue          = NULL;
 SemaphoreHandle_t lora_mutex                 = NULL;

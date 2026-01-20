@@ -7,7 +7,7 @@
 #include "esp_log.h"
 #include "sdkconfig.h"
 
-const char TAG[] = "Add-on";
+static const char TAG[] = "Add-on";
 
 esp_err_t addon_detect_internal(void) {
     i2c_master_bus_handle_t i2c_bus_handle = NULL;
