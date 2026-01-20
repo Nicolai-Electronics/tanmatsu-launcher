@@ -57,11 +57,12 @@
 static char const TAG[] = "main";
 
 // Global variables
-static QueueHandle_t input_event_queue           = NULL;
-static wl_handle_t   wl_handle                   = WL_INVALID_HANDLE;
-static bool          wifi_stack_initialized      = false;
-static bool          wifi_stack_task_done        = false;
-static bool          wifi_firmware_version_match = false;
+static QueueHandle_t input_event_queue              = NULL;
+static wl_handle_t   wl_handle                      = WL_INVALID_HANDLE;
+static bool          wifi_stack_initialized         = false;
+static bool          wifi_stack_task_done           = false;
+static bool          wifi_firmware_version_match    = false;
+static bool          wifi_firmware_version_mismatch = false;
 
 static void fix_rtc_out_of_bounds(void) {
     time_t rtc_time = time(NULL);
@@ -101,11 +102,11 @@ void startup_screen(const char* text) {
 bool wifi_stack_get_initialized(void) {
     bsp_radio_state_t state;
     bsp_power_get_radio_state(&state);
-    return wifi_stack_initialized && wifi_firmware_version_match && state == BSP_POWER_RADIO_STATE_APPLICATION;
+    return wifi_stack_initialized && state == BSP_POWER_RADIO_STATE_APPLICATION;
 }
 
 bool wifi_stack_get_version_mismatch(void) {
-    return wifi_stack_get_initialized() && (!wifi_firmware_version_match);
+    return wifi_firmware_version_mismatch;
 }
 
 bool wifi_stack_get_task_done(void) {
@@ -118,6 +119,7 @@ static void radio_firmware_callback(uint32_t version) {
         wifi_firmware_version_match = true;
     } else {
         ESP_LOGE(TAG, "Incompatible radio firmware version detected, expected 0x00020703");
+        wifi_firmware_version_mismatch = true;
     }
 }
 
