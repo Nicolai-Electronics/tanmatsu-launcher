@@ -1,6 +1,5 @@
 #include "lora.h"
 #include <string.h>
-#include "bsp/tanmatsu.h"
 #include "esp_err.h"
 #include "esp_hosted_custom.h"
 #include "esp_log.h"
@@ -9,7 +8,11 @@
 #include "freertos/queue.h"
 #include "lora_protocol.h"
 #include "portmacro.h"
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "tanmatsu_coprocessor.h"
+#include "bsp/tanmatsu.h"
+#endif
 
 static const char TAG[] = "lora";
 
@@ -56,11 +59,13 @@ esp_err_t lora_transaction_receive(uint8_t* packet, size_t length) {
             printf("%02X ", packet[i]);
         }
         printf("\r\n");
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
         tanmatsu_coprocessor_handle_t handle;
         bsp_tanmatsu_coprocessor_get_handle(&handle);
         tanmatsu_coprocessor_set_message(handle, true, false, false, true, false, false, false, false);
         vTaskDelay(pdMS_TO_TICKS(500));
         tanmatsu_coprocessor_set_message(handle, false, false, false, false, false, false, false, false);
+#endif
         return ESP_OK;
     }
     // Else it's a response to a transaction

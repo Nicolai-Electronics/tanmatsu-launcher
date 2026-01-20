@@ -240,8 +240,8 @@ static void wifi_task(void* pvParameters) {
 
 esp_err_t check_i2c_bus(void) {
     i2c_master_bus_handle_t i2c_bus_handle_internal;
-    ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal));
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+    ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal));
     esp_err_t ret_codec  = i2c_master_probe(i2c_bus_handle_internal, 0x08, 50);
     esp_err_t ret_bmi270 = i2c_master_probe(i2c_bus_handle_internal, 0x68, 50);
 
