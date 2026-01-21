@@ -1,13 +1,16 @@
 #include "lora.h"
 #include <string.h>
 #include "esp_err.h"
-#include "esp_hosted_custom.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/idf_additions.h"
 #include "freertos/queue.h"
 #include "lora_protocol.h"
 #include "portmacro.h"
+
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
+#include "esp_hosted_custom.h"
+#endif
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "tanmatsu_coprocessor.h"
@@ -28,6 +31,7 @@ static esp_err_t lora_transaction(const uint8_t* request, size_t request_length,
     esp_err_t result = ESP_FAIL;
     xSemaphoreTake(lora_mutex, portMAX_DELAY);
     xSemaphoreTake(lora_transaction_semaphore, 0);  // Clear semaphore
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
     result = esp_hosted_send_custom(1, (uint8_t*)request, request_length);
     if (result == ESP_OK) {
         if (xSemaphoreTake(lora_transaction_semaphore, pdMS_TO_TICKS(1000)) == pdTRUE) {  // Wait for response
@@ -42,6 +46,9 @@ static esp_err_t lora_transaction(const uint8_t* request, size_t request_length,
             result = ESP_ERR_TIMEOUT;
         }
     }
+#else
+    result = ESP_OK;
+#endif
     lora_sequence_number++;
     xSemaphoreGive(lora_mutex);
     return result;

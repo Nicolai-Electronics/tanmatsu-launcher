@@ -21,7 +21,6 @@
 #include "eeprom.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
-#include "esp_hosted_custom.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
 #include "esp_log.h"
@@ -47,6 +46,10 @@
 #include "usb_device.h"
 #include "wifi_connection.h"
 #include "wifi_remote.h"
+
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
+#include "esp_hosted_custom.h"
+#endif
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "bsp/tanmatsu.h"
@@ -100,9 +103,13 @@ void startup_screen(const char* text) {
 }
 
 bool wifi_stack_get_initialized(void) {
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     bsp_radio_state_t state;
     bsp_power_get_radio_state(&state);
     return wifi_stack_initialized && state == BSP_POWER_RADIO_STATE_APPLICATION;
+#else
+    return wifi_stack_initialized;
+#endif
 }
 
 bool wifi_stack_get_version_mismatch(void) {
@@ -136,8 +143,10 @@ static void radio_callback(uint8_t type, uint8_t* payload, uint16_t payload_leng
 }
 
 static void wifi_task(void* pvParameters) {
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
     esp_hosted_set_custom_callback(radio_callback);
     esp_hosted_set_firmware_version_callback(radio_firmware_callback);
+#endif
 
     if (wifi_remote_initialize() == ESP_OK) {
         wifi_connection_init_stack();
