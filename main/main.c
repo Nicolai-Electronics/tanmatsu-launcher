@@ -31,6 +31,7 @@
 #include "gui_style.h"
 #include "hal/lcd_types.h"
 #include "icons.h"
+#include "lora.h"
 #include "menu/home.h"
 #include "ntp.h"
 #include "nvs_flash.h"
@@ -46,6 +47,10 @@
 #include "wifi_connection.h"
 #include "wifi_remote.h"
 
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
+#include "esp_hosted_custom.h"
+#endif
+
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "bsp/tanmatsu.h"
 #include "tanmatsu_coprocessor.h"
@@ -55,10 +60,12 @@
 static char const TAG[] = "main";
 
 // Global variables
-static QueueHandle_t input_event_queue      = NULL;
-static wl_handle_t   wl_handle              = WL_INVALID_HANDLE;
-static bool          wifi_stack_initialized = false;
-static bool          wifi_stack_task_done   = false;
+static QueueHandle_t input_event_queue              = NULL;
+static wl_handle_t   wl_handle                      = WL_INVALID_HANDLE;
+static bool          wifi_stack_initialized         = false;
+static bool          wifi_stack_task_done           = false;
+static bool          wifi_firmware_version_match    = false;
+static bool          wifi_firmware_version_mismatch = false;
 
 static void fix_rtc_out_of_bounds(void) {
     time_t rtc_time = time(NULL);
@@ -96,14 +103,51 @@ void startup_screen(const char* text) {
 }
 
 bool wifi_stack_get_initialized(void) {
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+    bsp_radio_state_t state;
+    bsp_power_get_radio_state(&state);
+    return wifi_stack_initialized && state == BSP_POWER_RADIO_STATE_APPLICATION;
+#else
     return wifi_stack_initialized;
+#endif
+}
+
+bool wifi_stack_get_version_mismatch(void) {
+    return wifi_firmware_version_mismatch;
 }
 
 bool wifi_stack_get_task_done(void) {
     return wifi_stack_task_done;
 }
 
+static void radio_firmware_callback(uint32_t version) {
+    ESP_LOGI(TAG, "Radio firmware version: 0x%" PRIX32, version);
+    if (version == 0x00020703) {
+        wifi_firmware_version_match = true;
+    } else {
+        ESP_LOGE(TAG, "Incompatible radio firmware version detected, expected 0x00020703");
+        wifi_firmware_version_mismatch = true;
+    }
+}
+
+static void radio_callback(uint8_t type, uint8_t* payload, uint16_t payload_length) {
+    if (type == 1) {
+        lora_transaction_receive(payload, payload_length);
+    } else {
+        ESP_LOGI(TAG, "Received message from radio: type: %d, payload length: %d", type, payload_length);
+        for (int i = 0; i < payload_length; i++) {
+            printf("%02X ", payload[i]);
+        }
+        printf("\r\n");
+    }
+}
+
 static void wifi_task(void* pvParameters) {
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
+    esp_hosted_set_custom_callback(radio_callback);
+    esp_hosted_set_firmware_version_callback(radio_firmware_callback);
+#endif
+
     if (wifi_remote_initialize() == ESP_OK) {
         wifi_connection_init_stack();
         wifi_stack_initialized = true;
@@ -114,7 +158,14 @@ static void wifi_task(void* pvParameters) {
     }
     wifi_stack_task_done = true;
 
-    if (ntp_get_enabled() && wifi_stack_initialized) {
+    addon_detect_internal();
+    addon_detect_catt();
+
+    while (!wifi_stack_get_initialized()) {
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+
+    if (ntp_get_enabled()) {
         if (wifi_connect_try_all() == ESP_OK) {
             esp_err_t res = ntp_start_service("pool.ntp.org");
             if (res == ESP_OK) {
@@ -134,9 +185,6 @@ static void wifi_task(void* pvParameters) {
         }
     }
 
-    addon_detect_internal();
-    addon_detect_catt();
-
 #if 0
     while (1) {
         printf("free:%lu min-free:%lu lfb-dma:%u lfb-def:%u lfb-8bit:%u\n", esp_get_free_heap_size(),
@@ -146,13 +194,63 @@ static void wifi_task(void* pvParameters) {
     }
 #endif
 
+    /*while (1) {
+        esp_hosted_send_custom(3, (uint8_t*)"Hello from Tanmatsu!", 20);
+        vTaskDelay(pdMS_TO_TICKS(2000));
+    }*/
+
+    lora_protocol_mode_t mode;
+    esp_err_t            res = lora_get_mode(&mode);
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa mode: %d", (int)mode);
+    } else {
+        ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
+    }
+
+    lora_protocol_config_params_t config = {
+        .frequency                  = 869.618,  // MHz
+        .spreading_factor           = 8,        // SF8
+        .bandwidth                  = 62,       // 62.5 kHz
+        .coding_rate                = 8,        // 4/8
+        .sync_word                  = 0x12,     // private
+        .preamble_length            = 16,       // symbols
+        .power                      = 22,       // +22 dBm
+        .ramp_time                  = 40,       // us
+        .crc_enabled                = true,     // CRC enabled
+        .invert_iq                  = false,    // normal IQ
+        .low_data_rate_optimization = false,    // disabled
+    };
+
+    res = lora_set_config(&config);
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa configuration set");
+    } else {
+        ESP_LOGE(TAG, "Failed to set LoRa configuration: %s", esp_err_to_name(res));
+    }
+
+    res = lora_set_mode(LORA_PROTOCOL_MODE_RX);
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa set to RX mode");
+    } else {
+        ESP_LOGE(TAG, "Failed to set LoRa mode: %s", esp_err_to_name(res));
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    res = lora_get_mode(&mode);
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa mode (after setting to RX): %d", (int)mode);
+    } else {
+        ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
+    }
+
     vTaskDelete(NULL);
 }
 
 esp_err_t check_i2c_bus(void) {
     i2c_master_bus_handle_t i2c_bus_handle_internal;
-    ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal));
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+    ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal));
     esp_err_t ret_codec  = i2c_master_probe(i2c_bus_handle_internal, 0x08, 50);
     esp_err_t ret_bmi270 = i2c_master_probe(i2c_bus_handle_internal, 0x68, 50);
 
@@ -304,6 +402,33 @@ void app_main(void) {
         return;
     }
 
+    bool radio_recovery_requested = false;
+    res = bsp_input_read_navigation_key(BSP_INPUT_NAVIGATION_KEY_VOLUME_UP, &radio_recovery_requested);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read volume up key state: %s", esp_err_to_name(res));
+    }
+    if (radio_recovery_requested) {
+        bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_BOOTLOADER);
+        gui_theme_t* theme = get_theme();
+        pax_buf_t*   fb    = display_get_buffer();
+        pax_background(fb, theme->palette.color_background);
+        gui_header_draw(
+            fb, theme,
+            ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), (char*)"Radio firmware update mode"}}), 1, NULL,
+            0);
+        gui_footer_draw(fb, theme, NULL, 0, NULL, 0);
+        int x = theme->menu.horizontal_margin + theme->menu.horizontal_padding;
+        int y = theme->header.height + (theme->header.vertical_margin * 2) + theme->menu.vertical_margin +
+                theme->menu.vertical_padding;
+        pax_draw_text(fb, theme->palette.color_foreground, theme->menu.text_font, 16, x, y + 18 * 0,
+                      "Volume up was held down while starting the device. The radio is\nhas been started in bootloader "
+                      "mode to allow firmware recovery.\n\nGo to https://recovery.tanmatsu.cloud for instructions.");
+        display_blit_buffer(fb);
+        while (1) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+    }
+
     startup_screen("Mounting AppFS filesystem...");
     res = appfsInit(APPFS_PART_TYPE, APPFS_PART_SUBTYPE);
     if (res != ESP_OK) {
@@ -355,6 +480,8 @@ void app_main(void) {
     python_initialize();
 #endif
 #endif
+
+    ESP_ERROR_CHECK(lora_init(NULL));
 
     xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, CONFIG_SOC_CPU_CORES_NUM - 1);
 

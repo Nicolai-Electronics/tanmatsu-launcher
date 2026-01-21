@@ -193,8 +193,14 @@ app_t* create_app(const char* path, const char* slug, bool sdcard) {
     }
 
     cJSON* version_obj = cJSON_GetObjectItem(root, "version");
-    if (version_obj) {
+    if (version_obj && cJSON_IsString(version_obj)) {
         app->version = strdup(version_obj->valuestring);
+    } else if (version_obj && cJSON_IsNumber(version_obj)) {
+        size_t length = snprintf(NULL, 0, "%d", version_obj->valueint);
+        app->version  = malloc(length + 1);
+        if (app->version != NULL) {
+            snprintf(app->version, length + 1, "%d", version_obj->valueint);
+        }
     }
 
     cJSON* icon_obj = cJSON_GetObjectItem(root, "icon");

@@ -22,6 +22,7 @@
 static const char* TAG = "WiFi scan";
 
 extern bool wifi_stack_get_initialized(void);
+extern bool wifi_stack_get_version_mismatch(void);
 
 static void wifi_scan_done_handler(void* handler_arg, esp_event_base_t base, int32_t id, void* event_data) {
 }
@@ -123,6 +124,12 @@ static esp_err_t scan_for_networks(pax_buf_t* buffer, gui_theme_t* theme, wifi_a
         } else {
             free(aps);
         }
+    } else if (wifi_stack_get_version_mismatch()) {
+        message_dialog(get_icon(ICON_ERROR), "WiFi firmware version mismatch",
+                       "The WiFi firmware version is incompatible with this application.\n"
+                       "Please update the ESP-HOSTED firmware on the WiFi coprocessor.",
+                       "OK");
+        return ESP_ERR_NOT_SUPPORTED;
     } else {
         message_dialog(get_icon(ICON_ERROR), "WiFi stack not initialized",
                        "The WiFi stack is not initialized. Please try again later.", "OK");
