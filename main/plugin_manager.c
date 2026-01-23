@@ -20,6 +20,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "freertos/timers.h"
 #include "hal/cache_hal.h"
 #include "soc/soc.h"
 
@@ -659,6 +660,18 @@ size_t plugin_manager_get_loaded_count(void) {
 // Service Plugin Management
 // ============================================
 
+// Deferred unload task - runs with sufficient stack for plugin cleanup
+static void deferred_unload_task(void* arg) {
+    plugin_context_t* ctx = (plugin_context_t*)arg;
+    if (ctx) {
+        // Small delay to ensure service task has fully exited
+        vTaskDelay(pdMS_TO_TICKS(50));
+        ESP_LOGI(TAG, "Auto-unloading service plugin: %s", ctx->plugin_slug);
+        plugin_manager_unload(ctx);
+    }
+    vTaskDelete(NULL);
+}
+
 static void plugin_service_task(void* arg) {
     plugin_context_t* ctx = (plugin_context_t*)arg;
 
@@ -676,6 +689,13 @@ static void plugin_service_task(void* arg) {
     ctx->task_handle = NULL;
     ctx->task_running = false;
     ctx->state = PLUGIN_STATE_STOPPED;
+
+    // Create a small task to handle deferred unload with sufficient stack
+    // This runs after the service task exits, so it's safe to unload the plugin
+    BaseType_t ret = xTaskCreate(deferred_unload_task, "unload", 4096, ctx, 5, NULL);
+    if (ret != pdPASS) {
+        ESP_LOGW(TAG, "Failed to create deferred unload task for plugin: %s", ctx->plugin_slug);
+    }
 
     // FreeRTOS idiom: vTaskDelete(NULL) deletes the calling task
     vTaskDelete(NULL);
