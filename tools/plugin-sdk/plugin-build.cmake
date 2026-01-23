@@ -25,6 +25,7 @@ set(PLUGIN_API_INCLUDE_DIRS
     "${LAUNCHER_DIR}/components/plugin-api/include"
     "${LAUNCHER_DIR}/components/badgeteam__badge-elf-api/include"
     "${LAUNCHER_DIR}/managed_components/robotman2412__pax-gfx/core/include"
+    "${LAUNCHER_DIR}/managed_components/robotman2412__pax-codecs/include"
 )
 
 # Stub library paths - link against BadgeELF libraries
@@ -76,6 +77,7 @@ function(build_tanmatsu_plugin PLUGIN_NAME PLUGIN_SOURCES)
             $<TARGET_OBJECTS:${PLUGIN_NAME}_obj>
             -lbadge
             -lpax-gfx
+            -lpax-codecs
             -lpthread
             -lc
             -lgcc
