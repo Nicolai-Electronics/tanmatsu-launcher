@@ -27,6 +27,7 @@
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
+#include "radio_ota.h"
 #include "settings.h"
 #include "tools.h"
 #include "usb_device.h"
@@ -39,6 +40,7 @@ static bool wifi_stack_get_task_done(void);
 
 typedef enum {
     ACTION_NONE,
+    ACTION_RADIO_OTA,
     ACTION_APPS,
     ACTION_NAMETAG,
     ACTION_REPOSITORY,
@@ -53,6 +55,10 @@ static void execute_action(menu_home_action_t action) {
     pax_buf_t*   fb    = display_get_buffer();
     gui_theme_t* theme = get_theme();
     switch (action) {
+        case ACTION_RADIO_OTA:
+            radio_ota_update();
+            esp_restart();
+            break;
         case ACTION_APPS:
             menu_apps(fb, theme);
             break;
@@ -197,6 +203,9 @@ void menu_home(void) {
 
     menu_t menu = {0};
     menu_initialize(&menu);
+    if (wifi_stack_get_version_mismatch()) {
+        menu_insert_item_icon(&menu, "Update radio", NULL, (void*)ACTION_RADIO_OTA, -1, get_icon(ICON_SYSTEM_UPDATE));
+    }
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
     if (access("/sd/nametag.png", F_OK) == 0 || access("/int/nametag.png", F_OK) == 0) {
         menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_NAMETAG, -1, get_icon(ICON_TAG));

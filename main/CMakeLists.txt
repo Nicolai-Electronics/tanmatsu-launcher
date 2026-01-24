@@ -49,6 +49,7 @@ idf_component_register(
 		"menu/chat/lora_settings.c"
 		"menu/chat/lora_presets.c"
 		"menu/chat/messages.c"
+		"radio_ota.c"
 
 		# Tests
 		"hardware_test/test_keyboard_stuck_keys.c"
