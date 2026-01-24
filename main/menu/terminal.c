@@ -9,7 +9,6 @@
 #include "console.h"
 #include "driver/uart.h"
 #include "freertos/idf_additions.h"
-#include "freertos/projdefs.h"
 #include "gui_element_footer.h"
 #include "gui_style.h"
 #include "icons.h"
