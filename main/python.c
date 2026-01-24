@@ -11,7 +11,6 @@
 #ifdef CONFIG_IDF_TARGET_ESP32P4
 #include "driver/usb_serial_jtag.h"
 #include "hal/usb_serial_jtag_ll.h"
-#include "projdefs.h"
 
 static const char* TAG = "python";
 

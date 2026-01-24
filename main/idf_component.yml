@@ -39,4 +39,3 @@ dependencies:
     version: ">=2.0.0"
   badgeteam/terminal-emulator: ">=0.0.4"
   badgeteam/badgelink: ">=0.0.3"
-  nicolaielectronics/eeprom: ">=1.0.0"

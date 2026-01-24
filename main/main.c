@@ -33,6 +33,7 @@
 #include "icons.h"
 #include "lora.h"
 #include "menu/home.h"
+#include "menu/message_dialog.h"
 #include "ntp.h"
 #include "nvs_flash.h"
 #include "pax_fonts.h"
@@ -93,15 +94,6 @@ static void fix_rtc_out_of_bounds(void) {
     }
 }
 
-void startup_screen(const char* text) {
-    gui_theme_t* theme = get_theme();
-    pax_buf_t*   fb    = display_get_buffer();
-    pax_background(fb, theme->palette.color_background);
-    gui_header_draw(fb, theme, ((gui_element_icontext_t[]){{NULL, (char*)text}}), 1, NULL, 0);
-    gui_footer_draw(fb, theme, NULL, 0, NULL, 0);
-    display_blit_buffer(fb);
-}
-
 bool wifi_stack_get_initialized(void) {
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     bsp_radio_state_t state;
@@ -143,24 +135,6 @@ static void radio_callback(uint8_t type, uint8_t* payload, uint16_t payload_leng
 }
 
 static void wifi_task(void* pvParameters) {
-#if defined(CONFIG_IDF_TARGET_ESP32P4)
-    esp_hosted_set_custom_callback(radio_callback);
-    esp_hosted_set_firmware_version_callback(radio_firmware_callback);
-#endif
-
-    if (wifi_remote_initialize() == ESP_OK) {
-        wifi_connection_init_stack();
-        wifi_stack_initialized = true;
-        // wifi_connect_try_all();
-    } else {
-        // bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
-        ESP_LOGE(TAG, "WiFi radio not responding, did you flash ESP-HOSTED firmware?");
-    }
-    wifi_stack_task_done = true;
-
-    addon_detect_internal();
-    addon_detect_catt();
-
     while (!wifi_stack_get_initialized()) {
         vTaskDelay(pdMS_TO_TICKS(500));
     }
@@ -280,7 +254,7 @@ esp_err_t check_i2c_bus(void) {
 
             vTaskDelay(pdMS_TO_TICKS(10000));
 
-            startup_screen("Initializing coprocessor...");
+            startup_dialog("Initializing coprocessor...");
             coprocessor_flash(true);
             return ESP_FAIL;
         } else {
@@ -357,7 +331,7 @@ void app_main(void) {
     }
 
     // Apply settings
-    startup_screen("Applying settings...");
+    startup_dialog("Applying settings...");
     device_settings_apply();
 
     // Configure LEDs
@@ -365,7 +339,7 @@ void app_main(void) {
     bsp_led_set_mode(true);
 
     // Initialize filesystems
-    startup_screen("Mounting FAT filesystem...");
+    startup_dialog("Mounting FAT filesystem...");
 
     esp_vfs_fat_mount_config_t fat_mount_config = {
         .format_if_mount_failed   = false,
@@ -378,7 +352,7 @@ void app_main(void) {
     res = esp_vfs_fat_spiflash_mount_rw_wl("/int", "locfd", &fat_mount_config, &wl_handle);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to mount FAT filesystem: %s", esp_err_to_name(res));
-        startup_screen("Error: Failed to mount FAT filesystem");
+        startup_dialog("Error: Failed to mount FAT filesystem");
         pax_buf_t* buffer = display_get_buffer();
         pax_background(buffer, 0xFFFF0000);
         pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 0, "Failed to initialize FAT filesystem");
@@ -386,12 +360,15 @@ void app_main(void) {
         return;
     }
 
-    startup_screen("Checking I2C bus...");
+    startup_dialog("Loading icons...");
+    load_icons();
+
+    startup_dialog("Checking I2C bus...");
     if (check_i2c_bus() != ESP_OK) {
         return;
     }
 
-    startup_screen("Initializing coprocessor...");
+    startup_dialog("Initializing coprocessor...");
     coprocessor_flash(false);
 
     if (bsp_init_result != ESP_OK || bsp_device_get_initialized_without_coprocessor()) {
@@ -429,7 +406,7 @@ void app_main(void) {
         }
     }
 
-    startup_screen("Mounting AppFS filesystem...");
+    startup_dialog("Mounting AppFS filesystem...");
     res = appfsInit(APPFS_PART_TYPE, APPFS_PART_SUBTYPE);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize AppFS: %s", esp_err_to_name(res));
@@ -440,6 +417,7 @@ void app_main(void) {
         return;
     }
 
+    startup_dialog("Initializing clock...");
     bsp_rtc_update_time();
     if (timezone_nvs_apply("system", "timezone") != ESP_OK) {
         ESP_LOGE(TAG, "Failed to apply timezone, setting timezone to Etc/UTC");
@@ -459,6 +437,7 @@ void app_main(void) {
     }
     fix_rtc_out_of_bounds();
 
+    startup_dialog("Initializing SD card...");
     bool sdcard_inserted = false;
     bsp_input_read_action(BSP_INPUT_ACTION_TYPE_SD_CARD, &sdcard_inserted);
 
@@ -472,7 +451,38 @@ void app_main(void) {
 #endif
     }
 
+    startup_dialog("Initializing certificate store...");
     ESP_ERROR_CHECK(initialize_custom_ca_store());
+
+    startup_dialog("Initializing radio...");
+    ESP_ERROR_CHECK(lora_init(NULL));
+
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
+    esp_hosted_set_custom_callback(radio_callback);
+    esp_hosted_set_firmware_version_callback(radio_firmware_callback);
+#endif
+
+    if (wifi_remote_initialize() == ESP_OK) {
+        wifi_connection_init_stack();
+        wifi_stack_initialized = true;
+    } else {
+        ESP_LOGE(TAG, "WiFi radio not responding, did you flash ESP-HOSTED firmware?");
+    }
+    wifi_stack_task_done = true;
+
+    xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, CONFIG_SOC_CPU_CORES_NUM - 1);
+
+    startup_dialog("Initializing BadgeLink...");
+    badgelink_init();
+    usb_initialize();
+    badgelink_start(usb_send_data);
+
+    startup_dialog("Detecting Add-On boards...");
+    addon_initialize();
+
+    // App start
+
+    bsp_power_set_usb_host_boost_enabled(true);
 
 #if CONFIG_IDF_TARGET_ESP32P4
 // Only integrate Python into the launcher on ESP32-P4 targets
@@ -480,18 +490,6 @@ void app_main(void) {
     python_initialize();
 #endif
 #endif
-
-    ESP_ERROR_CHECK(lora_init(NULL));
-
-    xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, CONFIG_SOC_CPU_CORES_NUM - 1);
-
-    badgelink_init();
-    usb_initialize();
-    badgelink_start(usb_send_data);
-
-    load_icons();
-
-    bsp_power_set_usb_host_boost_enabled(true);
 
     menu_home();
 }

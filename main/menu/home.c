@@ -3,6 +3,7 @@
 #include <sys/unistd.h>
 #include <time.h>
 #include "apps.h"
+#include "bsp/device.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
 #include "bsp/power.h"
@@ -11,10 +12,10 @@
 #include "common/display.h"
 #include "common/theme.h"
 #include "coprocessor_management.h"
+#include "device_information.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
-#include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
@@ -48,7 +49,9 @@ typedef enum {
     ACTION_CHAT,
 } menu_home_action_t;
 
-static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
+static void execute_action(menu_home_action_t action) {
+    pax_buf_t*   fb    = display_get_buffer();
+    gui_theme_t* theme = get_theme();
     switch (action) {
         case ACTION_APPS:
             menu_apps(fb, theme);
@@ -80,17 +83,26 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
 }
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_F5), "Settings"}, {get_icon(ICON_F6), "USB mode"}}), 2
+#define FOOTER_LEFT                                                 \
+    ((gui_element_icontext_t[]){{get_icon(ICON_F2), "Tools"},       \
+                                {get_icon(ICON_F3), "Information"}, \
+                                {get_icon(ICON_F5), "Settings"},    \
+                                {get_icon(ICON_F6), "USB mode"}}),  \
+        4
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ / ← / → | ⏎ Select"}}), 1
 #elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_KAMI)
 #define FOOTER_LEFT  NULL, 0
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅼 Settings 🅰 Select"}}), 1
 #else
-#define FOOTER_LEFT  ((gui_element_icontext_t[]){{NULL, "F5 Settings"}, {NULL, "F6 USB mode"}}), 2
+#define FOOTER_LEFT                                                                                   \
+    ((gui_element_icontext_t[]){                                                                      \
+        {NULL, "F2 Tools"}, {NULL, "F3 Information"}, {NULL, "F5 Settings"}, {NULL, "F6 USB mode"}}), \
+        4
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ / ← / → | ⏎ Select"}}), 1
 #endif
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
+static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons,
+                   bool provisioned, bool name_match) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
                                      ((gui_element_icontext_t[]){{get_icon(ICON_HOME), "Home"}}), 1, FOOTER_LEFT,
@@ -111,6 +123,14 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
             pax_draw_text(buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
                           pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
                           "Radio communication error!\r\nPlease flash the radio firmware using the recovery website.");
+        } else if (!provisioned) {
+            pax_draw_text(buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
+                          pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                          "Device not provisioned!\r\nPlease contact the manufacturer.");
+        } else if (!name_match) {
+            pax_draw_text(buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
+                          pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                          "Device type mismatch!\r\nPlease contact the manufacturer.");
         }
     }
     display_blit_buffer(buffer);
@@ -141,10 +161,27 @@ static void display_backlight(void) {
 
 static void toggle_usb_mode(void) {
     if (usb_mode_get() == USB_DEVICE) {
+        busy_dialog(get_icon(ICON_USB), "USB mode", "Debug USB-serial & JTAG peripheral", true);
         usb_mode_set(USB_DEBUG);
+        vTaskDelay(pdMS_TO_TICKS(1000));
     } else {
+        busy_dialog(get_icon(ICON_USB), "USB mode", "BadgeLink mode", true);
         usb_mode_set(USB_DEVICE);
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
+}
+
+static void is_provisioned(bool* out_provisioned, bool* out_name_match) {
+    device_identity_t identity = {0};
+    esp_err_t         res      = read_device_identity(&identity);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read device identity: %s", esp_err_to_name(res));
+        return;
+    }
+    *out_provisioned       = strlen(identity.name) > 0;
+    char expected_name[32] = {0};
+    bsp_device_get_name(expected_name, sizeof(expected_name) - 1);
+    *out_name_match = strcmp(identity.name, expected_name) == 0;
 }
 
 void menu_home(void) {
@@ -154,6 +191,10 @@ void menu_home(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
+    bool provisioned = false;
+    bool name_match  = false;
+    is_provisioned(&provisioned, &name_match);
+
     menu_t menu = {0};
     menu_initialize(&menu);
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
@@ -162,12 +203,12 @@ void menu_home(void) {
     }
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
     menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
-    menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_EXTENSION));
-    menu_insert_item_icon(&menu, "Information", NULL, (void*)ACTION_INFORMATION, -1, get_icon(ICON_INFO));
+    //  menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_EXTENSION));
+    //  menu_insert_item_icon(&menu, "Information", NULL, (void*)ACTION_INFORMATION, -1, get_icon(ICON_INFO));
     if (access("/int/rftest_local.bin", F_OK) == 0) {
         menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_DEV));
     }
-    menu_insert_item_icon(&menu, "Chat", NULL, (void*)ACTION_CHAT, -1, get_icon(ICON_GLOBE));
+    // menu_insert_item_icon(&menu, "Chat", NULL, (void*)ACTION_CHAT, -1, get_icon(ICON_GLOBE)); // Soon...
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
@@ -181,7 +222,7 @@ void menu_home(void) {
 
     bool power_button_latch = false;
 
-    render(buffer, theme, &menu, position, false, true);
+    render(buffer, theme, &menu, position, false, true, provisioned, name_match);
 
     while (1) {
         bsp_input_event_t event;
@@ -194,31 +235,39 @@ void menu_home(void) {
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
                                 }
+                                render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F2:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_BOOTLOADER);
+                                } else {
+                                    execute_action(ACTION_TOOLS);
                                 }
+                                render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F3:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_APPLICATION);
+                                } else {
+                                    execute_action(ACTION_INFORMATION);
                                 }
+                                render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F4:
                             case BSP_INPUT_NAVIGATION_KEY_START:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     keyboard_backlight();
                                 }
+                                render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_MENU:
                             case BSP_INPUT_NAVIGATION_KEY_F5:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     display_backlight();
                                 } else {
-                                    menu_settings();
-                                    render(buffer, theme, &menu, position, false, true);
+                                    execute_action(ACTION_SETTINGS);
                                 }
+                                render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F6:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
@@ -226,29 +275,34 @@ void menu_home(void) {
                                 } else {
                                     toggle_usb_mode();
                                 }
+                                render(buffer, theme, &menu, position, false, true, provisioned, name_match);
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_SUPER:
+                                execute_action(ACTION_APPS);
+                                render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_LEFT:
                                 menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, position, true, false);
+                                render(buffer, theme, &menu, position, true, false, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RIGHT:
                                 menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, position, true, false);
+                                render(buffer, theme, &menu, position, true, false, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous_row(&menu, theme);
-                                render(buffer, theme, &menu, position, true, false);
+                                render(buffer, theme, &menu, position, true, false, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_DOWN:
                                 menu_navigate_next_row(&menu, theme);
-                                render(buffer, theme, &menu, position, true, false);
+                                render(buffer, theme, &menu, position, true, false, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                execute_action(buffer, (menu_home_action_t)arg, theme);
-                                render(buffer, theme, &menu, position, false, true);
+                                execute_action((menu_home_action_t)arg);
+                                render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;
                             }
                             default:
@@ -265,7 +319,7 @@ void menu_home(void) {
                             } else if (power_button_latch) {
                                 power_button_latch = false;
                                 charging_mode(buffer, theme);
-                                render(buffer, theme, &menu, position, false, true);
+                                render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                             }
                             break;
                         case BSP_INPUT_ACTION_TYPE_SD_CARD:
@@ -282,7 +336,7 @@ void menu_home(void) {
                     break;
             }
         } else {
-            render(buffer, theme, &menu, position, true, true);
+            render(buffer, theme, &menu, position, true, true, provisioned, name_match);
         }
     }
 }
