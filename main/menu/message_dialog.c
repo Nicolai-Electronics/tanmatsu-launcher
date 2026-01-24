@@ -353,3 +353,13 @@ void busy_dialog(pax_buf_t* icon, const char* title, const char* message, bool h
 
     display_blit_buffer(buffer);
 }
+
+void startup_dialog(const char* message) {
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
+    pax_background(buffer, theme->palette.color_background);
+    pax_draw_text(buffer, theme->menu.palette.color_active_foreground, theme->menu.text_font, theme->menu.text_height,
+                  theme->menu.horizontal_margin,
+                  (pax_buf_get_height(buffer) - theme->menu.text_height - theme->menu.vertical_margin), message);
+    display_blit_buffer(buffer);
+}

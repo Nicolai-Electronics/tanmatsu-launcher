@@ -1,0 +1,10 @@
+idf_component_register(
+	SRCS
+		addon.c
+	INCLUDE_DIRS
+		"include"
+	REQUIRES
+		driver
+		badge-bsp
+		eeprom
+)
