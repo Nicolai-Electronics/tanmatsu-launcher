@@ -186,8 +186,11 @@ esp_err_t radio_ota_update(void) {
     }*/
 
     for (int i = 0; i < step_count; i++) {
-        res = et2_cmd_deflate_begin(steps[i].uncompressed_size, steps[i].compressed_size, steps[i].offset);
-        if (res != ESP_OK) {
+        busy_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Preparing...", false);
+        while (et2_cmd_deflate_begin(steps[i].uncompressed_size, steps[i].compressed_size, steps[i].offset) != ESP_OK) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        /*if (res != ESP_OK) {
             bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
             for (int j = 0; j < i; j++) {
                 free(steps[j].compressed_data);
@@ -196,7 +199,7 @@ esp_err_t radio_ota_update(void) {
             free(instructions_data);
             message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Failed to start flashing", "Quit");
             return res;
-        }
+        }*/
 
         size_t   position = 0;
         uint32_t seq      = 0;
@@ -211,8 +214,10 @@ esp_err_t radio_ota_update(void) {
                      i + 1, step_count, block_length, seq);
             fputs(buffer, stdout);
             busy_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", buffer, false);
-            res = et2_cmd_deflate_data(steps[i].compressed_data + position, block_length, seq);
-            if (res != ESP_OK) {
+            while (et2_cmd_deflate_data(steps[i].compressed_data + position, block_length, seq) != ESP_OK) {
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+            /*if (res != ESP_OK) {
                 bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
                 for (int j = 0; j < step_count; j++) {
                     free(steps[j].compressed_data);
@@ -221,12 +226,14 @@ esp_err_t radio_ota_update(void) {
                 free(instructions_data);
                 message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Failed to write data", "Quit");
                 return ESP_FAIL;
-            }
+            }*/
             seq++;
             position += block_length;
         }
-        res = et2_cmd_deflate_finish(false);
-        if (res != ESP_OK) {
+        while (et2_cmd_deflate_finish(false) != ESP_OK) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        /*if (res != ESP_OK) {
             bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
             for (int j = 0; j < step_count; j++) {
                 free(steps[j].compressed_data);
@@ -235,7 +242,7 @@ esp_err_t radio_ota_update(void) {
             free(instructions_data);
             message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Failed to finalize flashing", "Quit");
             return res;
-        }
+        }*/
     }
 
     for (int j = 0; j < step_count; j++) {
