@@ -1,6 +1,6 @@
 idf_component_register(
 	SRCS
-		api.c
+		lora.c
 	INCLUDE_DIRS
 		"include"
 	REQUIRES

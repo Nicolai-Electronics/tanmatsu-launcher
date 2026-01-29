@@ -75,7 +75,6 @@ idf_component_register(
 		"app_management.c"
 		"ntp.c"
 		"device_settings.c"
-		"lora.c"
 		"fastopen.c"
 
 	PRIV_REQUIRES

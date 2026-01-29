@@ -455,7 +455,7 @@ void app_main(void) {
     ESP_ERROR_CHECK(initialize_custom_ca_store());
 
     startup_dialog("Initializing radio...");
-    ESP_ERROR_CHECK(lora_init(NULL));
+    ESP_ERROR_CHECK(lora_init(16));
 
 #if defined(CONFIG_IDF_TARGET_ESP32P4)
     esp_hosted_set_custom_callback(radio_callback);
