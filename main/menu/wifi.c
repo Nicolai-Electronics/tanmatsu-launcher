@@ -2,6 +2,7 @@
 #include <string.h>
 #include "bsp/input.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "freertos/idf_additions.h"
 #include "gui_menu.h"
 #include "gui_style.h"
@@ -91,7 +92,9 @@ static void add_manually(pax_buf_t* buffer, gui_theme_t* theme) {
     menu_wifi_edit(buffer, theme, index, true, "", 0);
 }
 
-static bool _menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
+static bool _menu_wifi(void) {
+    pax_buf_t*    buffer              = display_get_buffer();
+    gui_theme_t*  theme               = get_theme();
     char          message_buffer[128] = {0};
     QueueHandle_t input_event_queue   = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
@@ -225,6 +228,6 @@ static bool _menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
     }
 }
 
-void menu_wifi(pax_buf_t* buffer, gui_theme_t* theme) {
-    while (_menu_wifi(buffer, theme));
+void menu_settings_wifi(void) {
+    while (_menu_wifi());
 }

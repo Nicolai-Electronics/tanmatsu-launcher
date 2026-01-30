@@ -161,7 +161,7 @@ void decrease_setting(menu_setting_t setting) {
     device_settings_apply();
 }
 
-void menu_brightness(void) {
+void menu_settings_brightness(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 

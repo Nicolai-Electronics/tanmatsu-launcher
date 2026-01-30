@@ -61,15 +61,15 @@ static void render(menu_t* menu, bool partial, bool icons) {
     display_blit_buffer(buffer);
 }
 
-void menu_owner(void) {
+void menu_settings_owner(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
     menu_t menu = {0};
     menu_initialize(&menu);
     menu_insert_item_value(&menu, "Nickname", "", NULL, (void*)SETTING_NICKNAME, -1);
-    menu_insert_item_value(&menu, "Birthday day", "", NULL, (void*)SETTING_BIRTHDAY_DAY, -1);
-    menu_insert_item_value(&menu, "Birthday month", "", NULL, (void*)SETTING_BIRTHDAY_MONTH, -1);
+    // menu_insert_item_value(&menu, "Birthday day", "", NULL, (void*)SETTING_BIRTHDAY_DAY, -1);
+    // menu_insert_item_value(&menu, "Birthday month", "", NULL, (void*)SETTING_BIRTHDAY_MONTH, -1);
 
     render(&menu, false, true);
     while (1) {

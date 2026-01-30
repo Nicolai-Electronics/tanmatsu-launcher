@@ -44,6 +44,7 @@ idf_component_register(
 		"menu/menu_hardware_test.c"
 		"menu/menu_brightness.c"
 		"menu/settings_repository.c"
+		"menu/settings_lora.c"
 		"menu/owner.c"
 		"menu/chat/chat.c"
 		"menu/chat/lora_settings.c"

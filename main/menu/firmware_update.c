@@ -4,6 +4,7 @@
 #include "bsp/input.h"
 #include "chakrapetchmedium.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "gui_element_footer.h"
 #include "gui_element_header.h"
 #include "gui_style.h"
@@ -36,7 +37,9 @@ static void firmware_update_callback(const char* status_text, uint8_t progress) 
     display_blit_buffer(buffer);
 }
 
-void menu_firmware_update(pax_buf_t* buffer, gui_theme_t* theme) {
+void menu_firmware_update(void) {
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
     pax_background(buffer, theme->palette.color_background);
     gui_header_draw(buffer, theme, ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Firmware update"}}), 1,
                     NULL, 0);

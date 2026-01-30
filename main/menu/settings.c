@@ -14,14 +14,12 @@
 #include "menu/owner.h"
 #include "menu/wifi.h"
 #include "menu_brightness.h"
-#include "menu_device_information.h"
 #include "menu_filebrowser.h"
-#include "menu_hardware_test.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
-#include "radio_update.h"
 #include "settings_clock.h"
+#include "settings_lora.h"
 #include "settings_repository.h"
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
@@ -42,24 +40,32 @@ typedef enum {
     ACTION_WIFI,
     ACTION_CLOCK,
     ACTION_REPOSITORY,
+    ACTION_LORA,
+    ACTION_FIRMWARE_UPDATE,
 } menu_home_action_t;
 
-static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
+static void execute_action(menu_home_action_t action) {
     switch (action) {
         case ACTION_OWNER:
-            menu_owner();
+            menu_settings_owner();
             break;
         case ACTION_BRIGHTNESS:
-            menu_brightness();
+            menu_settings_brightness();
             break;
         case ACTION_WIFI:
-            menu_wifi(fb, theme);
+            menu_settings_wifi();
             break;
         case ACTION_CLOCK:
-            menu_settings_clock(fb, theme);
+            menu_settings_clock();
             break;
         case ACTION_REPOSITORY:
-            menu_settings_repository(fb, theme);
+            menu_settings_repository();
+            break;
+        case ACTION_LORA:
+            menu_settings_lora();
+            break;
+        case ACTION_FIRMWARE_UPDATE:
+            menu_firmware_update();
             break;
         default:
             break;
@@ -90,6 +96,7 @@ void menu_settings(void) {
     menu_insert_item_icon(&menu, "WiFi", NULL, (void*)ACTION_WIFI, -1, get_icon(ICON_WIFI));
     menu_insert_item_icon(&menu, "Clock", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
+    menu_insert_item_icon(&menu, "LoRa radio", NULL, (void*)ACTION_LORA, -1, get_icon(ICON_CHAT));
 
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
@@ -138,7 +145,7 @@ void menu_settings(void) {
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                execute_action(buffer, (menu_home_action_t)arg, theme);
+                                execute_action((menu_home_action_t)arg);
                                 render(&menu, position, false, true);
                                 break;
                             }

@@ -53,7 +53,7 @@ static void radio_update_v2(void) {
 static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t* theme) {
     switch (action) {
         case ACTION_FIRMWARE_UPDATE:
-            menu_firmware_update(fb, theme);
+            menu_firmware_update();
             break;
         case ACTION_RADIO_UPDATE:
             radio_update_v2();

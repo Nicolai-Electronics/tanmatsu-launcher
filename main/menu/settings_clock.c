@@ -4,6 +4,7 @@
 #include "bsp/input.h"
 #include "bsp/rtc.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "esp_log.h"
 #include "freertos/idf_additions.h"
 #include "gui_element_footer.h"
@@ -168,7 +169,9 @@ static void get_timezone(const timezone_t** zone) {
     timezone_get_name(timezone_name, zone);
 }
 
-void menu_settings_clock(pax_buf_t* buffer, gui_theme_t* theme) {
+void menu_settings_clock(void) {
+    pax_buf_t*    buffer            = display_get_buffer();
+    gui_theme_t*  theme             = get_theme();
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
