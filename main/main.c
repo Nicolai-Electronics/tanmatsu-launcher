@@ -173,13 +173,22 @@ static void wifi_task(void* pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(2000));
     }*/
 
-    lora_protocol_mode_t mode;
-    esp_err_t            res = lora_get_mode(&mode);
-    if (res == ESP_OK) {
-        ESP_LOGI(TAG, "LoRa mode: %d", (int)mode);
-    } else {
-        ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
+    lora_protocol_status_params_t status;
+    esp_err_t                     res = lora_get_status(&status);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read LoRa radio status: %s", esp_err_to_name(res));
+        vTaskDelete(NULL);
     }
+
+    ESP_LOGI(TAG, "LoRa radio version string: %s", status.version_string);
+
+    lora_protocol_mode_t mode;
+    res = lora_get_mode(&mode);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
+        vTaskDelete(NULL);
+    }
+    ESP_LOGI(TAG, "LoRa mode: %d", (int)mode);
 
     lora_protocol_config_params_t config = {
         .frequency                  = 869.618,  // MHz
@@ -194,6 +203,14 @@ static void wifi_task(void* pvParameters) {
         .invert_iq                  = false,    // normal IQ
         .low_data_rate_optimization = false,    // disabled
     };
+
+    if (status.chip_type == LORA_PROTOCOL_CHIP_SX1268) {
+        // 433MHz LoRa radio
+        ESP_LOGW(TAG, "433MHz LoRa radio detected");
+        config.frequency = 433.875;  // MHz
+    } else {
+        ESP_LOGW(TAG, "868/915MHz LoRa radio detected");
+    }
 
     res = lora_set_config(&config);
     if (res == ESP_OK) {
@@ -463,8 +480,12 @@ void app_main(void) {
 #endif
 
     if (wifi_remote_initialize() == ESP_OK) {
-        wifi_connection_init_stack();
-        wifi_stack_initialized = true;
+        res = wifi_connection_init_stack();
+        if (res != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to initialize WiFi stack %d (%s)", res, esp_err_to_name(res));
+        } else {
+            wifi_stack_initialized = true;
+        }
     } else {
         ESP_LOGE(TAG, "WiFi radio not responding, did you flash ESP-HOSTED firmware?");
     }
