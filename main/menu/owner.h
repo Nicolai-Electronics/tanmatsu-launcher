@@ -1,3 +1,3 @@
 #pragma once
 
-void menu_owner(void);
+void menu_settings_owner(void);

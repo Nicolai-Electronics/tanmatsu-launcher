@@ -1,3 +1,3 @@
 #pragma once
 
-void menu_brightness(void);
+void menu_settings_brightness(void);
