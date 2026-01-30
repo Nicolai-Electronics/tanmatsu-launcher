@@ -1,50 +1,68 @@
-# The following lines of boilerplate have to be in your project's
-# CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.10)
+
+# Device variable
+# Set to the name of the badge-bsp target
+# Supported values:
+# - tanmatsu
+# - konsool
+# - esp32-p4-function-ev-board
+# - mch2022
+# - kami
+# - hackerhotel-2024
 
 if(DEVICE STREQUAL "")
 	set(DEVICE "$ENV{TARGET}")
-endif()
-
-if(FAT STREQUAL "")
-	set(FAT "$ENV{FAT}")
 endif()
 
 if(DEVICE STREQUAL "")
 	message(FATAL_ERROR "DEVICE not set")
 endif()
 
-if(DEVICE STREQUAL "tanmatsu")
-	set(SDKCONFIG_DEFAULTS "sdkconfigs/general;sdkconfigs/tanmatsu")
-	set(IDF_TARGET esp32p4)
-	set(SDKCONFIG "sdkconfig_tanmatsu")
-elseif(DEVICE STREQUAL "konsool")
-	set(SDKCONFIG_DEFAULTS "sdkconfigs/general;sdkconfigs/konsool")
-	set(IDF_TARGET esp32p4)
-	set(SDKCONFIG "sdkconfig_konsool")
-elseif(DEVICE STREQUAL "hackerhotel-2026")
-	set(SDKCONFIG_DEFAULTS "sdkconfigs/general;sdkconfigs/hackerhotel-2026")
-	set(IDF_TARGET esp32p4)
-	set(SDKCONFIG "sdkconfig_hackerhotel-2026")
-elseif(DEVICE STREQUAL "esp32-p4-function-ev-board")
-	set(SDKCONFIG_DEFAULTS "sdkconfigs/general;sdkconfigs/esp32-p4-function-ev-board")
-	set(IDF_TARGET esp32p4)
-	set(SDKCONFIG "sdkconfig_esp32-p4-function-ev-board")
-elseif(DEVICE STREQUAL "mch2022")
-	set(SDKCONFIG_DEFAULTS "sdkconfigs/general;sdkconfigs/mch2022")
-	set(IDF_TARGET esp32)
-	set(SDKCONFIG "sdkconfig_mch2022")
-elseif(DEVICE STREQUAL "hackerhotel-2024")
-	set(SDKCONFIG_DEFAULTS "sdkconfigs/general;sdkconfigs/hackerhotel-2024")
-	set(IDF_TARGET esp32c6)
-	set(SDKCONFIG "sdkconfig_hackerhotel-2024")
-elseif(DEVICE STREQUAL "kami")
-	set(SDKCONFIG_DEFAULTS "sdkconfigs/general;sdkconfigs/kami")
-	set(IDF_TARGET esp32)
-	set(SDKCONFIG "sdkconfig_kami")
-else()
-	message(FATAL_ERROR "Unknown target device ${DEVICE}")
+# FAT variable
+# Set to 1 to generate and/or flash the FAT partition image or to 0 to disable
+
+if(FAT STREQUAL "")
+	set(FAT "$ENV{FAT}")
 endif()
 
+if(FAT STREQUAL "")
+	message(FATAL_ERROR "FAT not set")
+endif()
+
+# SDKCONFIG_DEFAULTS variable
+# Usually you want to set this to "sdkconfigs/general;sdkconfigs/<DEVICE>"
+
+if(SDKCONFIG_DEFAULTS STREQUAL "")
+	set(SDKCONFIG_DEFAULTS "$ENV{SDKCONFIG_DEFAULTS}")
+endif()
+
+if(SDKCONFIG_DEFAULTS STREQUAL "")
+	message(FATAL_ERROR "SDKCONFIG_DEFAULTS not set")
+endif()
+
+# SDKCONFIG variable
+# Usually you want to set this to "sdkconfig_<DEVICE>"
+
+if(SDKCONFIG STREQUAL "")
+	set(SDKCONFIG "$ENV{SDKCONFIG}")
+endif()
+
+if(SDKCONFIG STREQUAL "")
+	message(FATAL_ERROR "SDKCONFIG not set")
+endif()
+
+# IDF_TARGET variable
+# Set to esp32, esp32c6 or esp32p4 depending on the target device
+
+if(IDF_TARGET STREQUAL "")
+	set(IDF_TARGET "$ENV{IDF_TARGET}")
+endif()
+
+if(IDF_TARGET STREQUAL "")
+	message(FATAL_ERROR "IDF_TARGET not set")
+endif()
+
+#########
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(${DEVICE}-launcher)
+project(launcher)

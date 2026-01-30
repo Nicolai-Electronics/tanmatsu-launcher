@@ -10,9 +10,34 @@ MAKEFLAGS += --silent
 
 SHELL := /usr/bin/env bash
 
-DEVICE ?= tanmatsu # Default target device
+DEVICE ?= tanmatsu
 BUILD ?= build/$(DEVICE)
-FAT ?= 0 # Don't build and/or flash FAT partition by default
+FAT ?= 0
+SDKCONFIG_DEFAULTS ?= sdkconfigs/general;sdkconfigs/$(DEVICE)
+SDKCONFIG ?= sdkconfig_$(DEVICE)
+
+####
+
+# Set IDF_TARGET based on device name
+
+ifeq ($(DEVICE), tanmatsu)
+IDF_TARGET ?= esp32p4
+else ifeq ($(DEVICE), konsool)
+IDF_TARGET ?= esp32p4
+else ifeq ($(DEVICE), esp32-p4-function-ev-board)
+IDF_TARGET ?= esp32p4
+else ifeq ($(DEVICE), mch2022)
+IDF_TARGET ?= esp32
+else ifeq ($(DEVICE), kami)
+IDF_TARGET ?= esp32
+else ifeq ($(DEVICE), hackerhotel-2024)
+IDF_TARGET ?= esp32c6
+else
+$(warning "Unknown device, defaulting to ESP32 $(DEVICE)")
+IDF_TARGET ?= esp32
+endif
+
+#####
 
 export IDF_TOOLS_PATH
 export IDF_GITHUB_ASSETS
@@ -62,7 +87,7 @@ refreshsdk: removesdk sdk
 
 .PHONY: menuconfig
 menuconfig:
-	source "$(IDF_PATH)/export.sh" && idf.py menuconfig -DDEVICE=$(DEVICE)
+	source "$(IDF_PATH)/export.sh" && idf.py menuconfig -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET)
 	
 # Cleaning
 
@@ -98,7 +123,7 @@ checkbuildenv:
 
 .PHONY: build
 build: icons checkbuildenv submodules
-	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py -B $(BUILD) build -DDEVICE=$(DEVICE) -DFAT=$(FAT)
+	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py -B $(BUILD) build -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET) -DFAT=$(FAT)
 
 # Hardware
 
@@ -137,23 +162,23 @@ monitor:
 
 .PHONY: openocd
 openocd:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) openocd
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET) openocd
 
 .PHONY: openocdftdi
 openocdftdi:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) openocd --openocd-commands "-f board/esp32p4-ftdi.cfg"
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET) openocd --openocd-commands "-f board/esp32p4-ftdi.cfg"
 
 .PHONY: gdb
 gdb:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdb
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET) gdb
 
 .PHONY: gdbgui
 gdbgui:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbgui
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET) gdbgui
 
 .PHONY: gdbtui
 gdbtui:
-	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) gdbtui
+	source "$(IDF_PATH)/export.sh" && idf.py -B $(BUILD) -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET) gdbtui
 
 # Tools
 
