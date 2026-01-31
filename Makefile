@@ -239,3 +239,9 @@ buildall:
 flashall:
 	$(MAKE) flash DEVICE=tanmatsu PORT=/dev/ttyACM0
 	$(MAKE) flash DEVICE=mch2022 PORT=/dev/ttyACM2
+
+# Vscode
+.PHONY: vscode
+vscode:
+	rm -rf .vscode
+	cp -r .vscode.template .vscode
