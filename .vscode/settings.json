@@ -1,12 +1,32 @@
 {
-    "clangd.fallbackFlags": [
-        "-Wunknown-warning-option"
-    ],
-    "clangd.arguments": [
-        "--query-driver=/**/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
-        "--compile-commands-dir=build/tanmatsu"
-    ],
-    "cSpell.words": [
-        "otadata"
-    ]
+  "C_Cpp.intelliSenseEngine": "default",
+  "idf.espIdfPath": "${workspaceFolder}/esp-idf",
+  "idf.pythonInstallPath": "/usr/bin/python3",
+  "idf.openOcdConfigs": [
+    "board/esp32p4-ftdi.cfg"
+  ],
+  "idf.openOcdLaunchArgs": [
+    "-d${config:idf.openOcdDebugLevel}",
+    "${config:idf.openOcdConfigs,-f}",
+    "-c",
+    "init",
+    "-c",
+    "reset halt",
+    "-c",
+    "esp appimage_offset 0x20000"
+  ],
+  "idf.port": "/dev/ttyACM0",
+  "idf.toolsPath": "${workspaceFolder}/esp-idf-tools",
+  "idf.customExtraVars": {
+    "IDF_TARGET": "esp32p4"
+  },
+  "clangd.path": "${workspaceFolder}/esp-idf-tools/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin/clangd",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=${workspaceFolder}/esp-idf-tools/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+    "--compile-commands-dir=${workspaceFolder}/build/tanmatsu"
+  ],
+  "idf.flashType": "UART",
+  "idf.monitorPort": "/dev/ttyACM0",
+  "idf.svdFilePath": "${workspaceFolder}/svd/esp32p4.svd"
 }
