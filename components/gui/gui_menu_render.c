@@ -131,6 +131,32 @@ void menu_render(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, gui_t
     }
 }
 
+void menu_get_draw_position(menu_t* menu, pax_vec2_t position, gui_theme_t* theme, int index, pax_vec2_t* output) {
+    float  remaining_height = position.y1 - position.y0;
+    size_t max_items        = remaining_height / theme->menu.list_entry_height;
+
+    size_t first_visible_item = menu->navigation_position;
+
+    if (menu->position < first_visible_item) {
+        menu->navigation_position = menu->position;
+    }
+    if (menu->position > menu->navigation_position + max_items - 1) {
+        menu->navigation_position = menu->position - max_items + 1;
+    }
+
+    size_t item_offset = menu->navigation_position;
+
+    pax_vec2_t position_item = position;
+    if (menu->length > max_items) {
+        position_item.x1 -= 8;
+    }
+
+    output->x0 = position_item.x0 + ((position_item.x1 - position_item.x0) / 2);
+    output->y0 = position_item.y0 + theme->menu.list_entry_height * (index - item_offset);
+    output->x1 = position_item.x1;
+    output->y1 = position_item.y0 + theme->menu.list_entry_height * (index - item_offset + 1);
+}
+
 void menu_render_grid(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, gui_theme_t* theme, bool partial) {
     int entry_count_x = theme->menu.grid_horizontal_count;
     int entry_count_y = theme->menu.grid_vertical_count;

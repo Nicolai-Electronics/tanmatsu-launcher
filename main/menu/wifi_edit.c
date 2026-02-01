@@ -5,6 +5,7 @@
 #include "esp_err.h"
 #include "esp_wifi_types_generic.h"
 #include "freertos/idf_additions.h"
+#include "gui_edit_v2.h"
 #include "gui_element_footer.h"
 #include "gui_menu.h"
 #include "gui_style.h"
@@ -17,7 +18,6 @@
 #include "wifi.h"
 #include "wifi_connection.h"
 #include "wifi_settings.h"
-// #include "shapes/pax_misc.h"
 
 typedef enum {
     ACTION_NONE,
@@ -30,7 +30,8 @@ typedef enum {
     ACTION_LAST,
 } menu_wifi_edit_action_t;
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
+static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons,
+                   gui_edit_v2_context_t* textedit_context) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
                                      ((gui_element_icontext_t[]){{get_icon(ICON_WIFI), "Edit WiFi network"}}), 1,
@@ -41,6 +42,39 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
     }
 
     menu_render(buffer, menu, position, theme, partial);
+
+    pax_vec2_t edit_position = {0};
+    menu_get_draw_position(menu, position, theme, menu_get_position(menu), &edit_position);
+
+    menu_wifi_edit_action_t action = (menu_wifi_edit_action_t)menu_get_callback_args(menu, menu_get_position(menu));
+    gui_edit_v2_context_t*  current_textedit_context = NULL;
+    switch (action) {
+        case ACTION_SSID:
+            current_textedit_context = &textedit_context[0];
+            break;
+        case ACTION_PASSWORD:
+            current_textedit_context = &textedit_context[1];
+            break;
+        case ACTION_IDENTITY:
+            current_textedit_context = &textedit_context[2];
+            break;
+        case ACTION_USERNAME:
+            current_textedit_context = &textedit_context[3];
+            break;
+        default:
+            break;
+    }
+    if (current_textedit_context != NULL) {
+        /*printf("Drawing edit at %f %f %f %f\r\n", edit_position.x0, edit_position.y0, edit_position.x1,
+               edit_position.y1);*/
+        pax_noclip(buffer);
+        gui_edit_v2_render(buffer, current_textedit_context, edit_position.x0, edit_position.y0,
+                           edit_position.x1 - edit_position.x0, edit_position.y1 - edit_position.y0,
+                           theme->menu.palette.color_active_foreground, theme->menu.palette.color_highlight_primary,
+                           theme->menu.palette.color_active_background, theme->menu.text_font, theme->menu.text_height,
+                           true);
+    }
+
     display_blit_buffer(buffer);
 }
 
@@ -96,7 +130,7 @@ const char* phase2_to_string(esp_eap_ttls_phase2_types phase2) {
     }
 }
 
-static void menu_populate(menu_t* menu, wifi_settings_t* settings) {
+static void menu_populate(menu_t* menu, gui_edit_v2_context_t* edit_context, wifi_settings_t* settings) {
     size_t previous_position = menu_get_position(menu);
     while (menu_get_length(menu) > 0) {
         menu_remove_item(menu, 0);
@@ -105,6 +139,7 @@ static void menu_populate(menu_t* menu, wifi_settings_t* settings) {
     char temp[129] = {0};
     memcpy(temp, settings->ssid, sizeof(settings->ssid));
     menu_insert_item_value(menu, "SSID", temp, NULL, (void*)ACTION_SSID, -1);
+    gui_edit_v2_init(&edit_context[0], temp, sizeof(settings->ssid) + sizeof('\0'));
 
     menu_insert_item_value(menu, "Security", authmode_to_string(settings->authmode), NULL, (void*)ACTION_AUTHMODE, -1);
 
@@ -112,6 +147,7 @@ static void menu_populate(menu_t* menu, wifi_settings_t* settings) {
         memset(temp, 0, sizeof(temp));
         memcpy(temp, settings->password, sizeof(settings->password));
         menu_insert_item_value(menu, "Password", temp, NULL, (void*)ACTION_PASSWORD, -1);
+        gui_edit_v2_init(&edit_context[1], temp, sizeof(settings->password) + sizeof('\0'));
     }
 
     if (settings->authmode == WIFI_AUTH_ENTERPRISE || settings->authmode == WIFI_AUTH_WPA3_ENTERPRISE ||
@@ -119,10 +155,12 @@ static void menu_populate(menu_t* menu, wifi_settings_t* settings) {
         memset(temp, 0, sizeof(temp));
         memcpy(temp, settings->identity, sizeof(settings->identity));
         menu_insert_item_value(menu, "Identity", temp, NULL, (void*)ACTION_IDENTITY, -1);
+        gui_edit_v2_init(&edit_context[2], temp, sizeof(settings->identity) + sizeof('\0'));
 
         memset(temp, 0, sizeof(temp));
         memcpy(temp, settings->username, sizeof(settings->username));
         menu_insert_item_value(menu, "Username", temp, NULL, (void*)ACTION_USERNAME, -1);
+        gui_edit_v2_init(&edit_context[3], temp, sizeof(settings->username) + sizeof('\0'));
 
         menu_insert_item_value(menu, "Phase 2", phase2_to_string(settings->phase2), NULL, (void*)ACTION_PHASE2, -1);
     }
@@ -132,29 +170,6 @@ static void menu_populate(menu_t* menu, wifi_settings_t* settings) {
     }
     menu_set_position(menu, previous_position);
 }
-
-/*static void menu_update(menu_t* menu, wifi_settings_t* settings) {
-    char temp[129] = {0};
-    memset(temp, 0, sizeof(temp));
-    memcpy(temp, settings->ssid, sizeof(settings->ssid));
-    menu_set_value(menu, 0, temp);
-
-    menu_set_value(menu, 1, authmode_to_string(settings->authmode));
-
-    memset(temp, 0, sizeof(temp));
-    memcpy(temp, settings->password, sizeof(settings->password));
-    menu_set_value(menu, 2, temp);
-
-    memset(temp, 0, sizeof(temp));
-    memcpy(temp, settings->identity, sizeof(settings->identity));
-    menu_set_value(menu, 3, temp);
-
-    memset(temp, 0, sizeof(temp));
-    memcpy(temp, settings->username, sizeof(settings->username));
-    menu_set_value(menu, 4, temp);
-
-    menu_set_value(menu, 5, phase2_to_string(settings->phase2));
-}*/
 
 static void edit_ssid(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, wifi_settings_t* settings) {
     char temp[129] = {0};
@@ -364,9 +379,10 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
     menu_insert_item(&menu_phase2, "CHAP", NULL, (void*)ESP_EAP_TTLS_PHASE2_CHAP, -1);
 
     // Menu for parameters
-    menu_t menu = {0};
+    gui_edit_v2_context_t textedit_context[4] = {0};  // SSID, password, identity and username
+    menu_t                menu                = {0};
     menu_initialize(&menu);
-    menu_populate(&menu, &settings);
+    menu_populate(&menu, textedit_context, &settings);
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
@@ -378,7 +394,7 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
         .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
     };
 
-    render(buffer, theme, &menu, position, false, true);
+    render(buffer, theme, &menu, position, false, true, textedit_context);
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -406,12 +422,103 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
                             }
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, position, true, false);
+                                render(buffer, theme, &menu, position, true, false, textedit_context);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_DOWN:
                                 menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, position, true, false);
+                                render(buffer, theme, &menu, position, true, false, textedit_context);
                                 break;
+                            case BSP_INPUT_NAVIGATION_KEY_LEFT: {
+                                menu_wifi_edit_action_t action =
+                                    (menu_wifi_edit_action_t)menu_get_callback_args(&menu, menu_get_position(&menu));
+                                gui_edit_v2_context_t* current_textedit_context = NULL;
+                                switch (action) {
+                                    case ACTION_SSID:
+                                        current_textedit_context = &textedit_context[0];
+                                        break;
+                                    case ACTION_PASSWORD:
+                                        current_textedit_context = &textedit_context[1];
+                                        break;
+                                    case ACTION_IDENTITY:
+                                        current_textedit_context = &textedit_context[2];
+                                        break;
+                                    case ACTION_USERNAME:
+                                        current_textedit_context = &textedit_context[3];
+                                        break;
+                                    default:
+                                        break;
+                                }
+                                if (current_textedit_context != NULL) {
+                                    gui_edit_v2_input_left(current_textedit_context);
+                                    render(buffer, theme, &menu, position, false, false, textedit_context);
+                                }
+                                break;
+                            }
+                            case BSP_INPUT_NAVIGATION_KEY_RIGHT: {
+                                menu_wifi_edit_action_t action =
+                                    (menu_wifi_edit_action_t)menu_get_callback_args(&menu, menu_get_position(&menu));
+                                gui_edit_v2_context_t* current_textedit_context = NULL;
+                                switch (action) {
+                                    case ACTION_SSID:
+                                        current_textedit_context = &textedit_context[0];
+                                        break;
+                                    case ACTION_PASSWORD:
+                                        current_textedit_context = &textedit_context[1];
+                                        break;
+                                    case ACTION_IDENTITY:
+                                        current_textedit_context = &textedit_context[2];
+                                        break;
+                                    case ACTION_USERNAME:
+                                        current_textedit_context = &textedit_context[3];
+                                        break;
+                                    default:
+                                        break;
+                                }
+                                if (current_textedit_context != NULL) {
+                                    gui_edit_v2_input_right(current_textedit_context);
+                                    render(buffer, theme, &menu, position, false, false, textedit_context);
+                                }
+                                break;
+                            }
+                            case BSP_INPUT_NAVIGATION_KEY_BACKSPACE: {
+                                menu_wifi_edit_action_t action =
+                                    (menu_wifi_edit_action_t)menu_get_callback_args(&menu, menu_get_position(&menu));
+                                gui_edit_v2_context_t* current_textedit_context     = NULL;
+                                char*                  current_textedit_output      = NULL;
+                                size_t                 current_textedit_output_size = 0;
+                                switch (action) {
+                                    case ACTION_SSID:
+                                        current_textedit_context     = &textedit_context[0];
+                                        current_textedit_output      = settings.ssid;
+                                        current_textedit_output_size = sizeof(settings.ssid);
+                                        break;
+                                    case ACTION_PASSWORD:
+                                        current_textedit_context     = &textedit_context[1];
+                                        current_textedit_output      = settings.password;
+                                        current_textedit_output_size = sizeof(settings.password);
+                                        break;
+                                    case ACTION_IDENTITY:
+                                        current_textedit_context     = &textedit_context[2];
+                                        current_textedit_output      = settings.identity;
+                                        current_textedit_output_size = sizeof(settings.identity);
+                                        break;
+                                    case ACTION_USERNAME:
+                                        current_textedit_context     = &textedit_context[3];
+                                        current_textedit_output      = settings.username;
+                                        current_textedit_output_size = sizeof(settings.username);
+                                        break;
+                                    default:
+                                        break;
+                                }
+                                if (current_textedit_context != NULL) {
+                                    gui_edit_v2_input_backspace(current_textedit_context);
+                                    gui_edit_v2_get_content(current_textedit_context, current_textedit_output,
+                                                            current_textedit_output_size);
+                                    menu_set_value(&menu, menu_get_position(&menu), current_textedit_output);
+                                    render(buffer, theme, &menu, position, false, false, textedit_context);
+                                }
+                                break;
+                            }
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
@@ -419,23 +526,23 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
                                     (menu_wifi_edit_action_t)menu_get_callback_args(&menu, menu_get_position(&menu));
                                 switch (action) {
                                     case ACTION_SSID:
-                                        edit_ssid(buffer, theme, &menu, &settings);
+                                        // edit_ssid(buffer, theme, &menu, &settings);
                                         break;
                                     case ACTION_AUTHMODE:
                                         edit_authmode(buffer, theme, &menu, &menu_authmode, position, &settings,
                                                       input_event_queue);
                                         menu_populate(
-                                            &menu,
+                                            &menu, textedit_context,
                                             &settings);  // Repopulate menu to show or hide enterprise WiFi options
                                         break;
                                     case ACTION_PASSWORD:
-                                        edit_password(buffer, theme, &menu, &settings);
+                                        // edit_password(buffer, theme, &menu, &settings);
                                         break;
                                     case ACTION_IDENTITY:
-                                        edit_identity(buffer, theme, &menu, &settings);
+                                        // edit_identity(buffer, theme, &menu, &settings);
                                         break;
                                     case ACTION_USERNAME:
-                                        edit_username(buffer, theme, &menu, &settings);
+                                        // edit_username(buffer, theme, &menu, &settings);
                                         break;
                                     case ACTION_PHASE2:
                                         edit_phase2(buffer, theme, &menu, &menu_phase2, position, &settings,
@@ -444,7 +551,7 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
                                     default:
                                         break;
                                 }
-                                render(buffer, theme, &menu, position, false, false);
+                                render(buffer, theme, &menu, position, false, false, textedit_context);
                                 break;
                             }
                             default:
@@ -453,11 +560,49 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
                     }
                     break;
                 }
+                case INPUT_EVENT_TYPE_KEYBOARD: {
+                    menu_wifi_edit_action_t action =
+                        (menu_wifi_edit_action_t)menu_get_callback_args(&menu, menu_get_position(&menu));
+                    gui_edit_v2_context_t* current_textedit_context     = NULL;
+                    char*                  current_textedit_output      = NULL;
+                    size_t                 current_textedit_output_size = 0;
+                    switch (action) {
+                        case ACTION_SSID:
+                            current_textedit_context     = &textedit_context[0];
+                            current_textedit_output      = settings.ssid;
+                            current_textedit_output_size = sizeof(settings.ssid);
+                            break;
+                        case ACTION_PASSWORD:
+                            current_textedit_context     = &textedit_context[1];
+                            current_textedit_output      = settings.password;
+                            current_textedit_output_size = sizeof(settings.password);
+                            break;
+                        case ACTION_IDENTITY:
+                            current_textedit_context     = &textedit_context[2];
+                            current_textedit_output      = settings.identity;
+                            current_textedit_output_size = sizeof(settings.identity);
+                            break;
+                        case ACTION_USERNAME:
+                            current_textedit_context     = &textedit_context[3];
+                            current_textedit_output      = settings.username;
+                            current_textedit_output_size = sizeof(settings.username);
+                            break;
+                        default:
+                            break;
+                    }
+                    if (current_textedit_context != NULL) {
+                        gui_edit_v2_input_text(current_textedit_context, event.args_keyboard.ascii);
+                        gui_edit_v2_get_content(current_textedit_context, current_textedit_output,
+                                                current_textedit_output_size);
+                        menu_set_value(&menu, menu_get_position(&menu), current_textedit_output);
+                        render(buffer, theme, &menu, position, false, false, textedit_context);
+                    }
+                }
                 default:
                     break;
             }
         } else {
-            render(buffer, theme, &menu, position, true, true);
+            render(buffer, theme, &menu, position, true, true, textedit_context);
         }
     }
 }

@@ -11,6 +11,7 @@ idf_component_register(
 		gui_osk.c
 		gui_osk_edit.c
 		gui_edit.c
+		gui_edit_v2.c
 	INCLUDE_DIRS
 		"include"
 	REQUIRES

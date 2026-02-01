@@ -61,6 +61,7 @@ const char*  menu_get_label(menu_t* menu, size_t position);
 
 void menu_render(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, gui_theme_t* theme, bool partial);
 void menu_render_grid(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, gui_theme_t* theme, bool partial);
+void menu_get_draw_position(menu_t* menu, pax_vec2_t position, gui_theme_t* theme, int index, pax_vec2_t* output);
 
 #ifdef __cplusplus
 }
