@@ -77,6 +77,7 @@ idf_component_register(
 		"ntp.c"
 		"device_settings.c"
 		"fastopen.c"
+		"global_event_handler.c"
 
 	PRIV_REQUIRES
 		esp_lcd
@@ -115,3 +116,6 @@ idf_component_register(
 if (FAT STREQUAL "1")
 fatfs_create_spiflash_image(locfd ../fat/${DEVICE} FLASH_IN_PROJECT)
 endif()
+
+idf_build_set_property(COMPILE_OPTIONS "-Wno-error=unused-variable" APPEND)
+idf_build_set_property(COMPILE_OPTIONS "-Wno-error=unused-const-variable" APPEND)

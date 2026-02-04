@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include "driver/gpio.h"
 #include "driver/sdmmc_host.h"
+#include "esp_err.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -392,6 +393,17 @@ void test_sd(void) {
     }
     closedir(dir);
 }
+
+#else
+
+esp_err_t sd_mount(void) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t sd_unmount(void) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
 #endif
 
 sd_status_t sd_status(void) {

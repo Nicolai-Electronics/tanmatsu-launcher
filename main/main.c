@@ -25,6 +25,7 @@
 #include "esp_lcd_types.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
+#include "global_event_handler.h"
 #include "gui_element_footer.h"
 #include "gui_element_header.h"
 #include "gui_menu.h"
@@ -458,15 +459,8 @@ void app_main(void) {
     }
     fix_rtc_out_of_bounds();
 
-    bool sdcard_inserted = false;
-    bsp_input_read_action(BSP_INPUT_ACTION_TYPE_SD_CARD, &sdcard_inserted);
-
-    if (sdcard_inserted) {
-        startup_dialog("Initializing SD card...");
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-        sd_mount();
-#endif
-    }
+    startup_dialog("Initializing event handler...");
+    global_event_handler_initialize();
 
     startup_dialog("Initializing certificate store...");
     ESP_ERROR_CHECK(initialize_custom_ca_store());
