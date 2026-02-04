@@ -3,23 +3,30 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "driver/gpio.h"
 #include "driver/sdmmc_host.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "sd_pwr_ctrl.h"
 #include "esp_vfs.h"
 #include "esp_vfs_fat.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "hal/gpio_types.h"
+#include "hal/ldo_ll.h"
+#include "sd_pwr_ctrl.h"
 #include "sd_pwr_ctrl_by_on_chip_ldo.h"
 #include "sdmmc_cmd.h"
 
 sd_status_t status = SD_STATUS_NOT_PRESENT;
 
+static sdmmc_card_t*        card          = NULL;
+static const char           mount_point[] = "/sd";
+static sd_pwr_ctrl_handle_t sd_pwr_handle = NULL;
+
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-static char const    TAG[] = "sdcard";
-sd_pwr_ctrl_handle_t initialize_sd_ldo(void) {
+static char const           TAG[] = "sdcard";
+static sd_pwr_ctrl_handle_t initialize_sd_ldo(void) {
     sd_pwr_ctrl_ldo_config_t ldo_config = {
         .ldo_chan_id = 4,
     };
@@ -33,45 +40,81 @@ sd_pwr_ctrl_handle_t initialize_sd_ldo(void) {
     return pwr_ctrl_handle;
 }
 
-esp_err_t sd_mount(sd_pwr_ctrl_handle_t pwr_ctrl_handle) {
+static esp_err_t reset_sd_card(void) {
+    if (sd_pwr_handle == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    ESP_LOGI(TAG, "Power cycling SD card...");
+
+    // Pull all SDIO bus lines low
+    gpio_config_t gpio_cfg = {
+        .pin_bit_mask = BIT64(GPIO_NUM_39) | BIT64(GPIO_NUM_40) | BIT64(GPIO_NUM_41) | BIT64(GPIO_NUM_42) |
+                        BIT64(GPIO_NUM_43) | BIT64(GPIO_NUM_44),
+        .mode         = GPIO_MODE_OUTPUT_OD,
+        .pull_up_en   = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type    = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&gpio_cfg);
+    gpio_set_level(GPIO_NUM_39, 0);
+    gpio_set_level(GPIO_NUM_40, 0);
+    gpio_set_level(GPIO_NUM_41, 0);
+    gpio_set_level(GPIO_NUM_42, 0);
+    gpio_set_level(GPIO_NUM_43, 0);
+    gpio_set_level(GPIO_NUM_44, 0);
+
+    // Decrease LDO output voltage to minimum
+    sd_pwr_ctrl_set_io_voltage(sd_pwr_handle, 0);
+    vTaskDelay(pdMS_TO_TICKS(150));  // Wait 150ms for card to power down
+
+    // Power on the SD card at 3.3V & release GPIOs
+    gpio_cfg.mode = GPIO_MODE_INPUT;
+    gpio_config(&gpio_cfg);
+    sd_pwr_ctrl_set_io_voltage(sd_pwr_handle, 3300);
+    vTaskDelay(pdMS_TO_TICKS(150));  // Wait 150ms for card to stabilize
+    return ESP_OK;
+}
+
+esp_err_t sd_mount(void) {
     esp_err_t res;
+
+    if (card != NULL) {
+        ESP_LOGI(TAG, "SD card already mounted");
+        return ESP_OK;
+    }
+
+    if (sd_pwr_handle == NULL) {
+        ESP_LOGI(TAG, "Acquiring SD LDO power control handle");
+        sd_pwr_handle = initialize_sd_ldo();
+    }
 
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
         .format_if_mount_failed = false, .max_files = 10, .allocation_unit_size = 16 * 1024};
 
-    sdmmc_card_t* card;
-    const char    mount_point[] = "/sd";
     ESP_LOGI(TAG, "Initializing SD card");
 
     // Power cycle the SD card to ensure it's in a known state
     // This prevents issues when the card was left in SDMMC mode from a previous session
-    if (pwr_ctrl_handle != NULL) {
-        ESP_LOGI(TAG, "Power cycling SD card...");
-        sd_pwr_ctrl_set_io_voltage(pwr_ctrl_handle, 0);      // Power off
-        vTaskDelay(pdMS_TO_TICKS(150));                      // Wait 150ms
-        sd_pwr_ctrl_set_io_voltage(pwr_ctrl_handle, 3300);   // Power on at 3.3V
-        vTaskDelay(pdMS_TO_TICKS(150));                      // Wait 150ms for card to stabilize
-        ESP_LOGI(TAG, "SD card power cycle complete");
-    }
+    reset_sd_card();
 
     sdmmc_host_t host    = SDMMC_HOST_DEFAULT();
     host.slot            = SDMMC_HOST_SLOT_0;     // Use SLOT0 for native IOMUX pins
     host.max_freq_khz    = SDMMC_FREQ_HIGHSPEED;  // 40MHz
-    host.pwr_ctrl_handle = pwr_ctrl_handle;
+    host.pwr_ctrl_handle = sd_pwr_handle;
 
     // Allocate DMA buffer in internal RAM to avoid PSRAM cache sync overhead
     static DRAM_DMA_ALIGNED_ATTR uint8_t dma_buf[512 * 4];  // 2KB aligned buffer
     host.dma_aligned_buffer = dma_buf;
 
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-    slot_config.clk   = GPIO_NUM_43;
-    slot_config.cmd   = GPIO_NUM_44;
-    slot_config.d0    = GPIO_NUM_39;
-    slot_config.d1    = GPIO_NUM_40;
-    slot_config.d2    = GPIO_NUM_41;
-    slot_config.d3    = GPIO_NUM_42;
-    slot_config.width = 4;  // 4-bit mode
-    //slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
+    slot_config.clk                 = GPIO_NUM_43;
+    slot_config.cmd                 = GPIO_NUM_44;
+    slot_config.d0                  = GPIO_NUM_39;
+    slot_config.d1                  = GPIO_NUM_40;
+    slot_config.d2                  = GPIO_NUM_41;
+    slot_config.d3                  = GPIO_NUM_42;
+    slot_config.width               = 4;  // 4-bit mode
+    // slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
     ESP_LOGI(TAG, "Mounting filesystem");
     res = esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card);
@@ -92,19 +135,48 @@ esp_err_t sd_mount(sd_pwr_ctrl_handle_t pwr_ctrl_handle) {
     return ESP_OK;
 }
 
-esp_err_t sd_mount_spi(sd_pwr_ctrl_handle_t pwr_ctrl_handle) {
+esp_err_t sd_unmount(void) {
+    if (card == NULL) {
+        ESP_LOGI(TAG, "SD card already unmounted");
+        return ESP_OK;
+    }
+    esp_err_t res = esp_vfs_fat_sdcard_unmount(mount_point, card);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "SD card unmount returned error: %s", esp_err_to_name(res));
+    }
+    card   = NULL;
+    status = SD_STATUS_NOT_PRESENT;
+    ESP_LOGI(TAG, "SD card unmounted");
+    return ESP_OK;
+}
+
+esp_err_t sd_mount_spi(void) {
     esp_err_t res;
+
+    if (card != NULL) {
+        ESP_LOGI(TAG, "SD card already mounted");
+        return ESP_OK;
+    }
+
+    if (sd_pwr_handle == NULL) {
+        ESP_LOGI(TAG, "Acquiring SD LDO power control handle");
+        sd_pwr_handle = initialize_sd_ldo();
+    }
 
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
         .format_if_mount_failed = false, .max_files = 10, .allocation_unit_size = 16 * 1024};
 
-    sdmmc_card_t* card;
-    const char    mount_point[] = "/sd";
+    ESP_LOGI(TAG, "Initializing SD card");
+
+    // Power cycle the SD card to ensure it's in a known state
+    // This prevents issues when the card was left in SDMMC mode from a previous session
+    reset_sd_card();
+
     ESP_LOGI(TAG, "Initializing SD card");
 
     sdmmc_host_t host    = SDSPI_HOST_DEFAULT();
     host.max_freq_khz    = SDMMC_FREQ_HIGHSPEED;  // 40MHz for better throughput
-    host.pwr_ctrl_handle = pwr_ctrl_handle;
+    host.pwr_ctrl_handle = sd_pwr_handle;
 
     spi_bus_config_t bus_cfg = {
         .mosi_io_num     = GPIO_NUM_44,
@@ -143,14 +215,14 @@ esp_err_t sd_mount_spi(sd_pwr_ctrl_handle_t pwr_ctrl_handle) {
     return ESP_OK;
 }
 
-#define SPEEDTEST_SIZE (20 * 1024 * 1024)  // 20MB
-#define SPEEDTEST_CHUNK_SIZE (32 * 1024)  // 32KB chunks for efficient I/O
+#define SPEEDTEST_SIZE       (20 * 1024 * 1024)  // 20MB
+#define SPEEDTEST_CHUNK_SIZE (32 * 1024)         // 32KB chunks for efficient I/O
 
 static void run_speedtest_posix(const char* label, uint8_t* buffer, size_t chunk_size) {
     const char* test_file = "/sd/test2.dat";
-    int64_t start_time, end_time;
-    size_t bytes_written = 0;
-    size_t bytes_read = 0;
+    int64_t     start_time, end_time;
+    size_t      bytes_written = 0;
+    size_t      bytes_read    = 0;
 
     // Fill buffer with pattern
     for (size_t i = 0; i < chunk_size; i++) {
@@ -182,8 +254,8 @@ static void run_speedtest_posix(const char* label, uint8_t* buffer, size_t chunk
     close(fd);
     end_time = esp_timer_get_time();
 
-    int64_t write_time_us = end_time - start_time;
-    float write_speed_mbps = (float)bytes_written / (float)write_time_us;
+    int64_t write_time_us    = end_time - start_time;
+    float   write_speed_mbps = (float)bytes_written / (float)write_time_us;
     ESP_LOGI(TAG, "Speedtest [%s POSIX]: Write - %.2f MB/s", label, write_speed_mbps);
 
     // === Read Test ===
@@ -210,8 +282,8 @@ static void run_speedtest_posix(const char* label, uint8_t* buffer, size_t chunk
     close(fd);
     end_time = esp_timer_get_time();
 
-    int64_t read_time_us = end_time - start_time;
-    float read_speed_mbps = (float)bytes_read / (float)read_time_us;
+    int64_t read_time_us    = end_time - start_time;
+    float   read_speed_mbps = (float)bytes_read / (float)read_time_us;
     ESP_LOGI(TAG, "Speedtest [%s POSIX]: Read - %.2f MB/s", label, read_speed_mbps);
 
     remove(test_file);
@@ -219,13 +291,13 @@ static void run_speedtest_posix(const char* label, uint8_t* buffer, size_t chunk
 
 static void run_speedtest_stdio(void) {
     const char* test_file = "/sd/test2.dat";
-    int64_t start_time, end_time;
-    size_t bytes_written = 0;
-    size_t bytes_read = 0;
+    int64_t     start_time, end_time;
+    size_t      bytes_written = 0;
+    size_t      bytes_read    = 0;
 
     // Allocate internal DMA buffer for stdio
     uint8_t* stdio_buf = heap_caps_malloc(8192, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
-    uint8_t* buffer = heap_caps_malloc(1024, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    uint8_t* buffer    = heap_caps_malloc(1024, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
     if (buffer == NULL || stdio_buf == NULL) {
         ESP_LOGW(TAG, "Could not allocate stdio test buffers");
         if (buffer) free(buffer);
@@ -264,7 +336,7 @@ static void run_speedtest_stdio(void) {
 
     // === stdio Read Test with internal RAM buffer ===
     bytes_read = 0;
-    f = fopen(test_file, "rb");
+    f          = fopen(test_file, "rb");
     if (f == NULL) {
         ESP_LOGE(TAG, "Speedtest: Failed to open file");
         free(buffer);

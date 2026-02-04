@@ -28,6 +28,7 @@
 #include "pax_matrix.h"
 #include "pax_types.h"
 #include "radio_ota.h"
+#include "sdcard.h"
 #include "settings.h"
 #include "tools.h"
 #include "usb_device.h"
@@ -332,7 +333,13 @@ void menu_home(void) {
                             }
                             break;
                         case BSP_INPUT_ACTION_TYPE_SD_CARD:
-                            ESP_LOGI(TAG, "Unhandled: SD card event (%u)\r\n", event.args_action.state);
+                            if (event.args_action.state) {
+                                ESP_LOGI(TAG, "SD card inserted");
+                                sd_mount();
+                            } else {
+                                ESP_LOGI(TAG, "SD card removed");
+                                sd_unmount();
+                            }
                             break;
                         case BSP_INPUT_ACTION_TYPE_AUDIO_JACK:
                             ESP_LOGI(TAG, "Unhandled: audio jack event (%u)\r\n", event.args_action.state);
