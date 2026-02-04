@@ -36,9 +36,12 @@ extern uint8_t*   asp_disp_fb;
 extern pax_buf_t* asp_disp_pax_buf;
 #endif
 
-void display_init(void) {
-    ESP_ERROR_CHECK(
-        bsp_display_get_parameters(&display_h_res, &display_v_res, &display_color_format, &display_data_endian));
+esp_err_t display_init(void) {
+    esp_err_t res =
+        bsp_display_get_parameters(&display_h_res, &display_v_res, &display_color_format, &display_data_endian);
+    if (res != ESP_OK) {
+        return res;
+    }
 
     pax_buf_type_t format = PAX_BUF_24_888RGB;
 
@@ -88,6 +91,8 @@ void display_init(void) {
     asp_disp_fb      = pax_buf_get_pixels_rw(&fb);
     asp_disp_pax_buf = &fb;
 #endif
+
+    return ESP_OK;
 }
 
 pax_buf_t* display_get_buffer(void) {
@@ -102,4 +107,8 @@ void display_blit_buffer(pax_buf_t* fb) {
 
 void display_blit(void) {
     display_blit_buffer(&fb);
+}
+
+bool display_is_initialized(void) {
+    return pax_buf_get_width(&fb) > 0;
 }
