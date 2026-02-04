@@ -25,6 +25,7 @@
 #include "esp_lcd_types.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
+#include "global_event_handler.h"
 #include "gui_element_footer.h"
 #include "gui_element_header.h"
 #include "gui_menu.h"
@@ -67,6 +68,7 @@ static bool          wifi_stack_initialized         = false;
 static bool          wifi_stack_task_done           = false;
 static bool          wifi_firmware_version_match    = false;
 static bool          wifi_firmware_version_mismatch = false;
+static bool          display_available              = false;
 
 static void fix_rtc_out_of_bounds(void) {
     time_t rtc_time = time(NULL);
@@ -334,15 +336,15 @@ void app_main(void) {
     if (bsp_init_result == ESP_OK) {
         ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
         bsp_display_set_backlight_brightness(100);
-        display_init();
-    } else if (bsp_device_get_initialized_without_coprocessor()) {
-        display_init();
-        pax_buf_t* buffer = display_get_buffer();
-        pax_background(buffer, 0xFFFFFF00);
-        pax_draw_text(buffer, 0xFF000000, pax_font_sky_mono, 16, 0, 0, "Device started without coprocessor!");
-        display_blit_buffer(buffer);
+    }
+
+    display_available = display_init() == ESP_OK;
+
+    if (bsp_device_get_initialized_without_coprocessor()) {
+        startup_dialog("Device started without coprocessor!");
+        ESP_LOGW(TAG, "Device started without coprocessor!");
         vTaskDelay(pdMS_TO_TICKS(2000));
-    } else {
+    } else if (bsp_init_result != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize BSP, bailing out.");
         return;
     }
@@ -369,19 +371,18 @@ void app_main(void) {
     res = esp_vfs_fat_spiflash_mount_rw_wl("/int", "locfd", &fat_mount_config, &wl_handle);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to mount FAT filesystem: %s", esp_err_to_name(res));
-        startup_dialog("Error: Failed to mount FAT filesystem");
-        pax_buf_t* buffer = display_get_buffer();
-        pax_background(buffer, 0xFFFF0000);
-        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 0, "Failed to initialize FAT filesystem");
-        display_blit_buffer(buffer);
-        return;
+        if (display_available) {
+            startup_dialog("Error: Failed to mount FAT filesystem");
+            vTaskDelay(pdMS_TO_TICKS(2000));
+        }
+    } else {
+        startup_dialog("Loading icons...");
+        load_icons();
     }
-
-    startup_dialog("Loading icons...");
-    load_icons();
 
     startup_dialog("Checking I2C bus...");
     if (check_i2c_bus() != ESP_OK) {
+        startup_dialog("Error: Internal I2C bus failure");
         return;
     }
 
@@ -389,10 +390,7 @@ void app_main(void) {
     coprocessor_flash(false);
 
     if (bsp_init_result != ESP_OK || bsp_device_get_initialized_without_coprocessor()) {
-        pax_buf_t* buffer = display_get_buffer();
-        pax_background(buffer, 0xFFFF0000);
-        pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 0, "Failed to initialize coprocessor");
-        display_blit_buffer(buffer);
+        startup_dialog("Error: Failed to initialize coprocessor");
         return;
     }
 
@@ -403,21 +401,28 @@ void app_main(void) {
     }
     if (radio_recovery_requested) {
         bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_BOOTLOADER);
-        gui_theme_t* theme = get_theme();
-        pax_buf_t*   fb    = display_get_buffer();
-        pax_background(fb, theme->palette.color_background);
-        gui_header_draw(
-            fb, theme,
-            ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), (char*)"Radio firmware update mode"}}), 1, NULL,
-            0);
-        gui_footer_draw(fb, theme, NULL, 0, NULL, 0);
-        int x = theme->menu.horizontal_margin + theme->menu.horizontal_padding;
-        int y = theme->header.height + (theme->header.vertical_margin * 2) + theme->menu.vertical_margin +
-                theme->menu.vertical_padding;
-        pax_draw_text(fb, theme->palette.color_foreground, theme->menu.text_font, 16, x, y + 18 * 0,
-                      "Volume up was held down while starting the device. The radio is\nhas been started in bootloader "
-                      "mode to allow firmware recovery.\n\nGo to https://recovery.tanmatsu.cloud for instructions.");
-        display_blit_buffer(fb);
+        ESP_LOGW(TAG, "Radio firmware update mode requested, starting radio in bootloader mode");
+        printf(
+            "Volume up was held down while starting the device. The radio is\nhas been started in bootloader \r\n"
+            "mode to allow firmware recovery.\n\nGo to https://recovery.tanmatsu.cloud for instructions.");
+        if (display_available) {
+            gui_theme_t* theme = get_theme();
+            pax_buf_t*   fb    = display_get_buffer();
+            pax_background(fb, theme->palette.color_background);
+            gui_header_draw(
+                fb, theme,
+                ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), (char*)"Radio firmware update mode"}}), 1,
+                NULL, 0);
+            gui_footer_draw(fb, theme, NULL, 0, NULL, 0);
+            int x = theme->menu.horizontal_margin + theme->menu.horizontal_padding;
+            int y = theme->header.height + (theme->header.vertical_margin * 2) + theme->menu.vertical_margin +
+                    theme->menu.vertical_padding;
+            pax_draw_text(
+                fb, theme->palette.color_foreground, theme->menu.text_font, 16, x, y + 18 * 0,
+                "Volume up was held down while starting the device. The radio is\nhas been started in bootloader "
+                "mode to allow firmware recovery.\n\nGo to https://recovery.tanmatsu.cloud for instructions.");
+            display_blit_buffer(fb);
+        }
         while (1) {
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
@@ -454,19 +459,8 @@ void app_main(void) {
     }
     fix_rtc_out_of_bounds();
 
-    startup_dialog("Initializing SD card...");
-    bool sdcard_inserted = false;
-    bsp_input_read_action(BSP_INPUT_ACTION_TYPE_SD_CARD, &sdcard_inserted);
-
-    if (sdcard_inserted) {
-        printf("SD card detected\r\n");
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-        sd_pwr_ctrl_handle_t sd_pwr_handle = initialize_sd_ldo();
-        sd_mount(sd_pwr_handle);
-        // sd_speedtest();  // Uncomment to run SD card benchmark
-        test_sd();
-#endif
-    }
+    startup_dialog("Initializing event handler...");
+    global_event_handler_initialize();
 
     startup_dialog("Initializing certificate store...");
     ESP_ERROR_CHECK(initialize_custom_ca_store());

@@ -342,6 +342,10 @@ message_dialog_return_type_t adv_dialog_yes_no_cancel(pax_buf_t* icon, const cha
 }
 
 void busy_dialog(pax_buf_t* icon, const char* title, const char* message, bool header) {
+    printf("BUSY: [%s] %s\n", title, message);
+    if (!display_is_initialized()) {
+        return;
+    }
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
 
@@ -355,6 +359,10 @@ void busy_dialog(pax_buf_t* icon, const char* title, const char* message, bool h
 }
 
 void startup_dialog(const char* message) {
+    printf("STARTUP: %s\n", message);
+    if (!display_is_initialized()) {
+        return;
+    }
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
     pax_background(buffer, theme->palette.color_background);
