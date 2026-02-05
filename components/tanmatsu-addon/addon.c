@@ -410,7 +410,7 @@ esp_err_t addon_initialize(void) {
         xSemaphoreGive(external_i2c_bus_semaphore);
         res = i2c_new_master_bus(&sao_i2c_master_config, &external_i2c_bus_handle);
         if (res == ESP_OK) {
-            res = addon_detect(internal_i2c_bus_handle, external_i2c_bus_semaphore, &external_eeprom_handle,
+            res = addon_detect(external_i2c_bus_handle, external_i2c_bus_semaphore, &external_eeprom_handle,
                                ADDON_LOCATION_EXTERNAL, &external_addon_descriptor);
             if (res == ESP_OK) {
                 ESP_LOGI(TAG, "External add-on detected");
