@@ -39,9 +39,9 @@ typedef struct {
 } __attribute__((packed)) lora_protocol_mode_params_t;
 
 typedef struct {
-    float    frequency;                   // Frequency in MHz
+    uint32_t frequency;                   // Frequency in Hz
     uint8_t  spreading_factor;            // 5-12
-    uint16_t bandwidth;                   // 7, 10,15, 20, 31, 41, 62, 125, 250, 500 kHz
+    uint16_t bandwidth;                   // 7, 10, 15, 20, 31, 41, 62, 125, 250, 500 kHz
     uint8_t  coding_rate;                 // 5-8 (4/5 to 4/8)
     uint8_t  sync_word;                   // Sync word
     uint16_t preamble_length;             // Preamble length in symbols

@@ -47,7 +47,6 @@ idf_component_register(
 		"menu/settings_lora.c"
 		"menu/owner.c"
 		"menu/chat/chat.c"
-		"menu/chat/lora_settings.c"
 		"menu/chat/lora_presets.c"
 		"menu/chat/messages.c"
 		"radio_ota.c"

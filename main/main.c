@@ -193,17 +193,17 @@ static void wifi_task(void* pvParameters) {
     ESP_LOGI(TAG, "LoRa mode: %d", (int)mode);
 
     lora_protocol_config_params_t config = {
-        .frequency                  = 869.618,  // MHz
-        .spreading_factor           = 8,        // SF8
-        .bandwidth                  = 62,       // 62.5 kHz
-        .coding_rate                = 8,        // 4/8
-        .sync_word                  = 0x12,     // private
-        .preamble_length            = 16,       // symbols
-        .power                      = 22,       // +22 dBm
-        .ramp_time                  = 40,       // us
-        .crc_enabled                = true,     // CRC enabled
-        .invert_iq                  = false,    // normal IQ
-        .low_data_rate_optimization = false,    // disabled
+        .frequency                  = 869618000,  // Hz
+        .spreading_factor           = 8,          // SF8
+        .bandwidth                  = 62,         // 62.5 kHz
+        .coding_rate                = 8,          // 4/8
+        .sync_word                  = 0x12,       // private
+        .preamble_length            = 16,         // symbols
+        .power                      = 22,         // +22 dBm
+        .ramp_time                  = 40,         // us
+        .crc_enabled                = true,       // CRC enabled
+        .invert_iq                  = false,      // normal IQ
+        .low_data_rate_optimization = false,      // disabled
     };
 
     if (status.chip_type == LORA_PROTOCOL_CHIP_SX1268) {
