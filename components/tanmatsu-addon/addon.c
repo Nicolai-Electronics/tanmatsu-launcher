@@ -51,9 +51,6 @@ static SemaphoreHandle_t       external_i2c_bus_semaphore = NULL;
 static eeprom_handle_t         external_eeprom_handle     = {0};
 static addon_descriptor_t*     external_addon_descriptor  = NULL;
 
-static addon_descriptor_t* addon_internal = NULL;
-static addon_descriptor_t* addon_catt     = NULL;
-
 // Helper functions
 
 static esp_err_t addon_parse_binary_sao_descriptor(eeprom_handle_t* eeprom, addon_descriptor_t* descriptor) {
@@ -281,7 +278,10 @@ static esp_err_t addon_detect(i2c_master_bus_handle_t bus, SemaphoreHandle_t sem
         // Initialize EEPROM driver
         esp_err_t res = eeprom_init(eeprom, bus, semaphore, 0x50, 16, false);
         if (res != ESP_OK) {
-            return ESP_ERR_NOT_FOUND;
+            res = eeprom_init(eeprom, bus, semaphore, 0x57, 16, false);
+            if (res != ESP_OK) {
+                return ESP_ERR_NOT_FOUND;
+            }
         }
     }
 
@@ -431,17 +431,15 @@ esp_err_t addon_initialize(void) {
 
 esp_err_t addon_get_descriptor(addon_location_t location, addon_descriptor_t** out_descriptor) {
     if (location == ADDON_LOCATION_INTERNAL) {
-        if (addon_internal != NULL) {
-            *out_descriptor = addon_internal;
+        if (internal_addon_descriptor != NULL) {
+            *out_descriptor = internal_addon_descriptor;
             return ESP_OK;
-        } else {
         }
         return ESP_ERR_NOT_FOUND;
     } else if (location == ADDON_LOCATION_EXTERNAL) {
-        if (addon_catt != NULL) {
-            *out_descriptor = addon_catt;
+        if (external_addon_descriptor != NULL) {
+            *out_descriptor = external_addon_descriptor;
             return ESP_OK;
-        } else {
         }
         return ESP_ERR_NOT_FOUND;
     }
