@@ -314,6 +314,40 @@ esp_err_t check_i2c_bus(void) {
     return ESP_OK;
 }
 
+static void led_test(void) {
+    bsp_led_clear();
+    bsp_led_set_mode(false);
+
+    uint8_t position = 0;
+    while (1) {
+        const int num_leds = 6;
+        for (int i = 0; i < num_leds; ++i) {
+            uint8_t wheel_pos = (uint8_t)(position + (i * (256 / num_leds)));
+            uint8_t r, g, b;
+            if (wheel_pos < 85) {
+                r = wheel_pos * 3;
+                g = 255 - wheel_pos * 3;
+                b = 0;
+            } else if (wheel_pos < 170) {
+                wheel_pos -= 85;
+                r          = 255 - wheel_pos * 3;
+                g          = 0;
+                b          = wheel_pos * 3;
+            } else {
+                wheel_pos -= 170;
+                r          = 0;
+                g          = wheel_pos * 3;
+                b          = 255 - wheel_pos * 3;
+            }
+            uint32_t color = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+            bsp_led_set_pixel(i, color);
+        }
+        bsp_led_send();
+        position++;
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+}
+
 void app_main(void) {
     // Initialize the Non Volatile Storage service
     esp_err_t res = nvs_flash_init();
@@ -504,6 +538,10 @@ void app_main(void) {
 #if 0
     python_initialize();
 #endif
+#endif
+
+#if 0
+    led_test();
 #endif
 
     menu_home();
