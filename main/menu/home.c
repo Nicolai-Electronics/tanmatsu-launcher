@@ -2,6 +2,7 @@
 #include <string.h>
 #include <sys/unistd.h>
 #include <time.h>
+#include "addon.h"
 #include "apps.h"
 #include "bsp/device.h"
 #include "bsp/display.h"
@@ -108,6 +109,43 @@ static void execute_action(menu_home_action_t action) {
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ / ← / → | ⏎ Select"}}), 1
 #endif
 
+static void describe_addon(addon_location_t location, char* description, size_t description_size) {
+    addon_descriptor_t* descriptor = NULL;
+    esp_err_t           res        = addon_get_descriptor(location, &descriptor);
+    if (res == ESP_OK && descriptor) {
+        const char* location_str = location == ADDON_LOCATION_INTERNAL ? "Internal" : "CATT";
+        switch (descriptor->descriptor_type) {
+            case ADDON_TYPE_UNINITIALIZED:
+                snprintf(&description[strlen(description)], description_size - strlen(description),
+                         "%s add-on: uninitialized add-on detected\r\n", location_str);
+                break;
+            case ADDON_TYPE_BINARY_SAO:
+                snprintf(&description[strlen(description)], description_size - strlen(description), "%s add-on: %s\r\n",
+                         location_str, descriptor->binary_sao.name);
+                break;
+            case ADDON_TYPE_JSON:
+                snprintf(&description[strlen(description)], description_size - strlen(description),
+                         "%s add-on: (json descriptor)\r\n", location_str);
+                break;
+            case ADDON_TYPE_HEXPANSION:
+                snprintf(&description[strlen(description)], description_size - strlen(description), "%s add-on: %s\r\n",
+                         location_str, descriptor->catt.name);
+                break;
+            case ADDON_TYPE_CATT:
+                snprintf(&description[strlen(description)], description_size - strlen(description), "%s add-on: %s\r\n",
+                         location_str, descriptor->catt.name);
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+static void describe_addons(char* description, size_t description_size) {
+    describe_addon(ADDON_LOCATION_INTERNAL, description, description_size);
+    describe_addon(ADDON_LOCATION_EXTERNAL, &description[strlen(description)], description_size - strlen(description));
+}
+
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons,
                    bool provisioned, bool name_match) {
     if (!partial || icons) {
@@ -138,6 +176,13 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
             pax_draw_text(buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
                           pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
                           "Device type mismatch!\r\nPlease contact the manufacturer.");
+        } else {
+            char description[256] = {0};
+            describe_addons(description, sizeof(description));
+
+            pax_draw_text(buffer, 0xFF000000, theme->footer.text_font, 16, position.x0,
+                          pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                          description);
         }
     }
     display_blit_buffer(buffer);
