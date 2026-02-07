@@ -168,6 +168,7 @@ esp_err_t radio_ota_update(void) {
         free(instructions_data);
         message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Failed to connect to radio in bootloader mode",
                        "Quit");
+        esp_restart();
         return ESP_FAIL;
     }
 
@@ -253,6 +254,7 @@ esp_err_t radio_ota_update(void) {
     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
     message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Radio update completed successfully!", "Quit");
 
+    esp_restart();
     return ESP_OK;
 }
 

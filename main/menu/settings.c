@@ -12,6 +12,7 @@
 #include "menu/menu_power_information.h"
 #include "menu/message_dialog.h"
 #include "menu/owner.h"
+#include "menu/tools.h"
 #include "menu/wifi.h"
 #include "menu_brightness.h"
 #include "menu_filebrowser.h"
@@ -42,6 +43,7 @@ typedef enum {
     ACTION_REPOSITORY,
     ACTION_LORA,
     ACTION_FIRMWARE_UPDATE,
+    ACTION_TOOLS,
 } menu_home_action_t;
 
 static void execute_action(menu_home_action_t action) {
@@ -66,6 +68,9 @@ static void execute_action(menu_home_action_t action) {
             break;
         case ACTION_FIRMWARE_UPDATE:
             menu_firmware_update();
+            break;
+        case ACTION_TOOLS:
+            menu_tools();
             break;
         default:
             break;
@@ -97,6 +102,7 @@ void menu_settings(void) {
     menu_insert_item_icon(&menu, "Clock", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
     menu_insert_item_icon(&menu, "LoRa radio", NULL, (void*)ACTION_LORA, -1, get_icon(ICON_CHAT));
+    menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_SETTINGS));
 
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
