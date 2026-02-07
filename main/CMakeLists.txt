@@ -1,5 +1,6 @@
 if (CONFIG_BSP_TARGET_TANMATSU OR CONFIG_BSP_TARGET_KONSOOL)
 list(APPEND files "tanmatsu_coprocessor.bin")
+list(APPEND files "p4_bootloader.bin")
 endif()
 
 idf_build_get_property(idf_target IDF_TARGET)
@@ -77,6 +78,7 @@ idf_component_register(
 		"device_settings.c"
 		"fastopen.c"
 		"global_event_handler.c"
+		"bootloader_update.c"
 
 	PRIV_REQUIRES
 		esp_lcd
