@@ -4,6 +4,7 @@
 #include "addon.h"
 #include "appfs.h"
 #include "badgelink.h"
+#include "bootloader_update.h"
 #include "bsp/device.h"
 #include "bsp/display.h"
 #include "bsp/i2c.h"
@@ -464,6 +465,9 @@ void app_main(void) {
 
     startup_dialog("Initializing certificate store...");
     ESP_ERROR_CHECK(initialize_custom_ca_store());
+
+    startup_dialog("Checking bootloader...");
+    bootloader_update();
 
     startup_dialog("Initializing radio...");
     ESP_ERROR_CHECK(lora_init(16));
