@@ -43,6 +43,7 @@ static bool wifi_stack_get_task_done(void);
 typedef enum {
     ACTION_NONE,
     ACTION_RADIO_OTA,
+    ACTION_DOWNLOAD_ICONS,
     ACTION_APPS,
     ACTION_NAMETAG,
     ACTION_REPOSITORY,
@@ -61,6 +62,9 @@ static void execute_action(menu_home_action_t action) {
             radio_ota_update();
             esp_restart();
             break;
+        case ACTION_DOWNLOAD_ICONS:
+            download_icons();
+            esp_restart();
         case ACTION_APPS:
             menu_apps(fb, theme);
             break;
@@ -252,16 +256,20 @@ void menu_home(void) {
     if (wifi_stack_get_version_mismatch()) {
         menu_insert_item_icon(&menu, "Update radio", NULL, (void*)ACTION_RADIO_OTA, -1, get_icon(ICON_SYSTEM_UPDATE));
     }
+    if (get_icons_missing()) {
+        menu_insert_item_icon(&menu, "Download icons", NULL, (void*)ACTION_DOWNLOAD_ICONS, -1,
+                              get_icon(ICON_DOWNLOADING));
+    }
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
     if (access("/sd/nametag.png", F_OK) == 0 || access("/int/nametag.png", F_OK) == 0) {
-        menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_NAMETAG, -1, get_icon(ICON_TAG));
+        menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_NAMETAG, -1, get_icon(ICON_BADGE));
     }
-    menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_REPOSITORY));
+    menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_STOREFRONT));
     menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
     //  menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_EXTENSION));
     //  menu_insert_item_icon(&menu, "Information", NULL, (void*)ACTION_INFORMATION, -1, get_icon(ICON_INFO));
     if (access("/int/rftest_local.bin", F_OK) == 0) {
-        menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_DEV));
+        menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_BUG_REPORT));
     }
     // menu_insert_item_icon(&menu, "Chat", NULL, (void*)ACTION_CHAT, -1, get_icon(ICON_GLOBE)); // Soon...
 

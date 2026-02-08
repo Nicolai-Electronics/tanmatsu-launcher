@@ -22,6 +22,7 @@
 #include "wifi_connection.h"
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "bsp/tanmatsu.h"
+#include "synthwave.h"
 #include "tanmatsu_coprocessor.h"
 #endif
 
@@ -51,19 +52,19 @@ static gui_element_icontext_t battery_indicator(void) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_UNKNOWN), ""};
     }
     if (information.battery_charging) {
-        return (gui_element_icontext_t){get_icon(ICON_BATTERY_CHARGING), ""};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_CHARGING_FULL), ""};
     }
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     if (faults.watchdog || faults.chrg_input || faults.chrg_thermal || faults.chrg_safety || faults.batt_ovp ||
         faults.ntc_cold || faults.ntc_hot) {
-        return (gui_element_icontext_t){get_icon(ICON_BATTERY_ERROR), ""};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_ALERT), ""};
     }
 #endif
 
     // snprintf(percentage_buffer, sizeof(percentage_buffer), "%3u%%", (uint8_t)information.remaining_percentage);
     if (information.remaining_percentage >= 98) {
-        return (gui_element_icontext_t){get_icon(ICON_BATTERY_7), percentage_buffer};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_FULL), percentage_buffer};
     }
     if (information.remaining_percentage >= 84) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_6), percentage_buffer};
@@ -90,7 +91,7 @@ static gui_element_icontext_t usb_indicator(void) {
     if (usb_mode_get() == USB_DEVICE) {
         return (gui_element_icontext_t){get_icon(ICON_USB), ""};
     } else {
-        return (gui_element_icontext_t){get_icon(ICON_DEV), ""};
+        return (gui_element_icontext_t){get_icon(ICON_BUG_REPORT), ""};
     }
 }
 
@@ -113,15 +114,15 @@ static gui_element_icontext_t wifi_indicator(void) {
             if (radio_initialized && esp_wifi_get_mode(&mode) == ESP_OK) {
                 if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
                     if (wifi_connection_is_connected() && esp_wifi_sta_get_ap_info(&connected_ap) == ESP_OK) {
-                        pax_buf_t* icon = get_icon(ICON_WIFI_0);
+                        pax_buf_t* icon = get_icon(ICON_WIFI_0_BAR);
                         if (connected_ap.rssi > -50) {
-                            icon = get_icon(ICON_WIFI_4);
+                            icon = get_icon(ICON_WIFI_4_BAR);
                         } else if (connected_ap.rssi > -60) {
-                            icon = get_icon(ICON_WIFI_3);
+                            icon = get_icon(ICON_WIFI_3_BAR);
                         } else if (connected_ap.rssi > -70) {
-                            icon = get_icon(ICON_WIFI_2);
+                            icon = get_icon(ICON_WIFI_2_BAR);
                         } else if (connected_ap.rssi > -80) {
-                            icon = get_icon(ICON_WIFI_1);
+                            icon = get_icon(ICON_WIFI_1_BAR);
                         }
                         return (gui_element_icontext_t){icon, (char*)connected_ap.ssid};
                     } else {
@@ -143,9 +144,9 @@ static gui_element_icontext_t wifi_indicator(void) {
 static gui_element_icontext_t sdcard_indicator(void) {
     switch (sd_status()) {
         case SD_STATUS_OK:
-            return (gui_element_icontext_t){get_icon(ICON_SD), ""};
+            return (gui_element_icontext_t){get_icon(ICON_SD_CARD), ""};
         case SD_STATUS_ERROR:
-            return (gui_element_icontext_t){get_icon(ICON_SD_ERROR), ""};
+            return (gui_element_icontext_t){get_icon(ICON_SD_CARD_ALERT), ""};
         default:
             return (gui_element_icontext_t){NULL, ""};
     }
@@ -365,9 +366,21 @@ void startup_dialog(const char* message) {
     }
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+    static bool initialized = false;
+    if (!initialized) {
+        synthwave(buffer);
+        initialized = true;
+    }
+    synthwave_step(buffer);
+    pax_draw_text(buffer, 0xFFFFFFFF, theme->menu.text_font, theme->menu.text_height, theme->menu.horizontal_margin,
+                  (pax_buf_get_height(buffer) - theme->menu.text_height - theme->menu.vertical_margin), message);
+#else
     pax_background(buffer, theme->palette.color_background);
     pax_draw_text(buffer, theme->menu.palette.color_active_foreground, theme->menu.text_font, theme->menu.text_height,
                   theme->menu.horizontal_margin,
                   (pax_buf_get_height(buffer) - theme->menu.text_height - theme->menu.vertical_margin), message);
+#endif
     display_blit_buffer(buffer);
 }

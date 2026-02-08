@@ -41,6 +41,7 @@ typedef enum {
     ACTION_RADIO_UPDATE,
     ACTION_RADIO_OTA,
     ACTION_HARDWARE_TEST,
+    ACTION_DOWNLOAD_ICONS,
 } menu_home_action_t;
 
 static void radio_update_v2(void) {
@@ -65,6 +66,9 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             break;
         case ACTION_HARDWARE_TEST:
             menu_hardware_test();
+            break;
+        case ACTION_DOWNLOAD_ICONS:
+            download_icons();
             break;
         default:
             break;
@@ -98,7 +102,8 @@ void menu_tools(void) {
 #endif
     menu_insert_item_icon(&menu, "Download & install latest radio firmware", NULL, (void*)ACTION_RADIO_OTA, -1,
                           get_icon(ICON_RELEASE_ALERT));
-    menu_insert_item_icon(&menu, "Hardware test", NULL, (void*)ACTION_HARDWARE_TEST, -1, get_icon(ICON_DEV));
+    menu_insert_item_icon(&menu, "Hardware test", NULL, (void*)ACTION_HARDWARE_TEST, -1, get_icon(ICON_BUG_REPORT));
+    menu_insert_item_icon(&menu, "Download icons", NULL, (void*)ACTION_DOWNLOAD_ICONS, -1, get_icon(ICON_COLORS));
 
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();

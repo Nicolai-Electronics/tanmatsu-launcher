@@ -59,7 +59,7 @@ void menu_chat(void) {
 
     menu_t menu = {0};
     menu_initialize(&menu);
-    menu_insert_item_icon(&menu, "Contacts", NULL, (void*)ACTION_FIXME, -1, get_icon(ICON_TAG));
+    menu_insert_item_icon(&menu, "Contacts", NULL, (void*)ACTION_FIXME, -1, get_icon(ICON_BADGE));
     menu_insert_item_icon(&menu, "Channels", NULL, (void*)ACTION_MESSAGES, -1, get_icon(ICON_APPS));
     menu_insert_item_icon(&menu, "Map", NULL, (void*)ACTION_FIXME, -1, get_icon(ICON_GLOBE_LOCATION));
     menu_insert_item_icon(&menu, "Configuration", NULL, (void*)ACTION_FIXME, -1, get_icon(ICON_SETTINGS));

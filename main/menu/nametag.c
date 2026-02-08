@@ -70,7 +70,7 @@ static void render_dialog(pax_buf_t* buffer, gui_theme_t* theme, const char* mes
     };
 
     render_base_screen_statusbar(buffer, theme, true, true, true,
-                                 ((gui_element_icontext_t[]){{get_icon(ICON_TAG), "Nametag"}}), 1, NULL, 0, NULL, 0);
+                                 ((gui_element_icontext_t[]){{get_icon(ICON_BADGE), "Nametag"}}), 1, NULL, 0, NULL, 0);
 
     pax_center_text(buffer, 0xFF000000, theme->menu.text_font, 24, pax_buf_get_width(buffer) / 2.0f,
                     (pax_buf_get_height(buffer) - 24) / 2.0f, message);

@@ -1,9 +1,11 @@
 #pragma once
 
 #include <complex.h>
+#include "esp_err.h"
 #include "pax_types.h"
 
 typedef enum {
+    // Keyboard keys
     ICON_ESC,
     ICON_F1,
     ICON_F2,
@@ -11,15 +13,8 @@ typedef enum {
     ICON_F4,
     ICON_F5,
     ICON_F6,
-    ICON_EXTENSION,
-    ICON_HOME,
-    ICON_APPS,
-    ICON_REPOSITORY,
-    ICON_TAG,
-    ICON_DEV,
-    ICON_SYSTEM_UPDATE,
-    ICON_SETTINGS,
-    ICON_INFO,
+
+    // Battery
     ICON_BATTERY_0,
     ICON_BATTERY_1,
     ICON_BATTERY_2,
@@ -27,36 +22,45 @@ typedef enum {
     ICON_BATTERY_4,
     ICON_BATTERY_5,
     ICON_BATTERY_6,
-    ICON_BATTERY_7,
-    ICON_BATTERY_CHARGING,
-    ICON_BATTERY_ERROR,
+    ICON_BATTERY_FULL,
+    ICON_BATTERY_CHARGING_FULL,
+    ICON_BATTERY_ALERT,
     ICON_BATTERY_UNKNOWN,
-    ICON_BATTERY_PLUS,
+
+    // WiFi
     ICON_WIFI,
     ICON_WIFI_OFF,
-    ICON_WIFI_0,
-    ICON_WIFI_1,
-    ICON_WIFI_2,
-    ICON_WIFI_3,
-    ICON_WIFI_4,
+    ICON_WIFI_0_BAR,
+    ICON_WIFI_1_BAR,
+    ICON_WIFI_2_BAR,
+    ICON_WIFI_3_BAR,
+    ICON_WIFI_4_BAR,
     ICON_WIFI_ERROR,
     ICON_WIFI_UNKNOWN,
+
+    ICON_EXTENSION,
+    ICON_HOME,
+    ICON_APPS,
+    ICON_STOREFRONT,
+    ICON_BADGE,
+    ICON_BUG_REPORT,
+    ICON_SYSTEM_UPDATE,
+    ICON_SETTINGS,
     ICON_USB,
-    ICON_SD,
-    ICON_SD_ERROR,
+    ICON_SD_CARD,
+    ICON_SD_CARD_ALERT,
     ICON_HEADPHONES,
     ICON_VOLUME_UP,
     ICON_VOLUME_DOWN,
-    ICON_LOUDSPEAKER,
+    ICON_SPEAKER,
     ICON_BLUETOOTH,
     ICON_BLUETOOTH_SEARCHING,
     ICON_BLUETOOTH_CONNECTED,
     ICON_BLUETOOTH_DISABLED,
-    ICON_BLUETOOTH_SETTINGS,
     ICON_RELEASE_ALERT,
     ICON_DOWNLOADING,
     ICON_HELP,
-    ICON_DEVICE_INFO,
+    ICON_INFO,
     ICON_CLOCK,
     ICON_LANGUAGE,
     ICON_GLOBE,
@@ -66,7 +70,6 @@ typedef enum {
     ICON_BRIGHTNESS,
     ICON_CHAT,
     ICON_CONTACT,
-    ICON_DATA_TABLE,
     ICON_DATABASE,
     ICON_FILE,
     ICON_FOLDER,
@@ -75,7 +78,7 @@ typedef enum {
     ICON_LOCATION_ON,
     ICON_MAIL,
     ICON_MAP,
-    ICON_PAINTBUCKET,
+    ICON_COLORS,
     ICON_SEND,
     ICON_WORKSPACES,
     ICON_LAST
@@ -83,3 +86,5 @@ typedef enum {
 
 void       load_icons(void);
 pax_buf_t* get_icon(icon_t icon);
+bool       get_icons_missing(void);
+esp_err_t  download_icons(void);

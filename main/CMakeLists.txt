@@ -79,6 +79,7 @@ idf_component_register(
 		"fastopen.c"
 		"global_event_handler.c"
 		"bootloader_update.c"
+		"synthwave.c"
 
 	PRIV_REQUIRES
 		esp_lcd
