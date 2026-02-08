@@ -82,7 +82,7 @@ void menu_rftest(void) {
     menu_insert_item_icon(&menu, "Install RF test firmware (local)", NULL, (void*)ACTION_INSTALL_RFTEST_LOCAL_FIRMWARE,
                           -1, get_icon(ICON_SYSTEM_UPDATE));
     menu_insert_item_icon(&menu, "Terminal for RF test local firmware", NULL, (void*)ACTION_TERMINAL, -1,
-                          get_icon(ICON_DEVICE_INFO));
+                          get_icon(ICON_INFO));
 
     render(&menu, false, true);
     while (1) {

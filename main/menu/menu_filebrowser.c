@@ -20,7 +20,7 @@ static void render(menu_t* menu, pax_vec2_t position, bool partial, bool icons, 
     if (!partial || icons) {
         render_base_screen_statusbar(
             buffer, theme, !partial, !partial || icons, !partial,
-            ((gui_element_icontext_t[]){{get_icon(ICON_SD), (char*)title}}), 1,
+            ((gui_element_icontext_t[]){{get_icon(ICON_SD_CARD), (char*)title}}), 1,
             ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
             ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1);
     }
@@ -37,7 +37,7 @@ static size_t populate_menu(const char* path, menu_t* menu, const char* filter[]
     size_t         count = 0;
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_DIR) {
-            menu_insert_item_icon(menu, entry->d_name, NULL, (void*)1, -1, get_icon(ICON_SD));
+            menu_insert_item_icon(menu, entry->d_name, NULL, (void*)1, -1, get_icon(ICON_SD_CARD));
         } else {
             bool matches_filter = false;
             for (size_t i = 0; i < filter_length; i++) {
@@ -69,7 +69,7 @@ bool menu_filebrowser(const char* in_path, const char* filter[], size_t filter_l
         menu_initialize(&menu);
 
         if (strcmp(path, "/sd") != 0 && strcmp(path, "/int") != 0) {
-            menu_insert_item_icon(&menu, "..", NULL, (void*)0, -1, get_icon(ICON_SD));
+            menu_insert_item_icon(&menu, "..", NULL, (void*)0, -1, get_icon(ICON_SD_CARD));
         }
         populate_menu(path, &menu, filter, filter_length);
 

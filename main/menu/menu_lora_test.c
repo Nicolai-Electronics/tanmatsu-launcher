@@ -46,8 +46,8 @@ static void render(bool partial, bool icons, size_t num_packets, lora_protocol_l
 
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_DEVICE_INFO), "LoRa test"}}), 1,
-                                     FOOTER_LEFT, FOOTER_RIGHT);
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "LoRa test"}}), 1, FOOTER_LEFT,
+                                     FOOTER_RIGHT);
     }
     char text_buffer[256];
     int  line = 0;

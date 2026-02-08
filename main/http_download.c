@@ -123,7 +123,7 @@ static bool _download_file(const char* url, const char* path) {
     esp_err_t                err    = esp_http_client_perform(client);
     fastclose(fd);
     esp_http_client_cleanup(client);
-    return download_success(err, &info);
+    return download_success(err, &info) && (esp_http_client_get_status_code(client) == 200);
 }
 
 bool download_file(const char* url, const char* path, download_callback_t callback, const char* callback_text) {
@@ -133,7 +133,7 @@ bool download_file(const char* url, const char* path, download_callback_t callba
     while (retry--) {
         if (_download_file(url, path)) return true;
         ESP_LOGI(TAG, "Download waiting to retry ...");
-        vTaskDelay(pdMS_TO_TICKS(5000));
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
     return false;
 }

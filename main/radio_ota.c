@@ -119,7 +119,7 @@ esp_err_t radio_ota_update(void) {
         }
     }
 
-    busy_dialog(get_icon(ICON_REPOSITORY), "Radio update", "Starting download...", true);
+    busy_dialog(get_icon(ICON_STOREFRONT), "Radio update", "Starting download...", true);
 
     uint8_t* instructions_data = NULL;
     size_t   instructions_size = 0;

@@ -126,7 +126,7 @@ static void render(menu_t* menu, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(
             buffer, theme, !partial, !partial || icons, !partial,
-            ((gui_element_icontext_t[]){{get_icon(ICON_TAG), "Owner"}}), 1,
+            ((gui_element_icontext_t[]){{get_icon(ICON_BADGE), "Owner"}}), 1,
             ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
             (setting == SETTING_NICKNAME) ? ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Edit"}})
                                           : ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ← / → Edit"}}),

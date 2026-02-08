@@ -31,7 +31,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
     if (!partial || icons) {
         render_base_screen_statusbar(
             buffer, theme, !partial, !partial || icons, !partial,
-            ((gui_element_icontext_t[]){{get_icon(ICON_REPOSITORY), "Repository settings"}}), 1,
+            ((gui_element_icontext_t[]){{get_icon(ICON_STOREFRONT), "Repository settings"}}), 1,
             ((gui_element_icontext_t[]){
                 {get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}, {get_icon(ICON_F4), "Reset defaults"}}),
             3, ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Edit setting"}}), 1);

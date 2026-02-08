@@ -46,7 +46,7 @@ static void render(void) {
     };
 
     render_base_screen_statusbar(buffer, theme, true, true, true,
-                                 ((gui_element_icontext_t[]){{get_icon(ICON_DEVICE_INFO), "Power information"}}), 1,
+                                 ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "Power information"}}), 1,
                                  FOOTER_LEFT, FOOTER_RIGHT);
     char text_buffer[256];
     int  line = 0;

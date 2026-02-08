@@ -58,7 +58,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
     if (!partial || icons) {
         render_base_screen_statusbar(
             buffer, theme, !partial, !partial || icons, !partial,
-            ((gui_element_icontext_t[]){{get_icon(ICON_REPOSITORY), "Repository"}}), 1,
+            ((gui_element_icontext_t[]){{get_icon(ICON_STOREFRONT), "Repository"}}), 1,
             ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
             ((gui_element_icontext_t[]){{NULL, "← / → | ⏎ Select"}}), 1);
     }
@@ -111,22 +111,21 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
     cJSON* slug_obj = cJSON_GetObjectItem(wrapper, "slug");
     switch (action) {
         case ACTION_INSTALL: {
-            busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Installing on internal memory...", true);
-            if (app_mgmt_install(server, slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL,
-                                 download_callback) != ESP_OK) {
+            busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Installing on internal memory...", true);
+            if (app_mgmt_install(server, slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL, download_callback) !=
+                ESP_OK) {
                 message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK");
             } else {
-                message_dialog(get_icon(ICON_REPOSITORY), "Repository", "App successfully installed", "OK");
+                message_dialog(get_icon(ICON_STOREFRONT), "Repository", "App successfully installed", "OK");
             }
             break;
         }
         case ACTION_INSTALL_SD: {
-            busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Installing on SD card...", true);
-            if (app_mgmt_install(server, slug_obj->valuestring, APP_MGMT_LOCATION_SD,
-                                 download_callback) != ESP_OK) {
+            busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Installing on SD card...", true);
+            if (app_mgmt_install(server, slug_obj->valuestring, APP_MGMT_LOCATION_SD, download_callback) != ESP_OK) {
                 message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK, download_callback");
             } else {
-                message_dialog(get_icon(ICON_REPOSITORY), "Repository", "App successfully installed", "OK");
+                message_dialog(get_icon(ICON_STOREFRONT), "Repository", "App successfully installed", "OK");
             }
             break;
         }
@@ -136,7 +135,7 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
 }
 
 void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON* wrapper) {
-    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Rendering project...", true);
+    busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Rendering project...", true);
 
     cJSON* project = cJSON_GetObjectItem(wrapper, "project");
     if (project == NULL) {

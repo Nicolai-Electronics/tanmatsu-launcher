@@ -44,8 +44,8 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
     if (!partial || icons) {
         snprintf(text_buffer, sizeof(text_buffer), "App Info: %s", app->name);
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_DEVICE_INFO), text_buffer}}), 1,
-                                     FOOTER_LEFT, FOOTER_RIGHT);
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_INFO), text_buffer}}), 1, FOOTER_LEFT,
+                                     FOOTER_RIGHT);
     }
 
     if (!partial) {

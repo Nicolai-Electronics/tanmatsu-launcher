@@ -34,8 +34,8 @@
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_DEVICE_INFO), "Device information"}}),
-                                     1, FOOTER_LEFT, FOOTER_RIGHT);
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "Device information"}}), 1,
+                                     FOOTER_LEFT, FOOTER_RIGHT);
     }
     char text_buffer[256];
     int  line = 0;

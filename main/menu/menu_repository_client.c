@@ -92,7 +92,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
         snprintf(server_info, sizeof(server_info), "Server: %s", server);
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_REPOSITORY), "Repository"}}), 1,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_STOREFRONT), "Repository"}}), 1,
                                      ((gui_element_icontext_t[]){
                                          {get_icon(ICON_ESC), "/"},
                                          {get_icon(ICON_F1), "Back    "},
@@ -101,7 +101,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
                                      3, ((gui_element_icontext_t[]){{NULL, "  ↑ / ↓ | ⏎ Select"}}), 1);
 #else
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_REPOSITORY), "Repository"}}), 1,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_STOREFRONT), "Repository"}}), 1,
                                      FOOTER_LEFT, FOOTER_RIGHT);
 #endif
     }
@@ -110,36 +110,36 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
 }
 
 void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
-    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Connecting to WiFi...", true);
+    busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Connecting to WiFi...", true);
 
     if (!wifi_stack_get_initialized()) {
         ESP_LOGE(TAG, "WiFi stack not initialized");
-        message_dialog(get_icon(ICON_REPOSITORY), "Repository: fatal error", "WiFi stack not initialized", "Quit");
+        message_dialog(get_icon(ICON_STOREFRONT), "Repository: fatal error", "WiFi stack not initialized", "Quit");
         return;
     }
 
     if (!wifi_connection_is_connected()) {
         if (wifi_connect_try_all() != ESP_OK) {
             ESP_LOGE(TAG, "Not connected to WiFi");
-            message_dialog(get_icon(ICON_REPOSITORY), "Repository: fatal error", "Failed to connect to WiFi network",
+            message_dialog(get_icon(ICON_STOREFRONT), "Repository: fatal error", "Failed to connect to WiFi network",
                            "Quit");
             return;
         }
     }
 
-    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Downloading list of projects...", true);
+    busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Downloading list of projects...", true);
 
     char server[128] = {0};
     device_settings_get_repo_server(server, sizeof(server));
     bool success = load_projects(server, &projects, NULL);
     if (!success) {
         ESP_LOGE(TAG, "Failed to load projects");
-        message_dialog(get_icon(ICON_REPOSITORY), "Repository: fatal error", "Failed to load projects from server",
+        message_dialog(get_icon(ICON_STOREFRONT), "Repository: fatal error", "Failed to load projects from server",
                        "Quit");
         return;
     }
 
-    busy_dialog(get_icon(ICON_REPOSITORY), "Repository", "Rendering list of projects...", true);
+    busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Rendering list of projects...", true);
 
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
