@@ -26,7 +26,11 @@ static char const TAG[] = "icons";
 #define ICON_BASE_PATH "/int/icons"
 #define ICON_EXT       ".png"
 
+#if defined(CONFIG_BSP_TARGET_KAMI)
+char icon_suffix[64] = "_black_16";
+#else
 char icon_suffix[64] = "_black_32";
+#endif
 
 #if defined(CONFIG_BSP_TARGET_KAMI)
 static pax_col_t palette[] = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
