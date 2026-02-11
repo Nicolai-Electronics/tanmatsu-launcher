@@ -8,6 +8,7 @@
 #include "bsp/led.h"
 #include "esp_app_desc.h"
 #include "esp_err.h"
+#include "lora.h"
 #include "nvs.h"
 
 static const char* NVS_NAMESPACE = "system";
@@ -327,7 +328,13 @@ esp_err_t device_settings_set_owner_birthday_month(uint8_t month) {
 // LoRa settings
 
 esp_err_t device_settings_get_lora_frequency(uint32_t* out_value) {
-    return device_settings_get_u32("lora.freq", 869618000, out_value);
+    esp_err_t res = device_settings_get_u32("lora.freq", 0, out_value);
+    if (res != ESP_OK || out_value == 0) {
+        lora_protocol_status_params_t status = {0};
+        lora_get_status(&status);
+        *out_value = status.chip_type == LORA_PROTOCOL_CHIP_SX1268 ? 433875000 : 869618000;
+    }
+    return res;
 }
 
 esp_err_t device_settings_set_lora_frequency(uint32_t frequency) {

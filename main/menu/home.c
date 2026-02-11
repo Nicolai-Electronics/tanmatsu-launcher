@@ -21,6 +21,7 @@
 #include "gui_style.h"
 #include "icons.h"
 #include "information.h"
+#include "menu/lora_information.h"
 #include "menu/menu_rftest.h"
 #include "menu/message_dialog.h"
 #include "menu/nametag.h"
@@ -36,9 +37,9 @@
 
 static const char TAG[] = "home menu";
 
-static bool wifi_stack_get_initialized(void);
-static bool wifi_stack_get_version_mismatch(void);
-static bool wifi_stack_get_task_done(void);
+extern bool wifi_stack_get_initialized(void);
+extern bool wifi_stack_get_version_mismatch(void);
+extern bool wifi_stack_get_task_done(void);
 
 typedef enum {
     ACTION_NONE,
@@ -52,6 +53,7 @@ typedef enum {
     ACTION_INFORMATION,
     ACTION_RFTEST,
     ACTION_CHAT,
+    ACTION_LORA_INFORMATION,
 } menu_home_action_t;
 
 static void execute_action(menu_home_action_t action) {
@@ -88,6 +90,9 @@ static void execute_action(menu_home_action_t action) {
             break;
         case ACTION_CHAT:
             menu_chat();
+            break;
+        case ACTION_LORA_INFORMATION:
+            menu_lora_information();
             break;
         default:
             break;
@@ -272,6 +277,7 @@ void menu_home(void) {
         menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_BUG_REPORT));
     }
     // menu_insert_item_icon(&menu, "Chat", NULL, (void*)ACTION_CHAT, -1, get_icon(ICON_GLOBE)); // Soon...
+    menu_insert_item_icon(&menu, "LoRa info", NULL, (void*)ACTION_LORA_INFORMATION, -1, get_icon(ICON_INFO));
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);

@@ -18,23 +18,25 @@
 
 static const char TAG[] = "lora";
 
-QueueHandle_t                      lora_packet_queue          = NULL;
-SemaphoreHandle_t                  lora_mutex                 = NULL;
-SemaphoreHandle_t                  lora_transaction_semaphore = NULL;
-uint32_t                           lora_sequence_number       = 0;
-uint8_t                            lora_packet_buffer[sizeof(uint32_t) + 512];
-size_t                             lora_packet_size = 0;
-static lora_protocol_lora_packet_t lora_packet      = {0};
+QueueHandle_t     lora_packet_queue          = NULL;
+SemaphoreHandle_t lora_mutex                 = NULL;
+SemaphoreHandle_t lora_transaction_semaphore = NULL;
+uint32_t          lora_sequence_number       = 0;
+uint8_t           lora_packet_buffer[sizeof(uint32_t) + 512];
+size_t            lora_packet_size = 0;
 
 static esp_err_t lora_transaction(const uint8_t* request, size_t request_length, uint8_t* out_response,
                                   size_t* response_length, size_t max_response_length) {
+    if (!lora_mutex || !lora_transaction_semaphore || !lora_packet_queue) {
+        return ESP_ERR_INVALID_STATE;
+    }
     esp_err_t result = ESP_FAIL;
     xSemaphoreTake(lora_mutex, portMAX_DELAY);
     xSemaphoreTake(lora_transaction_semaphore, 0);  // Clear semaphore
 #if defined(CONFIG_IDF_TARGET_ESP32P4)
     result = esp_hosted_send_custom(1, (uint8_t*)request, request_length);
     if (result == ESP_OK) {
-        if (xSemaphoreTake(lora_transaction_semaphore, pdMS_TO_TICKS(1000)) == pdTRUE) {  // Wait for response
+        if (xSemaphoreTake(lora_transaction_semaphore, pdMS_TO_TICKS(2000)) == pdTRUE) {  // Wait for response
             if (lora_packet_size <= max_response_length) {
                 memcpy(out_response, lora_packet_buffer, lora_packet_size);
                 *response_length = lora_packet_size;
@@ -55,6 +57,8 @@ static esp_err_t lora_transaction(const uint8_t* request, size_t request_length,
 }
 
 esp_err_t lora_transaction_receive(uint8_t* packet, size_t length) {
+    static lora_protocol_lora_packet_t lora_packet = {0};
+
     if (!lora_mutex || !lora_transaction_semaphore || !lora_packet_queue) {
         return ESP_ERR_INVALID_STATE;
     }
@@ -292,5 +296,5 @@ esp_err_t lora_send_packet(const lora_protocol_lora_packet_t* packet) {
 }
 
 esp_err_t lora_receive_packet(lora_protocol_lora_packet_t* out_packet, TickType_t timeout) {
-    return xQueueReceive(lora_packet_queue, out_packet, timeout) ? ESP_OK : ESP_FAIL;
+    return xQueueReceive(lora_packet_queue, out_packet, timeout) == pdTRUE ? ESP_OK : ESP_FAIL;
 }

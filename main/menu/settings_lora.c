@@ -4,15 +4,20 @@
 #include "common/display.h"
 #include "common/theme.h"
 #include "device_settings.h"
+#include "esp_log.h"
 #include "freertos/idf_additions.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "lora.h"
+#include "lora_settings_handler.h"
 #include "menu/message_dialog.h"
 #include "menu/textedit.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
+
+static const char TAG[] = "LoRa settings menu";
 
 typedef enum {
     SETTING_NONE,
@@ -22,20 +27,6 @@ typedef enum {
     SETTING_CODING_RATE,
     SETTING_POWER,
 } menu_setting_t;
-
-static void edit_nickname(menu_t* menu) {
-    pax_buf_t*   buffer    = display_get_buffer();
-    gui_theme_t* theme     = get_theme();
-    char         temp[129] = {0};
-    bool         accepted  = false;
-    memset(temp, 0, sizeof(temp));
-    device_settings_get_owner_nickname(temp, sizeof(temp));
-    menu_textedit(buffer, theme, "Nickname", temp, sizeof(temp) + sizeof('\0'), true, &accepted);
-    if (accepted) {
-        device_settings_set_owner_nickname(temp);
-        menu_set_value(menu, 0, temp);
-    }
-}
 
 static void render(menu_t* menu, bool partial, bool icons) {
     pax_buf_t*   buffer = display_get_buffer();
@@ -56,10 +47,10 @@ static void render(menu_t* menu, bool partial, bool icons) {
     if (!partial || icons) {
         render_base_screen_statusbar(
             buffer, theme, !partial, !partial || icons, !partial,
-            ((gui_element_icontext_t[]){{get_icon(ICON_GLOBE), "LoRa radio"}}), 1,
+            ((gui_element_icontext_t[]){{get_icon(ICON_CHAT), "LoRa radio"}}), 1,
             ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
-            (false) ? ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Edit"}})
-                    : ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ← / → Edit"}}),
+            (setting == SETTING_FREQUENCY) ? ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Edit"}})
+                                           : ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ← / → Edit"}}),
             1);
     }
 
@@ -99,6 +90,139 @@ static void render(menu_t* menu, bool partial, bool icons) {
     display_blit_buffer(buffer);
 }
 
+void edit_frequency(menu_t* menu) {
+    pax_buf_t*   buffer    = display_get_buffer();
+    gui_theme_t* theme     = get_theme();
+    char         temp[16]  = {0};
+    bool         accepted  = false;
+    uint32_t     frequency = 0;
+    device_settings_get_lora_frequency(&frequency);
+    snprintf(temp, sizeof(temp), "%" PRIu32, frequency);
+    menu_textedit(buffer, theme, "Frequency (Hz)", temp, sizeof(temp) + sizeof('\0'), true, &accepted);
+    if (accepted) {
+        uint32_t new_frequency = strtoul(temp, NULL, 10);
+        if (new_frequency < 1) {
+            return;
+        }
+        device_settings_set_lora_frequency(new_frequency);
+        snprintf(temp, sizeof(temp), "%" PRIu32, new_frequency);
+        menu_set_value(menu, 0, temp);
+    }
+}
+
+static void edit(menu_t* menu) {
+    menu_setting_t setting = (menu_setting_t)menu_get_callback_args(menu, menu_get_position(menu));
+    switch (setting) {
+        case SETTING_FREQUENCY:
+            edit_frequency(menu);
+            break;
+        default:
+            break;
+    }
+}
+
+static void edit_updown(menu_t* menu, bool up) {
+    menu_setting_t setting = (menu_setting_t)menu_get_callback_args(menu, menu_get_position(menu));
+    switch (setting) {
+        case SETTING_FREQUENCY:
+            break;
+        case SETTING_SPREADING_FACTOR: {
+            uint8_t spreading_factor = 0;
+            device_settings_get_lora_spreading_factor(&spreading_factor);
+            spreading_factor += up ? 1 : -1;
+            if (spreading_factor < 7) spreading_factor = 7;
+            if (spreading_factor > 12) spreading_factor = 12;
+            device_settings_set_lora_spreading_factor(spreading_factor);
+            break;
+        }
+        case SETTING_BANDWIDTH: {
+            uint16_t bandwidth = 0;
+            device_settings_get_lora_bandwidth(&bandwidth);
+            switch (bandwidth) {
+                case 7:
+                    bandwidth = up ? 10 : 7;
+                    break;
+                case 10:
+                    bandwidth = up ? 15 : 7;
+                    break;
+                case 15:
+                    bandwidth = up ? 20 : 10;
+                    break;
+                case 20:
+                    bandwidth = up ? 31 : 15;
+                    break;
+                case 31:
+                    bandwidth = up ? 41 : 20;
+                    break;
+                case 41:
+                    bandwidth = up ? 62 : 31;
+                    break;
+                case 62:
+                    bandwidth = up ? 125 : 41;
+                    break;
+                case 125:
+                    bandwidth = up ? 250 : 62;
+                    break;
+                case 250:
+                    bandwidth = up ? 500 : 125;
+                    break;
+                case 500:
+                    bandwidth = up ? 500 : 250;
+                    break;
+                default:
+                    bandwidth = 125;
+            }
+            device_settings_set_lora_bandwidth(bandwidth);
+            break;
+        }
+        case SETTING_CODING_RATE: {
+            uint8_t coding_rate = 0;
+            device_settings_get_lora_coding_rate(&coding_rate);
+            coding_rate += up ? 1 : -1;
+            if (coding_rate < 5) coding_rate = 5;
+            if (coding_rate > 8) coding_rate = 8;
+            device_settings_set_lora_coding_rate(coding_rate);
+            break;
+        }
+        case SETTING_POWER: {
+            uint8_t power = 0;
+            device_settings_get_lora_power(&power);
+            if (power > 0 && !up) power -= 1;
+            if (up) {
+                power++;
+                if (power > 22) power = 22;
+            }
+            device_settings_set_lora_power(power);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+static void apply(void) {
+    esp_err_t res = lora_set_mode(LORA_PROTOCOL_MODE_STANDBY_RC);
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa set to standby mode");
+    } else {
+        ESP_LOGE(TAG, "Failed to set LoRa mode: %s", esp_err_to_name(res));
+    }
+
+    res = lora_apply_settings();
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa configuration set");
+    } else {
+        ESP_LOGE(TAG, "Failed to set LoRa configuration: %s", esp_err_to_name(res));
+    }
+
+    res = lora_set_mode(LORA_PROTOCOL_MODE_RX);
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa set to RX mode");
+    } else {
+        ESP_LOGE(TAG, "Failed to set LoRa mode: %s", esp_err_to_name(res));
+    }
+}
+
 void menu_settings_lora(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
@@ -123,6 +247,7 @@ void menu_settings_lora(void) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                                apply();
                                 menu_free(&menu);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
@@ -136,33 +261,17 @@ void menu_settings_lora(void) {
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
-                                menu_setting_t setting =
-                                    (menu_setting_t)menu_get_callback_args(&menu, menu_get_position(&menu));
-                                switch (setting) {
-                                    default:
-                                        break;
-                                }
+                                edit(&menu);
                                 render(&menu, false, true);
                                 break;
                             }
                             case BSP_INPUT_NAVIGATION_KEY_LEFT: {
-                                menu_setting_t setting =
-                                    (menu_setting_t)menu_get_callback_args(&menu, menu_get_position(&menu));
-                                switch (setting) {
-                                    default:
-                                        break;
-                                }
+                                edit_updown(&menu, false);
                                 render(&menu, false, true);
                                 break;
                             }
                             case BSP_INPUT_NAVIGATION_KEY_RIGHT: {
-                                menu_setting_t setting =
-                                    (menu_setting_t)menu_get_callback_args(&menu, menu_get_position(&menu));
-                                switch (setting) {
-                                    break;
-                                    default:
-                                        break;
-                                }
+                                edit_updown(&menu, true);
                                 render(&menu, false, true);
                                 break;
                             }

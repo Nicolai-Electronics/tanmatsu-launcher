@@ -34,6 +34,7 @@
 #include "hal/lcd_types.h"
 #include "icons.h"
 #include "lora.h"
+#include "lora_settings_handler.h"
 #include "menu/home.h"
 #include "menu/message_dialog.h"
 #include "ntp.h"
@@ -193,29 +194,20 @@ static void wifi_task(void* pvParameters) {
     }
     ESP_LOGI(TAG, "LoRa mode: %d", (int)mode);
 
-    lora_protocol_config_params_t config = {
-        .frequency                  = 869618000,  // Hz
-        .spreading_factor           = 8,          // SF8
-        .bandwidth                  = 62,         // 62.5 kHz
-        .coding_rate                = 8,          // 4/8
-        .sync_word                  = 0x12,       // private
-        .preamble_length            = 16,         // symbols
-        .power                      = 22,         // +22 dBm
-        .ramp_time                  = 40,         // us
-        .crc_enabled                = true,       // CRC enabled
-        .invert_iq                  = false,      // normal IQ
-        .low_data_rate_optimization = false,      // disabled
-    };
-
     if (status.chip_type == LORA_PROTOCOL_CHIP_SX1268) {
-        // 433MHz LoRa radio
-        ESP_LOGW(TAG, "433MHz LoRa radio detected");
-        config.frequency = 433.875;  // MHz
+        ESP_LOGW(TAG, "SX1268 LoRa radio detected");
     } else {
-        ESP_LOGW(TAG, "868/915MHz LoRa radio detected");
+        ESP_LOGW(TAG, "SX1262 LoRa radio detected");
     }
 
-    res = lora_set_config(&config);
+    res = lora_set_mode(LORA_PROTOCOL_MODE_STANDBY_RC);
+    if (res == ESP_OK) {
+        ESP_LOGI(TAG, "LoRa set to standby mode");
+    } else {
+        ESP_LOGE(TAG, "Failed to set LoRa mode: %s", esp_err_to_name(res));
+    }
+
+    res = lora_apply_settings();
     if (res == ESP_OK) {
         ESP_LOGI(TAG, "LoRa configuration set");
     } else {
