@@ -78,6 +78,14 @@ int asp_plugin_settings_set_string(void* ctx, const char* key, const char* value
 int asp_plugin_settings_get_int(void* ctx, const char* key, int* value) { return 0; }
 int asp_plugin_settings_set_int(void* ctx, const char* key, int value) { return 0; }
 
+// I2C API
+void* asp_i2c_open(void* ctx, unsigned char bus, unsigned short address, unsigned int speed_hz) { return 0; }
+void asp_i2c_close(void* device) {}
+int asp_i2c_write(void* device, const unsigned char* data, unsigned int len) { return 0; }
+int asp_i2c_read(void* device, unsigned char* data, unsigned int len) { return 0; }
+int asp_i2c_write_read(void* device, const unsigned char* write_data, unsigned int write_len, unsigned char* read_data, unsigned int read_len) { return 0; }
+int asp_i2c_probe(unsigned char bus, unsigned short address) { return 0; }
+
 // Power Information API
 int asp_power_get_battery_info(void* out_info) { return 0; }
 int asp_power_get_system_voltage(unsigned short* out_millivolt) { return 0; }
