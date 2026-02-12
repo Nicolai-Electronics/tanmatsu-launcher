@@ -418,6 +418,38 @@ bool asp_plugin_settings_get_int(plugin_context_t* ctx, const char* key, int32_t
 bool asp_plugin_settings_set_int(plugin_context_t* ctx, const char* key, int32_t value);
 
 // ============================================
+// Host API: I2C Bus Access
+// ============================================
+
+// Opaque I2C device handle
+typedef void* asp_i2c_device_t;
+
+// Open an I2C device on the specified bus.
+// bus: 0 = primary (internal), 1 = external (QWIIC/SAO)
+// address: 7-bit I2C device address
+// speed_hz: clock speed (e.g. 100000 for 100kHz, 400000 for 400kHz)
+// Returns opaque device handle, or NULL on failure.
+// Devices are auto-closed when the plugin unloads.
+asp_i2c_device_t asp_i2c_open(plugin_context_t* ctx, uint8_t bus, uint16_t address, uint32_t speed_hz);
+
+// Close an I2C device and release resources.
+void asp_i2c_close(asp_i2c_device_t device);
+
+// Write data to an I2C device.
+bool asp_i2c_write(asp_i2c_device_t device, const uint8_t* data, size_t len);
+
+// Read data from an I2C device.
+bool asp_i2c_read(asp_i2c_device_t device, uint8_t* data, size_t len);
+
+// Write then read in a single I2C transaction (repeated start).
+bool asp_i2c_write_read(asp_i2c_device_t device,
+                         const uint8_t* write_data, size_t write_len,
+                         uint8_t* read_data, size_t read_len);
+
+// Probe for an I2C device on the specified bus.
+bool asp_i2c_probe(uint8_t bus, uint16_t address);
+
+// ============================================
 // Host API: Power Information
 // ============================================
 // Power API has moved to badge-elf-api: #include <asp/power.h>

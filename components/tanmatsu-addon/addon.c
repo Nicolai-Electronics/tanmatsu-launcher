@@ -409,6 +409,7 @@ esp_err_t addon_initialize(void) {
     if (external_i2c_bus_semaphore != NULL) {
         xSemaphoreGive(external_i2c_bus_semaphore);
         res = i2c_new_master_bus(&sao_i2c_master_config, &external_i2c_bus_handle);
+        ESP_LOGI(TAG, "External I2C bus init: %s (handle=%p)", esp_err_to_name(res), external_i2c_bus_handle);
         if (res == ESP_OK) {
             res = addon_detect(external_i2c_bus_handle, external_i2c_bus_semaphore, &external_eeprom_handle,
                                ADDON_LOCATION_EXTERNAL, &external_addon_descriptor);
@@ -416,16 +417,63 @@ esp_err_t addon_initialize(void) {
                 ESP_LOGI(TAG, "External add-on detected");
                 addon_print_descriptor(external_addon_descriptor);
             } else {
-                ESP_LOGI(TAG, "No external add-on detected");
-                i2c_del_master_bus(external_i2c_bus_handle);
-                external_i2c_bus_handle = NULL;
-                vSemaphoreDelete(external_i2c_bus_semaphore);
-                external_i2c_bus_semaphore = NULL;
+                ESP_LOGI(TAG, "No external add-on detected (bus kept for plugin I2C access)");
             }
         }
     }
 #endif
 
+    // Debug: scan both I2C buses
+    ESP_LOGI(TAG, "Scanning internal I2C bus for devices...");
+    if (internal_i2c_bus_handle != NULL && internal_i2c_bus_semaphore != NULL) {
+        for (uint16_t addr = 0x08; addr < 0x78; addr++) {
+            if (xSemaphoreTake(internal_i2c_bus_semaphore, portMAX_DELAY) == pdTRUE) {
+                esp_err_t probe_res = i2c_master_probe(internal_i2c_bus_handle, addr, 100);
+                xSemaphoreGive(internal_i2c_bus_semaphore);
+                if (probe_res == ESP_OK) {
+                    ESP_LOGI(TAG, "  Internal bus: device at 0x%02X", addr);
+                }
+            }
+        }
+    } else {
+        ESP_LOGW(TAG, "  Internal bus not available");
+    }
+
+    ESP_LOGI(TAG, "Scanning external I2C bus for devices...");
+    if (external_i2c_bus_handle != NULL && external_i2c_bus_semaphore != NULL) {
+        for (uint16_t addr = 0x08; addr < 0x78; addr++) {
+            if (xSemaphoreTake(external_i2c_bus_semaphore, portMAX_DELAY) == pdTRUE) {
+                esp_err_t probe_res = i2c_master_probe(external_i2c_bus_handle, addr, 100);
+                xSemaphoreGive(external_i2c_bus_semaphore);
+                if (probe_res == ESP_OK) {
+                    ESP_LOGI(TAG, "  External bus: device at 0x%02X", addr);
+                }
+            }
+        }
+    } else {
+        ESP_LOGW(TAG, "  External bus not available (handle=%p, sem=%p)",
+                 external_i2c_bus_handle, external_i2c_bus_semaphore);
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t addon_i2c_external_bus_get_handle(i2c_master_bus_handle_t* handle) {
+    if (handle == NULL) return ESP_ERR_INVALID_ARG;
+    if (external_i2c_bus_handle == NULL) return ESP_ERR_INVALID_STATE;
+    *handle = external_i2c_bus_handle;
+    return ESP_OK;
+}
+
+esp_err_t addon_i2c_external_bus_claim(void) {
+    if (external_i2c_bus_semaphore == NULL) return ESP_ERR_INVALID_STATE;
+    if (xSemaphoreTake(external_i2c_bus_semaphore, portMAX_DELAY) != pdTRUE) return ESP_FAIL;
+    return ESP_OK;
+}
+
+esp_err_t addon_i2c_external_bus_release(void) {
+    if (external_i2c_bus_semaphore == NULL) return ESP_ERR_INVALID_STATE;
+    xSemaphoreGive(external_i2c_bus_semaphore);
     return ESP_OK;
 }
 

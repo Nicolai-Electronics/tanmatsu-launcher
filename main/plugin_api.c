@@ -24,6 +24,9 @@
 
 #include "common/display.h"
 #include "bsp/input.h"
+#include "bsp/i2c.h"
+#include "driver/i2c_master.h"
+#include "addon.h"
 #include "fastopen.h"
 
 static const char* TAG = "plugin_api";
@@ -93,6 +96,173 @@ void asp_plugin_led_release(plugin_context_t* ctx, uint32_t index) {
 bool plugin_api_is_led_claimed(uint32_t index) {
     if (index >= LED_COUNT) return false;
     return led_claims[index].claimed;
+}
+
+// ============================================
+// I2C Device Registry
+// ============================================
+
+#define MAX_I2C_DEVICES 8
+
+typedef struct {
+    bool in_use;
+    i2c_master_dev_handle_t dev_handle;
+    uint8_t bus;
+    plugin_context_t* owner;
+} plugin_i2c_device_entry_t;
+
+static plugin_i2c_device_entry_t i2c_devices[MAX_I2C_DEVICES] = {0};
+
+static bool i2c_bus_get_handles(uint8_t bus, i2c_master_bus_handle_t* out_bus) {
+    if (bus == 0) {
+        return bsp_i2c_primary_bus_get_handle(out_bus) == ESP_OK;
+    } else if (bus == 1) {
+        return addon_i2c_external_bus_get_handle(out_bus) == ESP_OK;
+    }
+    return false;
+}
+
+static bool i2c_bus_claim(uint8_t bus) {
+    if (bus == 0) {
+        return bsp_i2c_primary_bus_claim() == ESP_OK;
+    } else if (bus == 1) {
+        return addon_i2c_external_bus_claim() == ESP_OK;
+    }
+    return false;
+}
+
+static bool i2c_bus_release(uint8_t bus) {
+    if (bus == 0) {
+        return bsp_i2c_primary_bus_release() == ESP_OK;
+    } else if (bus == 1) {
+        return addon_i2c_external_bus_release() == ESP_OK;
+    }
+    return false;
+}
+
+asp_i2c_device_t asp_i2c_open(plugin_context_t* ctx, uint8_t bus, uint16_t address, uint32_t speed_hz) {
+    if (ctx == NULL || bus > 1) return NULL;
+
+    i2c_master_bus_handle_t bus_handle = NULL;
+    if (!i2c_bus_get_handles(bus, &bus_handle)) {
+        ESP_LOGE(TAG, "I2C bus %d not available", bus);
+        return NULL;
+    }
+
+    // Find free slot
+    int slot = -1;
+    for (int i = 0; i < MAX_I2C_DEVICES; i++) {
+        if (!i2c_devices[i].in_use) {
+            slot = i;
+            break;
+        }
+    }
+    if (slot < 0) {
+        ESP_LOGW(TAG, "No free I2C device slots");
+        return NULL;
+    }
+
+    i2c_device_config_t dev_cfg = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = address,
+        .scl_speed_hz = speed_hz,
+    };
+
+    i2c_master_dev_handle_t dev_handle = NULL;
+    esp_err_t err = i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to add I2C device at 0x%02X on bus %d: %s",
+                 address, bus, esp_err_to_name(err));
+        return NULL;
+    }
+
+    i2c_devices[slot].in_use = true;
+    i2c_devices[slot].dev_handle = dev_handle;
+    i2c_devices[slot].bus = bus;
+    i2c_devices[slot].owner = ctx;
+
+    ESP_LOGI(TAG, "Plugin %s opened I2C device at 0x%02X on bus %d (slot %d)",
+             ctx->plugin_slug ? ctx->plugin_slug : "unknown", address, bus, slot);
+
+    // Return slot index + 1 so NULL (0) means failure
+    return (asp_i2c_device_t)(intptr_t)(slot + 1);
+}
+
+void asp_i2c_close(asp_i2c_device_t device) {
+    int slot = (int)(intptr_t)device - 1;
+    if (slot < 0 || slot >= MAX_I2C_DEVICES) return;
+    if (!i2c_devices[slot].in_use) return;
+
+    i2c_master_bus_rm_device(i2c_devices[slot].dev_handle);
+
+    ESP_LOGI(TAG, "Closed I2C device slot %d", slot);
+
+    i2c_devices[slot].in_use = false;
+    i2c_devices[slot].dev_handle = NULL;
+    i2c_devices[slot].owner = NULL;
+}
+
+bool asp_i2c_write(asp_i2c_device_t device, const uint8_t* data, size_t len) {
+    int slot = (int)(intptr_t)device - 1;
+    if (slot < 0 || slot >= MAX_I2C_DEVICES || !i2c_devices[slot].in_use) return false;
+    if (data == NULL || len == 0) return false;
+
+    if (!i2c_bus_claim(i2c_devices[slot].bus)) return false;
+    esp_err_t err = i2c_master_transmit(i2c_devices[slot].dev_handle, data, len, 100);
+    i2c_bus_release(i2c_devices[slot].bus);
+
+    return err == ESP_OK;
+}
+
+bool asp_i2c_read(asp_i2c_device_t device, uint8_t* data, size_t len) {
+    int slot = (int)(intptr_t)device - 1;
+    if (slot < 0 || slot >= MAX_I2C_DEVICES || !i2c_devices[slot].in_use) return false;
+    if (data == NULL || len == 0) return false;
+
+    if (!i2c_bus_claim(i2c_devices[slot].bus)) return false;
+    esp_err_t err = i2c_master_receive(i2c_devices[slot].dev_handle, data, len, 100);
+    i2c_bus_release(i2c_devices[slot].bus);
+
+    return err == ESP_OK;
+}
+
+bool asp_i2c_write_read(asp_i2c_device_t device,
+                         const uint8_t* write_data, size_t write_len,
+                         uint8_t* read_data, size_t read_len) {
+    int slot = (int)(intptr_t)device - 1;
+    if (slot < 0 || slot >= MAX_I2C_DEVICES || !i2c_devices[slot].in_use) return false;
+    if (write_data == NULL || write_len == 0 || read_data == NULL || read_len == 0) return false;
+
+    if (!i2c_bus_claim(i2c_devices[slot].bus)) return false;
+    esp_err_t err = i2c_master_transmit_receive(i2c_devices[slot].dev_handle,
+                                                 write_data, write_len,
+                                                 read_data, read_len, 100);
+    i2c_bus_release(i2c_devices[slot].bus);
+
+    return err == ESP_OK;
+}
+
+bool asp_i2c_probe(uint8_t bus, uint16_t address) {
+    if (bus > 1) return false;
+
+    i2c_master_bus_handle_t bus_handle = NULL;
+    if (!i2c_bus_get_handles(bus, &bus_handle)) {
+        if (address == 0x08) {  // Log once per scan (first address)
+            ESP_LOGE(TAG, "I2C probe: bus %d handle not available", bus);
+        }
+        return false;
+    }
+
+    if (!i2c_bus_claim(bus)) {
+        if (address == 0x08) {
+            ESP_LOGE(TAG, "I2C probe: bus %d claim failed", bus);
+        }
+        return false;
+    }
+    esp_err_t err = i2c_master_probe(bus_handle, address, 100);
+    i2c_bus_release(bus);
+
+    return err == ESP_OK;
 }
 
 // Display API moved to badge-elf-api (asp/display.h)
@@ -816,6 +986,17 @@ void plugin_api_cleanup_for_plugin(plugin_context_t* ctx) {
             ESP_LOGI(TAG, "Auto-releasing LED claim %d", i);
             led_claims[i].claimed = false;
             led_claims[i].owner = NULL;
+        }
+    }
+
+    // Close all I2C devices owned by this plugin
+    for (int i = 0; i < MAX_I2C_DEVICES; i++) {
+        if (i2c_devices[i].in_use && i2c_devices[i].owner == ctx) {
+            ESP_LOGI(TAG, "Auto-closing I2C device slot %d", i);
+            i2c_master_bus_rm_device(i2c_devices[i].dev_handle);
+            i2c_devices[i].in_use = false;
+            i2c_devices[i].dev_handle = NULL;
+            i2c_devices[i].owner = NULL;
         }
     }
 
