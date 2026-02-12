@@ -666,8 +666,23 @@ static void deferred_unload_task(void* arg) {
     if (ctx) {
         // Small delay to ensure service task has fully exited
         vTaskDelay(pdMS_TO_TICKS(50));
-        ESP_LOGI(TAG, "Auto-unloading service plugin: %s", ctx->plugin_slug);
-        plugin_manager_unload(ctx);
+
+        // Check if the plugin is still in the loaded plugins list.
+        // If it was already unloaded by an explicit call, ctx is freed and we must not touch it.
+        xSemaphoreTake(plugin_mutex, portMAX_DELAY);
+        bool still_loaded = false;
+        for (size_t i = 0; i < loaded_plugin_count; i++) {
+            if (loaded_plugins[i] == ctx) {
+                still_loaded = true;
+                break;
+            }
+        }
+        xSemaphoreGive(plugin_mutex);
+
+        if (still_loaded) {
+            ESP_LOGI(TAG, "Auto-unloading service plugin: %s", ctx->plugin_slug);
+            plugin_manager_unload(ctx);
+        }
     }
     vTaskDelete(NULL);
 }

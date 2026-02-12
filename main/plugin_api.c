@@ -625,7 +625,7 @@ plugin_dialog_result_t asp_plugin_show_info_dialog(
 
     // Draw dialog background and header
     render_base_screen_statusbar(buffer, theme, true, true, true,
-        ((gui_element_icontext_t[]){{get_icon(ICON_LOUDSPEAKER), (char*)title}}), 1,
+        ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1,
         ADV_DIALOG_FOOTER_OK, NULL, 0);
 
     // Draw message in content area
@@ -667,7 +667,7 @@ plugin_dialog_result_t asp_plugin_show_info_dialog(
         } else {
             // Refresh status bar on timeout (clock, battery, etc.)
             render_base_screen_statusbar(buffer, theme, false, true, false,
-                ((gui_element_icontext_t[]){{get_icon(ICON_LOUDSPEAKER), (char*)title}}), 1,
+                ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1,
                 NULL, 0, NULL, 0);
             display_blit_buffer(buffer);
         }
@@ -693,7 +693,7 @@ plugin_dialog_result_t asp_plugin_show_text_dialog(
 
     // Draw dialog
     render_base_screen_statusbar(buffer, theme, true, true, true,
-        ((gui_element_icontext_t[]){{get_icon(ICON_LOUDSPEAKER), (char*)title}}), 1,
+        ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1,
         ADV_DIALOG_FOOTER_OK, NULL, 0);
 
     // Draw lines in content area
@@ -744,7 +744,7 @@ plugin_dialog_result_t asp_plugin_show_text_dialog(
         } else {
             // Refresh status bar on timeout
             render_base_screen_statusbar(buffer, theme, false, true, false,
-                ((gui_element_icontext_t[]){{get_icon(ICON_LOUDSPEAKER), (char*)title}}), 1,
+                ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1,
                 NULL, 0, NULL, 0);
             display_blit_buffer(buffer);
         }
