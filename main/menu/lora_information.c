@@ -33,6 +33,18 @@ const char TAG[] = "LoRa information menu";
 #define TEXT_SIZE    9
 #endif
 
+// Temporarily copied here, should come from LoRa driver instead
+typedef enum {
+    SX126X_ERROR_RC64K_CALIB_ERR = 0x0001,
+    SX126X_ERROR_RC13M_CALIB_ERR = 0x0002,
+    SX126X_ERROR_PLL_CALIB_ERR   = 0x0004,
+    SX126X_ERROR_ADC_CALIB_ERR   = 0x0008,
+    SX126X_ERROR_IMG_CALIB_ERR   = 0x0010,
+    SX126X_XOSC_START_ERR        = 0x0020,
+    SX126X_PLL_LOCK_ERR          = 0x0040,
+    SX126X_PA_RAMP_ERR           = 0x0100,
+} sx126x_error_t;
+
 static void render(bool partial, bool icons, size_t num_packets, lora_protocol_lora_packet_t* packets) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
@@ -70,6 +82,28 @@ static void render(bool partial, bool icons, size_t num_packets, lora_protocol_l
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
         snprintf(text_buffer, sizeof(text_buffer), "Radio type:           %s",
                  status.chip_type == LORA_PROTOCOL_CHIP_SX1268 ? "SX1268 (410 - 493 MHz)" : "SX1262 (850 - 930 MHz)");
+        pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
+                      position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
+    }
+
+    lora_protocol_mode_t mode = LORA_PROTOCOL_MODE_UNKNOWN;
+    res                       = lora_get_mode(&mode);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
+        snprintf(text_buffer, sizeof(text_buffer), "Failed to get LoRa mode");
+        pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
+                      position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
+        snprintf(text_buffer, sizeof(text_buffer), "%s", esp_err_to_name(res));
+        pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
+                      position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
+    } else {
+        snprintf(text_buffer, sizeof(text_buffer), "Current mode:         %s",
+                 mode == LORA_PROTOCOL_MODE_STANDBY_RC     ? "Standby (RC)"
+                 : mode == LORA_PROTOCOL_MODE_STANDBY_XOSC ? "Standby (XOSC)"
+                 : mode == LORA_PROTOCOL_MODE_FS           ? "FS"
+                 : mode == LORA_PROTOCOL_MODE_TX           ? "TX"
+                 : mode == LORA_PROTOCOL_MODE_RX           ? "RX"
+                                                           : "Unknown");
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
     }
@@ -119,28 +153,31 @@ static void render(bool partial, bool icons, size_t num_packets, lora_protocol_l
                  config.low_data_rate_optimization ? "Yes" : "No");
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
-    }
 
-    lora_protocol_mode_t mode = LORA_PROTOCOL_MODE_UNKNOWN;
-    res                       = lora_get_mode(&mode);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
-        snprintf(text_buffer, sizeof(text_buffer), "Failed to get LoRa mode");
-        pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
-                      position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
-        snprintf(text_buffer, sizeof(text_buffer), "%s", esp_err_to_name(res));
-        pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
-                      position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
-    } else {
-        snprintf(text_buffer, sizeof(text_buffer), "Current mode:         %s",
-                 mode == LORA_PROTOCOL_MODE_STANDBY_RC     ? "Standby (RC)"
-                 : mode == LORA_PROTOCOL_MODE_STANDBY_XOSC ? "Standby (XOSC)"
-                 : mode == LORA_PROTOCOL_MODE_FS           ? "FS"
-                 : mode == LORA_PROTOCOL_MODE_TX           ? "TX"
-                 : mode == LORA_PROTOCOL_MODE_RX           ? "RX"
-                                                           : "Unknown");
-        pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
-                      position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
+        if (status.errors & SX126X_ERROR_RC64K_CALIB_ERR)
+            pax_draw_text(buffer, 0xFFFF0000, TEXT_FONT, TEXT_SIZE, position.x0,
+                          position.y0 + (TEXT_SIZE + 2) * (line++), "RC64K calibration error");
+        if (status.errors & SX126X_ERROR_RC13M_CALIB_ERR)
+            pax_draw_text(buffer, 0xFFFF0000, TEXT_FONT, TEXT_SIZE, position.x0,
+                          position.y0 + (TEXT_SIZE + 2) * (line++), "RC13M calibration error");
+        if (status.errors & SX126X_ERROR_PLL_CALIB_ERR)
+            pax_draw_text(buffer, 0xFFFF0000, TEXT_FONT, TEXT_SIZE, position.x0,
+                          position.y0 + (TEXT_SIZE + 2) * (line++), "PLL calibration error");
+        if (status.errors & SX126X_ERROR_ADC_CALIB_ERR)
+            pax_draw_text(buffer, 0xFFFF0000, TEXT_FONT, TEXT_SIZE, position.x0,
+                          position.y0 + (TEXT_SIZE + 2) * (line++), "ADC calibration error");
+        if (status.errors & SX126X_ERROR_IMG_CALIB_ERR)
+            pax_draw_text(buffer, 0xFFFF0000, TEXT_FONT, TEXT_SIZE, position.x0,
+                          position.y0 + (TEXT_SIZE + 2) * (line++), "Image calibration error");
+        if (status.errors & SX126X_XOSC_START_ERR)
+            pax_draw_text(buffer, 0xFFFF0000, TEXT_FONT, TEXT_SIZE, position.x0,
+                          position.y0 + (TEXT_SIZE + 2) * (line++), "XOSC start error");
+        if (status.errors & SX126X_PLL_LOCK_ERR)
+            pax_draw_text(buffer, 0xFFFF0000, TEXT_FONT, TEXT_SIZE, position.x0,
+                          position.y0 + (TEXT_SIZE + 2) * (line++), "PLL lock error");
+        if (status.errors & SX126X_PA_RAMP_ERR)
+            pax_draw_text(buffer, 0xFFFF0000, TEXT_FONT, TEXT_SIZE, position.x0,
+                          position.y0 + (TEXT_SIZE + 2) * (line++), "PA ramp error");
     }
 
     line++;

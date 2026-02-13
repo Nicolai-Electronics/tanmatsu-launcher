@@ -21,6 +21,7 @@
 #include "gui_style.h"
 #include "icons.h"
 #include "information.h"
+#include "lora.h"
 #include "menu/lora_information.h"
 #include "menu/menu_rftest.h"
 #include "menu/message_dialog.h"
@@ -177,21 +178,33 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
             pax_draw_text(buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
                           pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
                           "Radio communication error!\r\nPlease flash the radio firmware using the recovery website.");
-        } else if (!provisioned) {
-            pax_draw_text(buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
-                          pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                          "Device not provisioned!\r\nPlease contact the manufacturer.");
-        } else if (!name_match) {
-            pax_draw_text(buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
-                          pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                          "Device type mismatch!\r\nPlease contact the manufacturer.");
         } else {
-            char description[256] = {0};
-            describe_addons(description, sizeof(description));
+            lora_protocol_status_params_t status = {0};
+            esp_err_t                     res    = lora_get_status(&status);
+            if (res != ESP_OK || status.errors > 0) {
+                pax_draw_text(
+                    buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
+                    pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                    "LoRa radio fault detected!");
+            } else if (!provisioned) {
+                pax_draw_text(
+                    buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
+                    pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                    "Device not provisioned!\r\nPlease contact the manufacturer.");
+            } else if (!name_match) {
+                pax_draw_text(
+                    buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
+                    pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                    "Device type mismatch!\r\nPlease contact the manufacturer.");
+            } else {
+                char description[256] = {0};
+                describe_addons(description, sizeof(description));
 
-            pax_draw_text(buffer, 0xFF000000, theme->footer.text_font, 16, position.x0,
-                          pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                          description);
+                pax_draw_text(
+                    buffer, 0xFF000000, theme->footer.text_font, 16, position.x0,
+                    pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                    description);
+            }
         }
     }
     display_blit_buffer(buffer);
