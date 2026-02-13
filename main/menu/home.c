@@ -66,7 +66,7 @@ static void execute_action(menu_home_action_t action) {
             esp_restart();
             break;
         case ACTION_DOWNLOAD_ICONS:
-            download_icons();
+            download_icons(true);
             esp_restart();
         case ACTION_APPS:
             menu_apps(fb, theme);

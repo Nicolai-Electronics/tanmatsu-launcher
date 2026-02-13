@@ -264,6 +264,15 @@ esp_err_t device_settings_apply(void) {
     return ESP_OK;
 }
 
+// Firmware settings
+esp_err_t device_settings_get_firmware_patch_level(uint8_t* out_level) {
+    return device_settings_get_u8("fw.patch", 0, out_level);
+}
+
+esp_err_t device_settings_set_firmware_patch_level(uint8_t level) {
+    return device_settings_set_u8("fw.patch", level);
+}
+
 // Repository settings
 
 esp_err_t device_settings_get_repo_server(char* out_value, size_t max_length) {

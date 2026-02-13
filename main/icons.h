@@ -23,7 +23,7 @@ typedef enum {
     ICON_BATTERY_5,
     ICON_BATTERY_6,
     ICON_BATTERY_FULL,
-    ICON_BATTERY_CHARGING_FULL,
+    ICON_BATTERY_BOLT,
     ICON_BATTERY_ALERT,
     ICON_BATTERY_UNKNOWN,
 
@@ -87,4 +87,4 @@ typedef enum {
 void       load_icons(void);
 pax_buf_t* get_icon(icon_t icon);
 bool       get_icons_missing(void);
-esp_err_t  download_icons(void);
+esp_err_t  download_icons(bool delete_old_files);

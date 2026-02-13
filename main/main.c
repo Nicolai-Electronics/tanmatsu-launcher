@@ -25,6 +25,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "esp_vfs_fat.h"
 #include "global_event_handler.h"
 #include "gui_element_footer.h"
@@ -44,6 +45,7 @@
 #include "pax_text.h"
 #include "portmacro.h"
 #include "python.h"
+#include "radio_ota.h"
 #include "sdcard.h"
 #include "sdkconfig.h"
 #include "timezone.h"
@@ -490,6 +492,34 @@ void app_main(void) {
 
     startup_dialog("Detecting Add-On boards...");
     addon_initialize();
+
+    // Check patch level and apply patches if needed
+    // Note: this explicitly checks the patch level once
+    // if the patch fails we can at least try to show the menu,
+    // the home menu will show a button to retry the patch in case of failure
+
+    uint8_t patch = 0;
+    device_settings_get_firmware_patch_level(&patch);
+    if (patch < 1) {
+        // Patch level 0: attempt updating radio
+        device_settings_set_firmware_patch_level(1);
+        if (wifi_stack_get_version_mismatch()) {
+            radio_ota_update();
+            bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            esp_restart();
+        }
+    }
+    if (patch < 2 && !wifi_stack_get_version_mismatch()) {
+        // Patch level 1: icons missing, attempt to download icons
+        device_settings_set_firmware_patch_level(2);
+        if (get_icons_missing()) {
+            download_icons(true);
+            bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            esp_restart();
+        }
+    }
 
     // App start
 

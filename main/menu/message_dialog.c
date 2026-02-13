@@ -52,7 +52,7 @@ static gui_element_icontext_t battery_indicator(void) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_UNKNOWN), ""};
     }
     if (information.battery_charging) {
-        return (gui_element_icontext_t){get_icon(ICON_BATTERY_CHARGING_FULL), ""};
+        return (gui_element_icontext_t){get_icon(ICON_BATTERY_BOLT), ""};
     }
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
