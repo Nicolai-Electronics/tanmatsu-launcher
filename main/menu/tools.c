@@ -68,7 +68,7 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             menu_hardware_test();
             break;
         case ACTION_DOWNLOAD_ICONS:
-            download_icons();
+            download_icons(false);
             break;
         default:
             break;

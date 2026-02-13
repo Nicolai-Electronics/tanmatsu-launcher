@@ -1,4 +1,5 @@
 #include "icons.h"
+#include "bsp/power.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "fastopen.h"
@@ -27,9 +28,9 @@ static char const TAG[] = "icons";
 #define ICON_EXT       ".png"
 
 #if defined(CONFIG_BSP_TARGET_KAMI)
-char icon_suffix[64] = "_black_16";
+char icon_suffix[64] = "_f_r_black_16";
 #else
-char icon_suffix[64] = "_black_32";
+char icon_suffix[64] = "_f_r_black_32";
 #endif
 
 #if defined(CONFIG_BSP_TARGET_KAMI)
@@ -47,27 +48,27 @@ static const char* icon_paths[] = {
     [ICON_F6]  = "f6",
 
     // Battery
-    [ICON_BATTERY_0]             = "battery_0_bar",
-    [ICON_BATTERY_1]             = "battery_1_bar",
-    [ICON_BATTERY_2]             = "battery_2_bar",
-    [ICON_BATTERY_3]             = "battery_3_bar",
-    [ICON_BATTERY_4]             = "battery_4_bar",
-    [ICON_BATTERY_5]             = "battery_5_bar",
-    [ICON_BATTERY_6]             = "battery_6_bar",
-    [ICON_BATTERY_FULL]          = "battery_full",
-    [ICON_BATTERY_CHARGING_FULL] = "battery_charging_full",
-    [ICON_BATTERY_ALERT]         = "battery_alert",
-    [ICON_BATTERY_UNKNOWN]       = "battery_unknown",
+    [ICON_BATTERY_0]       = "battery_android_0",
+    [ICON_BATTERY_1]       = "battery_android_1",
+    [ICON_BATTERY_2]       = "battery_android_2",
+    [ICON_BATTERY_3]       = "battery_android_3",
+    [ICON_BATTERY_4]       = "battery_android_4",
+    [ICON_BATTERY_5]       = "battery_android_5",
+    [ICON_BATTERY_6]       = "battery_android_6",
+    [ICON_BATTERY_FULL]    = "battery_android_full",
+    [ICON_BATTERY_BOLT]    = "battery_android_bolt",
+    [ICON_BATTERY_ALERT]   = "battery_android_alert",
+    [ICON_BATTERY_UNKNOWN] = "battery_android_question",
 
     // WiFi
     [ICON_WIFI]         = "wifi",
     [ICON_WIFI_OFF]     = "signal_wifi_off",
     [ICON_WIFI_0_BAR]   = "signal_wifi_0_bar",
-    [ICON_WIFI_1_BAR]   = "signal_wifi_1_bar",
-    [ICON_WIFI_2_BAR]   = "signal_wifi_2_bar",
-    [ICON_WIFI_3_BAR]   = "signal_wifi_3_bar",
+    [ICON_WIFI_1_BAR]   = "network_wifi_1_bar",
+    [ICON_WIFI_2_BAR]   = "network_wifi_2_bar",
+    [ICON_WIFI_3_BAR]   = "network_wifi_3_bar",
     [ICON_WIFI_4_BAR]   = "signal_wifi_4_bar",
-    [ICON_WIFI_ERROR]   = "signal_wifi_statusbar_connected_no_internet",
+    [ICON_WIFI_ERROR]   = "signal_wifi_off",
     [ICON_WIFI_UNKNOWN] = "signal_wifi_statusbar_not_connected",
 
     [ICON_EXTENSION]           = "extension",
@@ -76,7 +77,7 @@ static const char* icon_paths[] = {
     [ICON_STOREFRONT]          = "storefront",
     [ICON_BADGE]               = "badge",
     [ICON_BUG_REPORT]          = "bug_report",
-    [ICON_SYSTEM_UPDATE]       = "system_update",
+    [ICON_SYSTEM_UPDATE]       = "system_update_alt",
     [ICON_SETTINGS]            = "settings",
     [ICON_INFO]                = "info",
     [ICON_USB]                 = "usb",
@@ -93,24 +94,24 @@ static const char* icon_paths[] = {
     [ICON_RELEASE_ALERT]       = "new_releases",
     [ICON_DOWNLOADING]         = "downloading",
     [ICON_HELP]                = "help",
-    [ICON_CLOCK]               = "timer",
+    [ICON_CLOCK]               = "schedule",
     [ICON_LANGUAGE]            = "language",
-    [ICON_GLOBE]               = "map",
-    [ICON_GLOBE_LOCATION]      = "pin_drop",
+    [ICON_GLOBE]               = "globe",
+    [ICON_GLOBE_LOCATION]      = "globe_location_pin",
     [ICON_APP]                 = "exit_to_app",
     [ICON_ERROR]               = "error",
     [ICON_BRIGHTNESS]          = "brightness_5",
     [ICON_CHAT]                = "chat",
     [ICON_CONTACT]             = "person",
     [ICON_DATABASE]            = "storage",
-    [ICON_FILE]                = "insert_drive_file",
+    [ICON_FILE]                = "description",
     [ICON_FOLDER]              = "folder",
     [ICON_IMAGE]               = "image",
     [ICON_LOCATION_OFF]        = "location_off",
     [ICON_LOCATION_ON]         = "location_on",
     [ICON_MAIL]                = "mail",
     [ICON_MAP]                 = "map",
-    [ICON_COLORS]              = "color_lens",
+    [ICON_COLORS]              = "colors",
     [ICON_SEND]                = "send",
     [ICON_WORKSPACES]          = "workspaces",
 };
@@ -191,7 +192,27 @@ static void download_callback(size_t download_position, size_t file_size, const 
     busy_dialog(get_icon(ICON_DOWNLOADING), "Icon downloader", text, true);
 };
 
-esp_err_t download_icons(void) {
+void print_commands(void) {
+    for (int i = 0; i < ICON_LAST; i++) {
+        if (icon_paths[i] == NULL || icon_paths[i][0] == '/') {
+            // Absolute path, skip
+            continue;
+        }
+        char path[512] = {0};
+        get_icon_path(i, path, sizeof(path));
+        char url[512] = {0};
+        if (i > ICON_F6) {
+            snprintf(url, sizeof(url), "https://ota.tanmatsu.cloud/icons/%s%s" ICON_EXT, icon_paths[i], icon_suffix);
+        } else {
+            // For keyboard icons, use a different naming scheme
+            snprintf(url, sizeof(url), "https://ota.tanmatsu.cloud/icons/%s" ICON_EXT, icon_paths[i]);
+        }
+        printf("wget -O '%s' '%s'\n", path, url);
+    }
+}
+
+esp_err_t download_icons(bool delete_old_files) {
+    print_commands();
     const char title[] = "Icon downloader";
     pax_buf_t* icon    = get_icon(ICON_DOWNLOADING);
 
@@ -209,11 +230,13 @@ esp_err_t download_icons(void) {
         }
     }
 
-    busy_dialog(icon, title, "Removing old icon files...", true);
-    fs_utils_remove("/int/icons");
-    if (mkdir("/int/icons", 0777) != 0) {
-        message_dialog(icon, title, "Failed to create icons directory", "Quit");
-        return ESP_FAIL;
+    if (delete_old_files) {
+        busy_dialog(icon, title, "Removing old icon files...", true);
+        fs_utils_remove("/int/icons");
+        if (mkdir("/int/icons", 0777) != 0) {
+            message_dialog(icon, title, "Failed to create icons directory", "Quit");
+            return ESP_FAIL;
+        }
     }
 
     for (int i = 0; i < ICON_LAST; i++) {
@@ -245,6 +268,9 @@ esp_err_t download_icons(void) {
         }
     }
 
-    message_dialog(icon, title, "Done, restart the device to load the new icon files", "Quit");
-    return ESP_OK;
+    busy_dialog(NULL, "Icon download successful",
+                "The icons have been downloaded successfully.\r\nDevice will restart now.", true);
+    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    esp_restart();
 }

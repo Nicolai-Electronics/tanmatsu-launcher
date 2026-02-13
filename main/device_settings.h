@@ -15,6 +15,10 @@ esp_err_t device_settings_set_led_brightness(uint8_t percentage);
 
 esp_err_t device_settings_apply(void);
 
+// Firmware settings
+esp_err_t device_settings_get_firmware_patch_level(uint8_t* out_level);
+esp_err_t device_settings_set_firmware_patch_level(uint8_t level);
+
 // Repository settings
 esp_err_t device_settings_get_repo_server(char* out_value, size_t max_length);
 esp_err_t device_settings_set_repo_server(const char* value);
