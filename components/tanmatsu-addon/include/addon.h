@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "driver/i2c_master.h"
 #include "esp_err.h"
 
 // Add-on descriptor
@@ -91,3 +92,8 @@ typedef struct _SAO {
 
 esp_err_t addon_initialize(void);
 esp_err_t addon_get_descriptor(addon_location_t location, addon_descriptor_t** out_descriptor);
+
+// External I2C bus access (QWIIC / SAO connector)
+esp_err_t addon_i2c_external_bus_get_handle(i2c_master_bus_handle_t* handle);
+esp_err_t addon_i2c_external_bus_claim(void);
+esp_err_t addon_i2c_external_bus_release(void);
