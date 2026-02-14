@@ -204,6 +204,19 @@ static void render(bool partial, bool icons, size_t num_packets, lora_protocol_l
     display_blit_buffer(buffer);
 }
 
+void test_tx(void) {
+    lora_protocol_lora_packet_t packet = {
+        .length = 16,
+        .data   = {0x42, 0x42, 0xDE, 0xAD, 0xBE, 0xEF, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42},
+    };
+    esp_err_t res = lora_send_packet(&packet);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to send LoRa packet: %s", esp_err_to_name(res));
+    } else {
+        ESP_LOGI(TAG, "LoRa packet sent");
+    }
+}
+
 void menu_lora_information(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
@@ -241,6 +254,9 @@ void menu_lora_information(void) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 return;
+                            case BSP_INPUT_NAVIGATION_KEY_F6:
+                                test_tx();
+                                break;
                             default:
                                 break;
                         }
