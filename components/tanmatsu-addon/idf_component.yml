@@ -1,9 +1,0 @@
-description: Tanmatsu add-on component
-url: https://github.com/nicolai-electronics/esp32-component-tanmatsu-addon
-repository: git://git@github.com:nicolai-electronics/esp32-component-tanmatsu-addon.git
-issues: https://github.com/nicolai-electronics/esp32-component-tanmatsu-addon/issues
-dependencies:
-  idf: ">=5.5"
-  badgeteam/badge-bsp: ">=0.7.1"
-  nicolaielectronics/eeprom: ">=1.0.0"
-license: "MIT"
