@@ -85,6 +85,7 @@ typedef enum {
 } icon_t;
 
 void       load_icons(void);
+void       unload_icons(void);
 pax_buf_t* get_icon(icon_t icon);
 bool       get_icons_missing(void);
 esp_err_t  download_icons(bool delete_old_files);

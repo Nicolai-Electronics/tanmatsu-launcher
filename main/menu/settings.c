@@ -1,6 +1,7 @@
 #include "settings.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
+#include "common/device.h"
 #include "common/display.h"
 #include "common/theme.h"
 #include "firmware_update.h"
@@ -9,6 +10,7 @@
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/about.h"
+#include "menu/information.h"
 #include "menu/menu_power_information.h"
 #include "menu/message_dialog.h"
 #include "menu/owner.h"
@@ -22,6 +24,7 @@
 #include "settings_clock.h"
 #include "settings_lora.h"
 #include "settings_repository.h"
+#include "settings_theme.h"
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
@@ -44,6 +47,8 @@ typedef enum {
     ACTION_LORA,
     ACTION_FIRMWARE_UPDATE,
     ACTION_TOOLS,
+    ACTION_INFO,
+    ACTION_THEME,
 } menu_home_action_t;
 
 static void execute_action(menu_home_action_t action) {
@@ -72,6 +77,12 @@ static void execute_action(menu_home_action_t action) {
         case ACTION_TOOLS:
             menu_tools();
             break;
+        case ACTION_INFO:
+            menu_information();
+            break;
+        case ACTION_THEME:
+            menu_settings_theme();
+            break;
         default:
             break;
     }
@@ -97,12 +108,21 @@ void menu_settings(void) {
     menu_t menu = {0};
     menu_initialize(&menu);
     menu_insert_item_icon(&menu, "Owner", NULL, (void*)ACTION_OWNER, -1, get_icon(ICON_BADGE));
-    menu_insert_item_icon(&menu, "Brightness", NULL, (void*)ACTION_BRIGHTNESS, -1, get_icon(ICON_BRIGHTNESS));
+    uint8_t dummy;
+    if (bsp_display_get_backlight_brightness(&dummy) == ESP_OK) {
+        menu_insert_item_icon(&menu, "Brightness", NULL, (void*)ACTION_BRIGHTNESS, -1, get_icon(ICON_BRIGHTNESS));
+    }
+    if (!display_is_epaper()) {
+        menu_insert_item_icon(&menu, "Theme", NULL, (void*)ACTION_THEME, -1, get_icon(ICON_COLORS));
+    }
     menu_insert_item_icon(&menu, "WiFi", NULL, (void*)ACTION_WIFI, -1, get_icon(ICON_WIFI));
     menu_insert_item_icon(&menu, "Clock", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_STOREFRONT));
-    menu_insert_item_icon(&menu, "LoRa radio", NULL, (void*)ACTION_LORA, -1, get_icon(ICON_CHAT));
+    if (device_has_lora()) {
+        menu_insert_item_icon(&menu, "LoRa radio", NULL, (void*)ACTION_LORA, -1, get_icon(ICON_CHAT));
+    }
     menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_SETTINGS));
+    menu_insert_item_icon(&menu, "Info", NULL, (void*)ACTION_INFO, -1, get_icon(ICON_INFO));
 
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();

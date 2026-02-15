@@ -55,3 +55,21 @@ esp_err_t device_settings_get_meshcore_private_key(char* out_value, size_t max_l
 esp_err_t device_settings_set_meshcore_private_key(const char* value);
 esp_err_t device_settings_get_meshcore_public_key(char* out_value, size_t max_length);
 esp_err_t device_settings_set_meshcore_public_key(const char* value);
+
+// Theme
+
+typedef enum {
+    THEME_BLACK,
+    THEME_WHITE,
+    THEME_RED,
+    THEME_BLUE,
+    THEME_PURPLE,
+    THEME_ORANGE,
+    THEME_GREEN,
+    THEME_YELLOW,
+    THEME_C_BLUE,
+    THEME_C_RED,
+} theme_setting_t;
+
+esp_err_t device_settings_get_theme(theme_setting_t* out_theme);
+esp_err_t device_settings_set_theme(theme_setting_t theme);

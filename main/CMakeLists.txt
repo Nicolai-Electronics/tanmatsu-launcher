@@ -14,6 +14,7 @@ idf_component_register(
 		"main.c"
 		"common/display.c"
 		"common/theme.c"
+		"common/device.c"
 		
 		# Menus
 		"menu/home.c"
@@ -51,6 +52,7 @@ idf_component_register(
 		"menu/chat/chat.c"
 		"menu/chat/lora_presets.c"
 		"menu/chat/messages.c"
+		"menu/settings_theme.c"
 		"radio_ota.c"
 		"lora_settings_handler.c"
 

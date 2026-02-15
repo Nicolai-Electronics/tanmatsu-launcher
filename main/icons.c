@@ -1,5 +1,7 @@
 #include "icons.h"
 #include "bsp/power.h"
+#include "common/theme.h"
+#include "device_settings.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "fastopen.h"
@@ -27,13 +29,13 @@ static char const TAG[] = "icons";
 #define ICON_BASE_PATH "/int/icons"
 #define ICON_EXT       ".png"
 
-#if defined(CONFIG_BSP_TARGET_KAMI)
+#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
 char icon_suffix[64] = "_f_r_black_16";
 #else
 char icon_suffix[64] = "_f_r_black_32";
 #endif
 
-#if defined(CONFIG_BSP_TARGET_KAMI)
+#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
 static pax_col_t palette[] = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
 #endif
 
@@ -134,6 +136,9 @@ void get_icon_path(icon_t icon, char* out_path, size_t max_path_len) {
 }
 
 void load_icons(void) {
+    theme_setting_t theme_setting = THEME_BLACK;
+    device_settings_get_theme(&theme_setting);
+
     for (int i = 0; i < ICON_LAST; i++) {
         char path[512] = {0};
         get_icon_path(i, path, sizeof(path));
@@ -151,7 +156,7 @@ void load_icons(void) {
             continue;
         }
         pax_buf_init(&icons[i], buffer, ICON_WIDTH, ICON_HEIGHT, ICON_COLOR_FORMAT);
-#if defined(CONFIG_BSP_TARGET_KAMI)
+#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
         icons[i].palette      = palette;
         icons[i].palette_size = sizeof(palette) / sizeof(pax_col_t);
 #endif
@@ -163,6 +168,40 @@ void load_icons(void) {
             icons_missing = true;
         }
         fastclose(fd);
+
+        if (theme_setting != THEME_BLACK) {
+            gui_theme_t* theme = get_theme();
+
+            uint32_t color = theme->palette.color_foreground;
+
+            if (i < ICON_F1 || i >= ICON_BATTERY_0) {
+                for (size_t y = 0; y < ICON_HEIGHT; y++) {
+                    for (size_t x = 0; x < ICON_WIDTH; x++) {
+                        pax_col_t col       = pax_get_pixel(&icons[i], x, y);
+                        col                ^= 0x00FFFFFF;  // Invert color
+                        uint8_t brightness  = ((col & 0xFF) + (col >> 8 & 0xFF) + (col >> 16 & 0xFF)) / 3;
+                        col                &= 0xFF000000;  // Remove colors
+                        uint8_t r           = (((color >> 16) & 0xFF) * brightness) / 255;
+                        uint8_t g           = (((color >> 8) & 0xFF) * brightness) / 255;
+                        uint8_t b           = (((color >> 0) & 0xFF) * brightness) / 255;
+                        col                |= (r << 16) | (g << 8) | b;
+                        pax_set_pixel(&icons[i], col, x, y);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void unload_icons(void) {
+    for (int i = 0; i < ICON_LAST; i++) {
+        if (pax_buf_get_width(&icons[i]) == 0 || pax_buf_get_height(&icons[i]) == 0) {
+            continue;  // Not loaded, skip
+        }
+        uint8_t* buffer = pax_buf_get_pixels(&icons[i]);
+        pax_buf_destroy(&icons[i]);
+        free(buffer);
+        memset(&icons[i], 0, sizeof(pax_buf_t));
     }
 }
 

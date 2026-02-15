@@ -10,6 +10,7 @@
 #include "bsp/power.h"
 #include "charging_mode.h"
 #include "chat/chat.h"
+#include "common/device.h"
 #include "common/display.h"
 #include "common/theme.h"
 #include "coprocessor_management.h"
@@ -181,17 +182,17 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
         } else {
             lora_protocol_status_params_t status = {0};
             esp_err_t                     res    = lora_get_status(&status);
-            if (res != ESP_OK || status.errors > 0) {
+            if (device_has_lora() && (res != ESP_OK || status.errors > 0)) {
                 pax_draw_text(
                     buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
                     pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
                     "LoRa radio fault detected!");
-            } else if (!provisioned) {
+            } else if (device_has_provisioning() && !provisioned) {
                 pax_draw_text(
                     buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
                     pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
                     "Device not provisioned!\r\nPlease contact the manufacturer.");
-            } else if (!name_match) {
+            } else if (device_has_provisioning() && !name_match) {
                 pax_draw_text(
                     buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
                     pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
@@ -290,7 +291,10 @@ void menu_home(void) {
         menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_BUG_REPORT));
     }
     // menu_insert_item_icon(&menu, "Chat", NULL, (void*)ACTION_CHAT, -1, get_icon(ICON_GLOBE)); // Soon...
-    menu_insert_item_icon(&menu, "LoRa info", NULL, (void*)ACTION_LORA_INFORMATION, -1, get_icon(ICON_INFO));
+
+    if (device_has_lora()) {
+        menu_insert_item_icon(&menu, "LoRa info", NULL, (void*)ACTION_LORA_INFORMATION, -1, get_icon(ICON_INFO));
+    }
 
     int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
