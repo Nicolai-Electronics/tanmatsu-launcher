@@ -151,61 +151,61 @@ void theme_initialize(void) {
     theme.chat.list_entry_height         = 64;
 
 #if defined(CONFIG_BSP_TARGET_MCH2022)
-    footer.height             = 24;
-    footer.vertical_margin    = 0;
-    footer.horizontal_margin  = 0;
-    footer.text_height        = 18;
-    footer.vertical_padding   = 0;
-    footer.horizontal_padding = 0;
-    footer.text_font          = pax_font_saira_regular;
+    theme.footer.height             = 24;
+    theme.footer.vertical_margin    = 0;
+    theme.footer.horizontal_margin  = 0;
+    theme.footer.text_height        = 18;
+    theme.footer.vertical_padding   = 0;
+    theme.footer.horizontal_padding = 0;
+    theme.footer.text_font          = pax_font_saira_regular;
 
-    header.height             = 32;
-    header.vertical_margin    = 0;
-    header.horizontal_margin  = 0;
-    header.text_height        = 18;
-    header.vertical_padding   = 0;
-    header.horizontal_padding = 0;
-    header.text_font          = pax_font_saira_regular;
+    theme.header.height             = 32;
+    theme.header.vertical_margin    = 0;
+    theme.header.horizontal_margin  = 0;
+    theme.header.text_height        = 18;
+    theme.header.vertical_padding   = 0;
+    theme.header.horizontal_padding = 0;
+    theme.header.text_font          = pax_font_saira_regular;
 
-    menu.height                = 240 - 32 - 16;
-    menu.vertical_margin       = 0;
-    menu.horizontal_margin     = 0;
-    menu.text_height           = 18;
-    menu.vertical_padding      = 3;
-    menu.horizontal_padding    = 3;
-    menu.text_font             = pax_font_saira_regular;
-    menu.list_entry_height     = 32;
-    menu.grid_horizontal_count = 3;
-    menu.grid_vertical_count   = 3;
+    theme.menu.height                = 240 - 32 - 16;
+    theme.menu.vertical_margin       = 0;
+    theme.menu.horizontal_margin     = 0;
+    theme.menu.text_height           = 18;
+    theme.menu.vertical_padding      = 3;
+    theme.menu.horizontal_padding    = 3;
+    theme.menu.text_font             = pax_font_saira_regular;
+    theme.menu.list_entry_height     = 32;
+    theme.menu.grid_horizontal_count = 3;
+    theme.menu.grid_vertical_count   = 3;
 #endif
 
 #if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
-    footer.height             = 24;
-    footer.vertical_margin    = 0;
-    footer.horizontal_margin  = 0;
-    footer.text_height        = 18;
-    footer.vertical_padding   = 0;
-    footer.horizontal_padding = 0;
-    footer.text_font          = &chakrapetchmedium;
+    theme.footer.height             = 24;
+    theme.footer.vertical_margin    = 0;
+    theme.footer.horizontal_margin  = 0;
+    theme.footer.text_height        = 18;
+    theme.footer.vertical_padding   = 0;
+    theme.footer.horizontal_padding = 0;
+    theme.footer.text_font          = &chakrapetchmedium;
 
-    header.height             = 32;
-    header.vertical_margin    = 0;
-    header.horizontal_margin  = 0;
-    header.text_height        = 18;
-    header.vertical_padding   = 0;
-    header.horizontal_padding = 0;
-    header.text_font          = &chakrapetchmedium;
+    theme.header.height             = 32;
+    theme.header.vertical_margin    = 0;
+    theme.header.horizontal_margin  = 0;
+    theme.header.text_height        = 18;
+    theme.header.vertical_padding   = 0;
+    theme.header.horizontal_padding = 0;
+    theme.header.text_font          = &chakrapetchmedium;
 
-    menu.height                = 240 - 32 - 16;
-    menu.vertical_margin       = 0;
-    menu.horizontal_margin     = 0;
-    menu.text_height           = 18;
-    menu.vertical_padding      = 3;
-    menu.horizontal_padding    = 3;
-    menu.text_font             = &chakrapetchmedium;
-    menu.list_entry_height     = 32;
-    menu.grid_horizontal_count = 3;
-    menu.grid_vertical_count   = 3;
+    theme.menu.height                = 240 - 32 - 16;
+    theme.menu.vertical_margin       = 0;
+    theme.menu.horizontal_margin     = 0;
+    theme.menu.text_height           = 18;
+    theme.menu.vertical_padding      = 3;
+    theme.menu.horizontal_padding    = 3;
+    theme.menu.text_font             = &chakrapetchmedium;
+    theme.menu.list_entry_height     = 32;
+    theme.menu.grid_horizontal_count = 3;
+    theme.menu.grid_vertical_count   = 3;
 #endif
 }
 

@@ -112,3 +112,11 @@ void display_blit(void) {
 bool display_is_initialized(void) {
     return pax_buf_get_width(&fb) > 0;
 }
+
+bool display_is_epaper(void) {
+#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
+    return true;
+#else
+    return false;
+#endif
+}

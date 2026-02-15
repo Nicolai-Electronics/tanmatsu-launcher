@@ -112,6 +112,7 @@ static gui_element_icontext_t wifi_indicator(void) {
         case BSP_POWER_RADIO_STATE_APPLICATION:
         default:
             if (radio_initialized && esp_wifi_get_mode(&mode) == ESP_OK) {
+                bool show_text = pax_buf_get_width(display_get_buffer()) > 400;
                 if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
                     if (wifi_connection_is_connected() && esp_wifi_sta_get_ap_info(&connected_ap) == ESP_OK) {
                         pax_buf_t* icon = get_icon(ICON_WIFI_0_BAR);
@@ -124,15 +125,15 @@ static gui_element_icontext_t wifi_indicator(void) {
                         } else if (connected_ap.rssi > -80) {
                             icon = get_icon(ICON_WIFI_1_BAR);
                         }
-                        return (gui_element_icontext_t){icon, (char*)connected_ap.ssid};
+                        return (gui_element_icontext_t){icon, show_text ? (char*)connected_ap.ssid : ""};
                     } else {
-                        return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), "Disconnected"};
+                        return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), show_text ? "Disconnected" : ""};
                     }
                 } else if (mode == WIFI_MODE_AP) {
                     return (gui_element_icontext_t){get_icon(ICON_WIFI_OFF), ""};  // AP mode is currently unused
                     // The device will be in AP mode by default until connection to a network is
                 } else {
-                    return (gui_element_icontext_t){get_icon(ICON_WIFI_UNKNOWN), "Other"};
+                    return (gui_element_icontext_t){get_icon(ICON_WIFI_UNKNOWN), show_text ? "Other" : ""};
                 }
             } else {
                 return (gui_element_icontext_t){get_icon(ICON_WIFI_ERROR), ""};
@@ -353,8 +354,8 @@ void busy_dialog(pax_buf_t* icon, const char* title, const char* message, bool h
     render_base_screen_statusbar(buffer, theme, true, header, true, ((gui_element_icontext_t[]){{icon, (char*)title}}),
                                  1, NULL, 0, NULL, 0);
 
-    pax_center_text(buffer, 0xFF000000, theme->menu.text_font, 24, pax_buf_get_width(buffer) / 2.0f,
-                    (pax_buf_get_height(buffer) - 24) / 2.0f, message);
+    pax_center_text(buffer, theme->palette.color_foreground, theme->menu.text_font, 24,
+                    pax_buf_get_width(buffer) / 2.0f, (pax_buf_get_height(buffer) - 24) / 2.0f, message);
 
     display_blit_buffer(buffer);
 }

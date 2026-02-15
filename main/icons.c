@@ -29,13 +29,13 @@ static char const TAG[] = "icons";
 #define ICON_BASE_PATH "/int/icons"
 #define ICON_EXT       ".png"
 
-#if defined(CONFIG_BSP_TARGET_KAMI)
+#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
 char icon_suffix[64] = "_f_r_black_16";
 #else
 char icon_suffix[64] = "_f_r_black_32";
 #endif
 
-#if defined(CONFIG_BSP_TARGET_KAMI)
+#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
 static pax_col_t palette[] = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
 #endif
 

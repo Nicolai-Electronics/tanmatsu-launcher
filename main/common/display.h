@@ -9,3 +9,4 @@ pax_buf_t* display_get_buffer(void);
 void       display_blit_buffer(pax_buf_t* fb);
 void       display_blit(void);
 bool       display_is_initialized(void);
+bool       display_is_epaper(void);

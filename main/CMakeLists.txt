@@ -14,6 +14,7 @@ idf_component_register(
 		"main.c"
 		"common/display.c"
 		"common/theme.c"
+		"common/device.c"
 		
 		# Menus
 		"menu/home.c"
