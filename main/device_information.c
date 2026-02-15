@@ -99,22 +99,6 @@ const char* get_radio_name(uint8_t radio_id) {
             return "EBYTE E22-400M22S";
         case DEVICE_VARIANT_RADIO_EBYTE_E22_900M_22S:
             return "EBYTE E22-900M22S";
-        case DEVICE_VARIANT_RADIO_EBYTE_E22_400M_30S:
-            return "EBYTE E22-400M30S";
-        case DEVICE_VARIANT_RADIO_EBYTE_E22_900M_30S:
-            return "EBYTE E22-900M30S";
-        case DEVICE_VARIANT_RADIO_EBYTE_E22_400M_33S:
-            return "EBYTE E22-400M33S";
-        case DEVICE_VARIANT_RADIO_EBYTE_E22_900M_33S:
-            return "EBYTE E22-900M33S";
-        case DEVICE_VARIANT_RADIO_EBYTE_E220_400M_22S:
-            return "EBYTE E220-400M22S";
-        case DEVICE_VARIANT_RADIO_EBYTE_E220_900M_22S:
-            return "EBYTE E220-900M22S";
-        case DEVICE_VARIANT_RADIO_EBYTE_E220_400M_33S:
-            return "EBYTE E220-400M33S";
-        case DEVICE_VARIANT_RADIO_EBYTE_E220_900M_33S:
-            return "EBYTE E220-900M33S";
         default:
             return "Unknown";
     }
@@ -138,10 +122,24 @@ const char* get_color_name(uint8_t color_id) {
             return "Yellow";
         case DEVICE_VARIANT_COLOR_WHITE:
             return "White";
+        case DEVICE_VARIANT_COLOR_COMMODORE:
+            return "Commodore";
+        case DEVICE_VARIANT_COLOR_BLACK_PURPLE:
+            return "Black - Purple";
         case DEVICE_VARIANT_COLOR_ORANGE_BLACK:
             return "Orange - Black";
         case DEVICE_VARIANT_COLOR_ORANGE_CYBERDECK:
             return "Orange - Cyberdeck";
+        case DEVICE_VARIANT_COLOR_WHITE_PURPLE:
+            return "White - Purple";
+        case DEVICE_VARIANT_COLOR_BLACK_WHITE:
+            return "Black - White";
+        case DEVICE_VARIANT_COLOR_GREEN_BLUE:
+            return "Green - Blue";
+        case DEVICE_VARIANT_COLOR_BLACK_GREEN:
+            return "Black - Green";
+        case DEVICE_VARIANT_COLOR_WHITE_CYBERDECK:
+            return "White - Cyberdeck";
         default:
             return "Unknown";
     }

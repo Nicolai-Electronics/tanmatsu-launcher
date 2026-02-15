@@ -407,3 +407,13 @@ esp_err_t device_settings_get_meshcore_public_key(char* out_value, size_t max_le
 esp_err_t device_settings_set_meshcore_public_key(const char* value) {
     return device_settings_set_string("mc.public_key", value);
 }
+
+// Theme
+
+esp_err_t device_settings_get_theme(theme_setting_t* out_theme) {
+    return device_settings_get_u32("owner.theme", THEME_BLACK, (uint32_t*)out_theme);
+}
+
+esp_err_t device_settings_set_theme(theme_setting_t theme) {
+    return device_settings_set_u32("owner.theme", (uint32_t)theme);
+}

@@ -22,6 +22,7 @@
 #include "settings_clock.h"
 #include "settings_lora.h"
 #include "settings_repository.h"
+#include "settings_theme.h"
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
@@ -44,6 +45,7 @@ typedef enum {
     ACTION_LORA,
     ACTION_FIRMWARE_UPDATE,
     ACTION_TOOLS,
+    ACTION_THEME,
 } menu_home_action_t;
 
 static void execute_action(menu_home_action_t action) {
@@ -71,6 +73,9 @@ static void execute_action(menu_home_action_t action) {
             break;
         case ACTION_TOOLS:
             menu_tools();
+            break;
+        case ACTION_THEME:
+            menu_settings_theme();
             break;
         default:
             break;
@@ -103,6 +108,7 @@ void menu_settings(void) {
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_STOREFRONT));
     menu_insert_item_icon(&menu, "LoRa radio", NULL, (void*)ACTION_LORA, -1, get_icon(ICON_CHAT));
     menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_SETTINGS));
+    menu_insert_item_icon(&menu, "Theme", NULL, (void*)ACTION_THEME, -1, get_icon(ICON_COLORS));
 
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();

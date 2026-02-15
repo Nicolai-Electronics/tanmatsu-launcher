@@ -318,6 +318,9 @@ void app_main(void) {
     }
     ESP_ERROR_CHECK(res);
 
+    // Initialize theme struct
+    theme_initialize();
+
     // Initialize the Board Support Package
     const bsp_configuration_t bsp_configuration = {
         .display =
