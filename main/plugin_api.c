@@ -12,6 +12,7 @@
 #include <dirent.h>
 #include <errno.h>
 
+#include "bsp/led.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "nvs_flash.h"
@@ -58,17 +59,16 @@ static status_widget_entry_t status_widgets[MAX_STATUS_WIDGETS] = {0};
 // The badge-elf-api LED functions write directly to BSP, so the system needs
 // to check claims before setting power/WiFi indicator LEDs.
 
-#define LED_COUNT 6
-
 typedef struct {
     bool claimed;
     plugin_context_t* owner;
 } led_claim_t;
 
-static led_claim_t led_claims[LED_COUNT] = {0};
+static led_claim_t* led_claims = NULL;
+static uint32_t led_claim_count = 0;
 
 bool asp_plugin_led_claim(plugin_context_t* ctx, uint32_t index) {
-    if (index >= LED_COUNT || ctx == NULL) return false;
+    if (led_claims == NULL || index >= led_claim_count || ctx == NULL) return false;
 
     // Can only claim if unclaimed or already owned by this plugin
     if (!led_claims[index].claimed || led_claims[index].owner == ctx) {
@@ -82,7 +82,7 @@ bool asp_plugin_led_claim(plugin_context_t* ctx, uint32_t index) {
 }
 
 void asp_plugin_led_release(plugin_context_t* ctx, uint32_t index) {
-    if (index >= LED_COUNT) return;
+    if (led_claims == NULL || index >= led_claim_count) return;
 
     // Can only release if owned by this plugin (or ctx is NULL for force release)
     if (led_claims[index].claimed &&
@@ -94,7 +94,7 @@ void asp_plugin_led_release(plugin_context_t* ctx, uint32_t index) {
 }
 
 bool plugin_api_is_led_claimed(uint32_t index) {
-    if (index >= LED_COUNT) return false;
+    if (led_claims == NULL || index >= led_claim_count) return false;
     return led_claims[index].claimed;
 }
 
@@ -140,13 +140,14 @@ static bool i2c_bus_release(uint8_t bus) {
     return false;
 }
 
-asp_i2c_device_t asp_i2c_open(plugin_context_t* ctx, uint8_t bus, uint16_t address, uint32_t speed_hz) {
-    if (ctx == NULL || bus > 1) return NULL;
+asp_err_t asp_i2c_open(plugin_context_t* ctx, asp_i2c_device_t* out_i2c_device_handle, uint8_t bus, uint16_t address, uint32_t speed_hz) {
+    if (ctx == NULL || out_i2c_device_handle == NULL) return ASP_ERR_PARAM;
+    if (bus > 1) return ASP_ERR_PARAM;
 
     i2c_master_bus_handle_t bus_handle = NULL;
     if (!i2c_bus_get_handles(bus, &bus_handle)) {
         ESP_LOGE(TAG, "I2C bus %d not available", bus);
-        return NULL;
+        return ASP_ERR_FAIL;
     }
 
     // Find free slot
@@ -159,7 +160,7 @@ asp_i2c_device_t asp_i2c_open(plugin_context_t* ctx, uint8_t bus, uint16_t addre
     }
     if (slot < 0) {
         ESP_LOGW(TAG, "No free I2C device slots");
-        return NULL;
+        return ASP_ERR_NOMEM;
     }
 
     i2c_device_config_t dev_cfg = {
@@ -173,7 +174,7 @@ asp_i2c_device_t asp_i2c_open(plugin_context_t* ctx, uint8_t bus, uint16_t addre
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to add I2C device at 0x%02X on bus %d: %s",
                  address, bus, esp_err_to_name(err));
-        return NULL;
+        return ASP_ERR_FAIL;
     }
 
     i2c_devices[slot].in_use = true;
@@ -184,14 +185,15 @@ asp_i2c_device_t asp_i2c_open(plugin_context_t* ctx, uint8_t bus, uint16_t addre
     ESP_LOGI(TAG, "Plugin %s opened I2C device at 0x%02X on bus %d (slot %d)",
              ctx->plugin_slug ? ctx->plugin_slug : "unknown", address, bus, slot);
 
-    // Return slot index + 1 so NULL (0) means failure
-    return (asp_i2c_device_t)(intptr_t)(slot + 1);
+    // Return slot index + 1 so NULL (0) means invalid
+    *out_i2c_device_handle = (asp_i2c_device_t)(intptr_t)(slot + 1);
+    return ASP_OK;
 }
 
-void asp_i2c_close(asp_i2c_device_t device) {
+asp_err_t asp_i2c_close(asp_i2c_device_t device) {
     int slot = (int)(intptr_t)device - 1;
-    if (slot < 0 || slot >= MAX_I2C_DEVICES) return;
-    if (!i2c_devices[slot].in_use) return;
+    if (slot < 0 || slot >= MAX_I2C_DEVICES) return ASP_ERR_PARAM;
+    if (!i2c_devices[slot].in_use) return ASP_ERR_PARAM;
 
     i2c_master_bus_rm_device(i2c_devices[slot].dev_handle);
 
@@ -200,69 +202,70 @@ void asp_i2c_close(asp_i2c_device_t device) {
     i2c_devices[slot].in_use = false;
     i2c_devices[slot].dev_handle = NULL;
     i2c_devices[slot].owner = NULL;
+    return ASP_OK;
 }
 
-bool asp_i2c_write(asp_i2c_device_t device, const uint8_t* data, size_t len) {
+asp_err_t asp_i2c_write(asp_i2c_device_t device, const uint8_t* data, size_t len) {
     int slot = (int)(intptr_t)device - 1;
-    if (slot < 0 || slot >= MAX_I2C_DEVICES || !i2c_devices[slot].in_use) return false;
-    if (data == NULL || len == 0) return false;
+    if (slot < 0 || slot >= MAX_I2C_DEVICES || !i2c_devices[slot].in_use) return ASP_ERR_PARAM;
+    if (data == NULL || len == 0) return ASP_ERR_PARAM;
 
-    if (!i2c_bus_claim(i2c_devices[slot].bus)) return false;
+    if (!i2c_bus_claim(i2c_devices[slot].bus)) return ASP_ERR_FAIL;
     esp_err_t err = i2c_master_transmit(i2c_devices[slot].dev_handle, data, len, 100);
     i2c_bus_release(i2c_devices[slot].bus);
 
-    return err == ESP_OK;
+    return err == ESP_OK ? ASP_OK : ASP_ERR_FAIL;
 }
 
-bool asp_i2c_read(asp_i2c_device_t device, uint8_t* data, size_t len) {
+asp_err_t asp_i2c_read(asp_i2c_device_t device, uint8_t* data, size_t len) {
     int slot = (int)(intptr_t)device - 1;
-    if (slot < 0 || slot >= MAX_I2C_DEVICES || !i2c_devices[slot].in_use) return false;
-    if (data == NULL || len == 0) return false;
+    if (slot < 0 || slot >= MAX_I2C_DEVICES || !i2c_devices[slot].in_use) return ASP_ERR_PARAM;
+    if (data == NULL || len == 0) return ASP_ERR_PARAM;
 
-    if (!i2c_bus_claim(i2c_devices[slot].bus)) return false;
+    if (!i2c_bus_claim(i2c_devices[slot].bus)) return ASP_ERR_FAIL;
     esp_err_t err = i2c_master_receive(i2c_devices[slot].dev_handle, data, len, 100);
     i2c_bus_release(i2c_devices[slot].bus);
 
-    return err == ESP_OK;
+    return err == ESP_OK ? ASP_OK : ASP_ERR_FAIL;
 }
 
-bool asp_i2c_write_read(asp_i2c_device_t device,
+asp_err_t asp_i2c_write_read(asp_i2c_device_t device,
                          const uint8_t* write_data, size_t write_len,
                          uint8_t* read_data, size_t read_len) {
     int slot = (int)(intptr_t)device - 1;
-    if (slot < 0 || slot >= MAX_I2C_DEVICES || !i2c_devices[slot].in_use) return false;
-    if (write_data == NULL || write_len == 0 || read_data == NULL || read_len == 0) return false;
+    if (slot < 0 || slot >= MAX_I2C_DEVICES || !i2c_devices[slot].in_use) return ASP_ERR_PARAM;
+    if (write_data == NULL || write_len == 0 || read_data == NULL || read_len == 0) return ASP_ERR_PARAM;
 
-    if (!i2c_bus_claim(i2c_devices[slot].bus)) return false;
+    if (!i2c_bus_claim(i2c_devices[slot].bus)) return ASP_ERR_FAIL;
     esp_err_t err = i2c_master_transmit_receive(i2c_devices[slot].dev_handle,
                                                  write_data, write_len,
                                                  read_data, read_len, 100);
     i2c_bus_release(i2c_devices[slot].bus);
 
-    return err == ESP_OK;
+    return err == ESP_OK ? ASP_OK : ASP_ERR_FAIL;
 }
 
-bool asp_i2c_probe(uint8_t bus, uint16_t address) {
-    if (bus > 1) return false;
+asp_err_t asp_i2c_probe(uint8_t bus, uint16_t address) {
+    if (bus > 1) return ASP_ERR_PARAM;
 
     i2c_master_bus_handle_t bus_handle = NULL;
     if (!i2c_bus_get_handles(bus, &bus_handle)) {
         if (address == 0x08) {  // Log once per scan (first address)
             ESP_LOGE(TAG, "I2C probe: bus %d handle not available", bus);
         }
-        return false;
+        return ASP_ERR_FAIL;
     }
 
     if (!i2c_bus_claim(bus)) {
         if (address == 0x08) {
             ESP_LOGE(TAG, "I2C probe: bus %d claim failed", bus);
         }
-        return false;
+        return ASP_ERR_FAIL;
     }
     esp_err_t err = i2c_master_probe(bus_handle, address, 100);
     i2c_bus_release(bus);
 
-    return err == ESP_OK;
+    return err == ESP_OK ? ASP_OK : ASP_ERR_NOT_FOUND;
 }
 
 // Display API moved to badge-elf-api (asp/display.h)
@@ -932,6 +935,15 @@ void plugin_api_init(void) {
             ESP_LOGE(TAG, "Failed to create plugin API mutex");
         }
     }
+
+    if (led_claims == NULL) {
+        bsp_led_get_count(&led_claim_count);
+        led_claims = calloc(led_claim_count, sizeof(led_claim_t));
+        if (led_claims == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate LED claim array");
+            led_claim_count = 0;
+        }
+    }
 }
 
 void plugin_api_cleanup_for_plugin(plugin_context_t* ctx) {
@@ -981,7 +993,7 @@ void plugin_api_cleanup_for_plugin(plugin_context_t* ctx) {
     }
 
     // Release all LED claims owned by this plugin
-    for (int i = 0; i < LED_COUNT; i++) {
+    for (uint32_t i = 0; i < led_claim_count; i++) {
         if (led_claims[i].claimed && led_claims[i].owner == ctx) {
             ESP_LOGI(TAG, "Auto-releasing LED claim %d", i);
             led_claims[i].claimed = false;

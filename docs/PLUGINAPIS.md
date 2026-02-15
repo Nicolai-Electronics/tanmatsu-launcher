@@ -280,11 +280,17 @@ Return `true` to consume the event (prevent application from seeing it), `false`
 
 ## RGB LED API
 
-Control the 6 RGB LEDs on the device. LEDs 0-1 are normally used by the system for WiFi and power indicators. Plugins must claim LEDs before using them to prevent conflicts.
+Control the RGB LEDs on the device. LEDs 0-1 are normally used by the system for WiFi and power indicators. Plugins must claim LEDs before using them to prevent conflicts.
 
-```c
-#define PLUGIN_LED_COUNT 6
-```
+All LED functions return `asp_err_t`. Use `asp_led_get_count()` to query the number of LEDs at runtime.
+
+### LED Count
+
+#### asp_led_get_count()
+
+Get the number of RGB LEDs available on the device.
+
+**Returns:** `uint32_t` - Number of LEDs
 
 ### Brightness and Mode
 
@@ -295,7 +301,7 @@ Set overall LED brightness.
 **Parameters:**
 - `percentage`: 0-100
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t`
 
 #### asp_led_get_brightness(out_percentage)
 
@@ -304,7 +310,7 @@ Get overall LED brightness.
 **Parameters:**
 - `out_percentage`: `uint8_t*` - Pointer to receive brightness value (0-100)
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t`
 
 #### asp_led_set_mode(automatic)
 
@@ -315,7 +321,7 @@ Set LED mode.
 
 Must set to `false` before controlling LEDs directly.
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t`
 
 #### asp_led_get_mode(out_automatic)
 
@@ -324,7 +330,7 @@ Get current LED mode.
 **Parameters:**
 - `out_automatic`: `bool*` - Pointer to receive mode
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t`
 
 ### Pixel Control
 
@@ -335,44 +341,44 @@ All `set_pixel` functions stage the color but do not update the hardware. Call `
 Set LED color using packed RGB.
 
 **Parameters:**
-- `index`: 0-5
+- `index`: 0 to `asp_led_get_count() - 1`
 - `color`: `0xRRGGBB` format
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t` (`ASP_ERR_PARAM` if index out of range)
 
 #### asp_led_set_pixel_rgb(index, red, green, blue)
 
 Set LED color using separate RGB components.
 
 **Parameters:**
-- `index`: 0-5
+- `index`: 0 to `asp_led_get_count() - 1`
 - `red`, `green`, `blue`: 0-255
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t` (`ASP_ERR_PARAM` if index out of range)
 
 #### asp_led_set_pixel_hsv(index, hue, saturation, value)
 
 Set LED color using HSV.
 
 **Parameters:**
-- `index`: 0-5
+- `index`: 0 to `asp_led_get_count() - 1`
 - `hue`: 0-65535 (maps to 0-360 degrees)
 - `saturation`: 0-255
 - `value`: 0-255
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t` (`ASP_ERR_PARAM` if index out of range)
 
 #### asp_led_send()
 
 Send staged LED data to hardware. Call after setting pixels.
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t`
 
 #### asp_led_clear()
 
 Set all LEDs to black and send to hardware.
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t`
 
 ### LED Claiming
 
@@ -384,7 +390,7 @@ Claim an LED for plugin use.
 
 **Parameters:**
 - `ctx`: `plugin_context_t*` - Plugin context
-- `index`: LED index (0-5)
+- `index`: LED index (0 to `asp_led_get_count() - 1`)
 
 **Returns:** `true` if claim succeeded, `false` if already claimed by another plugin
 
@@ -394,7 +400,7 @@ Release an LED claim.
 
 **Parameters:**
 - `ctx`: `plugin_context_t*` - Plugin context
-- `index`: LED index (0-5)
+- `index`: LED index (0 to `asp_led_get_count() - 1`)
 
 ---
 
@@ -584,13 +590,18 @@ Return 0 if not handled, positive if handled.
 
 ## Network API
 
-### asp_net_is_connected()
+All network functions return `asp_err_t`.
+
+### asp_net_is_connected(out_connected)
 
 Check if network is available.
 
-**Returns:** `true` if connected, `false` otherwise
+**Parameters:**
+- `out_connected`: `bool*` - Pointer to receive connection state
 
-### asp_http_get(url, response, max_len)
+**Returns:** `asp_err_t`
+
+### asp_http_get(url, response, max_len, out_status_code)
 
 Perform an HTTP GET request.
 
@@ -598,10 +609,11 @@ Perform an HTTP GET request.
 - `url`: Full URL to fetch
 - `response`: Buffer to receive response body
 - `max_len`: Maximum bytes to store
+- `out_status_code`: `int*` - Pointer to receive HTTP status code (200, 404, etc.)
 
-**Returns:** HTTP status code (200, 404, etc.) or -1 on error
+**Returns:** `asp_err_t` (`ASP_OK` on successful request, `ASP_ERR_FAIL` on transport error)
 
-### asp_http_post(url, body, response, max_len)
+### asp_http_post(url, body, response, max_len, out_status_code)
 
 Perform an HTTP POST request.
 
@@ -610,8 +622,9 @@ Perform an HTTP POST request.
 - `body`: Request body (null-terminated string)
 - `response`: Buffer to receive response
 - `max_len`: Maximum response bytes
+- `out_status_code`: `int*` - Pointer to receive HTTP status code
 
-**Returns:** HTTP status code or -1 on error
+**Returns:** `asp_err_t` (`ASP_OK` on successful request, `ASP_ERR_FAIL` on transport error)
 
 ---
 
@@ -663,19 +676,20 @@ Write an integer setting.
 
 ## I2C Bus API
 
-Access I2C peripherals connected to the device. Maximum 8 I2C device handles across all plugins. Devices are automatically closed when the plugin unloads.
+Access I2C peripherals connected to the device. Maximum 8 I2C device handles across all plugins. Devices are automatically closed when the plugin unloads. All I2C functions return `asp_err_t`.
 
-### asp_i2c_open(ctx, bus, address, speed_hz)
+### asp_i2c_open(ctx, out_i2c_device_handle, bus, address, speed_hz)
 
 Open an I2C device on the specified bus.
 
 **Parameters:**
 - `ctx`: `plugin_context_t*` - Plugin context
+- `out_i2c_device_handle`: `asp_i2c_device_t*` - Pointer to receive device handle
 - `bus`: `0` = primary (internal), `1` = external (QWIIC/SAO)
 - `address`: 7-bit I2C device address
 - `speed_hz`: Clock speed (e.g. `100000` for 100 kHz, `400000` for 400 kHz)
 
-**Returns:** `asp_i2c_device_t` handle on success, `NULL` on failure
+**Returns:** `asp_err_t` (`ASP_OK` on success, handle written to `*out_i2c_device_handle`)
 
 ### asp_i2c_close(device)
 
@@ -683,6 +697,8 @@ Close an I2C device and release resources.
 
 **Parameters:**
 - `device`: Handle from `asp_i2c_open`
+
+**Returns:** `asp_err_t`
 
 ### asp_i2c_write(device, data, len)
 
@@ -693,7 +709,7 @@ Write data to an I2C device.
 - `data`: `const uint8_t*` - Data to write
 - `len`: Number of bytes
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t`
 
 ### asp_i2c_read(device, data, len)
 
@@ -704,7 +720,7 @@ Read data from an I2C device.
 - `data`: `uint8_t*` - Buffer to read into
 - `len`: Number of bytes to read
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t`
 
 ### asp_i2c_write_read(device, write_data, write_len, read_data, read_len)
 
@@ -717,7 +733,7 @@ Write then read in a single I2C transaction (repeated start). Useful for registe
 - `read_data`: `uint8_t*` - Buffer for read data
 - `read_len`: Number of bytes to read
 
-**Returns:** `true` on success
+**Returns:** `asp_err_t`
 
 ### asp_i2c_probe(bus, address)
 
@@ -727,7 +743,7 @@ Probe for the presence of an I2C device.
 - `bus`: `0` = primary, `1` = external
 - `address`: 7-bit I2C address to probe
 
-**Returns:** `true` if a device responds at that address
+**Returns:** `asp_err_t` (`ASP_OK` if device found, `ASP_ERR_NOT_FOUND` if not)
 
 ---
 
@@ -839,7 +855,7 @@ typedef void* asp_i2c_device_t;
 | Input hooks | 8 | All plugins combined |
 | Event handlers | 16 | All plugins combined |
 | I2C devices | 8 | All plugins combined |
-| RGB LEDs | 6 | Device total |
+| RGB LEDs | `asp_led_get_count()` | Device total |
 | Text dialog lines | 10 | Per dialog |
 
 All registrations (widgets, hooks, event handlers, LED claims, I2C devices) are automatically cleaned up when a plugin is unloaded.

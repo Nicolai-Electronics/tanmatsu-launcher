@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "asp/err.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -233,53 +234,42 @@ bool asp_plugin_input_inject(plugin_input_event_t* event);
 // Host API: RGB LEDs
 // ============================================
 
-// Number of RGB LEDs available on the device
-#define PLUGIN_LED_COUNT 6
+// Get the number of RGB LEDs available on the device
+uint32_t asp_led_get_count(void);
 
 // Set overall LED brightness (0-100%)
-// Returns: true on success
-bool asp_led_set_brightness(uint8_t percentage);
+asp_err_t asp_led_set_brightness(uint8_t percentage);
 
 // Get overall LED brightness (0-100%)
-// Returns: true on success
-bool asp_led_get_brightness(uint8_t* out_percentage);
+asp_err_t asp_led_get_brightness(uint8_t* out_percentage);
 
 // Set LED mode (true = automatic/system control, false = manual/plugin control)
 // Must set to false (manual) before controlling LEDs directly
-// Returns: true on success
-bool asp_led_set_mode(bool automatic);
+asp_err_t asp_led_set_mode(bool automatic);
 
 // Get current LED mode
-// Returns: true on success
-bool asp_led_get_mode(bool* out_automatic);
+asp_err_t asp_led_get_mode(bool* out_automatic);
 
 // Set a single LED pixel color using 0xRRGGBB format
-// Index: 0-5 for the 6 LEDs
 // Does not update hardware until asp_led_send() is called
-// Returns: true on success
-bool asp_led_set_pixel(uint32_t index, uint32_t color);
+asp_err_t asp_led_set_pixel(uint32_t index, uint32_t color);
 
 // Set a single LED pixel color using RGB components
-// Index: 0-5 for the 6 LEDs
 // Does not update hardware until asp_led_send() is called
-// Returns: true on success
-bool asp_led_set_pixel_rgb(uint32_t index, uint8_t red, uint8_t green, uint8_t blue);
+asp_err_t asp_led_set_pixel_rgb(uint32_t index, uint8_t red, uint8_t green, uint8_t blue);
 
 // Set a single LED pixel color using HSV
 // hue: 0-65535 (maps to 0-360 degrees)
 // saturation: 0-255
 // value: 0-255
 // Does not update hardware until asp_led_send() is called
-// Returns: true on success
-bool asp_led_set_pixel_hsv(uint32_t index, uint16_t hue, uint8_t saturation, uint8_t value);
+asp_err_t asp_led_set_pixel_hsv(uint32_t index, uint16_t hue, uint8_t saturation, uint8_t value);
 
 // Send LED data to hardware (call after setting pixels)
-// Returns: true on success
-bool asp_led_send(void);
+asp_err_t asp_led_send(void);
 
 // Clear all LEDs (sets all to black and sends to hardware)
-// Returns: true on success
-bool asp_led_clear(void);
+asp_err_t asp_led_clear(void);
 
 // Claim an LED for plugin use
 // Plugins MUST claim an LED before using it. This prevents conflicts
@@ -388,16 +378,17 @@ void asp_plugin_event_unregister(int handler_id);
 // Host API: Networking
 // ============================================
 
-// Check if network is available
-bool asp_net_is_connected(void);
+// Check if network is available.
+// On success, writes the connection state to *out_connected and returns ASP_OK.
+asp_err_t asp_net_is_connected(bool* out_connected);
 
-// Perform HTTP GET request
-// Returns: HTTP status code on success, -1 on error
-int asp_http_get(const char* url, char* response, size_t max_len);
+// Perform HTTP GET request.
+// On success, writes the HTTP status code to *out_status_code and returns ASP_OK.
+asp_err_t asp_http_get(const char* url, char* response, size_t max_len, int* out_status_code);
 
-// Perform HTTP POST request
-// Returns: HTTP status code on success, -1 on error
-int asp_http_post(const char* url, const char* body, char* response, size_t max_len);
+// Perform HTTP POST request.
+// On success, writes the HTTP status code to *out_status_code and returns ASP_OK.
+asp_err_t asp_http_post(const char* url, const char* body, char* response, size_t max_len, int* out_status_code);
 
 // ============================================
 // Host API: Settings Storage
@@ -428,26 +419,27 @@ typedef void* asp_i2c_device_t;
 // bus: 0 = primary (internal), 1 = external (QWIIC/SAO)
 // address: 7-bit I2C device address
 // speed_hz: clock speed (e.g. 100000 for 100kHz, 400000 for 400kHz)
-// Returns opaque device handle, or NULL on failure.
+// On success, writes device handle to *out_i2c_device_handle and returns ASP_OK.
 // Devices are auto-closed when the plugin unloads.
-asp_i2c_device_t asp_i2c_open(plugin_context_t* ctx, uint8_t bus, uint16_t address, uint32_t speed_hz);
+asp_err_t asp_i2c_open(plugin_context_t* ctx, asp_i2c_device_t* out_i2c_device_handle, uint8_t bus, uint16_t address, uint32_t speed_hz);
 
 // Close an I2C device and release resources.
-void asp_i2c_close(asp_i2c_device_t device);
+asp_err_t asp_i2c_close(asp_i2c_device_t device);
 
 // Write data to an I2C device.
-bool asp_i2c_write(asp_i2c_device_t device, const uint8_t* data, size_t len);
+asp_err_t asp_i2c_write(asp_i2c_device_t device, const uint8_t* data, size_t len);
 
 // Read data from an I2C device.
-bool asp_i2c_read(asp_i2c_device_t device, uint8_t* data, size_t len);
+asp_err_t asp_i2c_read(asp_i2c_device_t device, uint8_t* data, size_t len);
 
 // Write then read in a single I2C transaction (repeated start).
-bool asp_i2c_write_read(asp_i2c_device_t device,
+asp_err_t asp_i2c_write_read(asp_i2c_device_t device,
                          const uint8_t* write_data, size_t write_len,
                          uint8_t* read_data, size_t read_len);
 
 // Probe for an I2C device on the specified bus.
-bool asp_i2c_probe(uint8_t bus, uint16_t address);
+// Returns ASP_OK if a device responds, ASP_ERR_NOT_FOUND otherwise.
+asp_err_t asp_i2c_probe(uint8_t bus, uint16_t address);
 
 // ============================================
 // Host API: Power Information

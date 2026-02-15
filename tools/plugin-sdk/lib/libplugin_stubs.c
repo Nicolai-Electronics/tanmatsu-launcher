@@ -28,6 +28,7 @@ void asp_plugin_input_hook_unregister(int hook_id) {}
 int asp_plugin_input_inject(void* event) { return 0; }
 
 // LED API
+unsigned int asp_led_get_count(void) { return 0; }
 int asp_led_set_brightness(unsigned char percentage) { return 0; }
 int asp_led_get_brightness(unsigned char* out_percentage) { return 0; }
 int asp_led_set_mode(int automatic) { return 0; }
@@ -68,9 +69,9 @@ int asp_plugin_event_register(void* ctx, unsigned int event_mask, void* callback
 void asp_plugin_event_unregister(int registration_id) {}
 
 // Network API
-int asp_net_is_connected(void) { return 0; }
-int asp_http_get(const char* url, void* response, unsigned int max_len) { return 0; }
-int asp_http_post(const char* url, const char* body, void* response, unsigned int max_len) { return 0; }
+int asp_net_is_connected(int* out_connected) { return 0; }
+int asp_http_get(const char* url, void* response, unsigned int max_len, int* out_status_code) { return 0; }
+int asp_http_post(const char* url, const char* body, void* response, unsigned int max_len, int* out_status_code) { return 0; }
 
 // Settings API
 int asp_plugin_settings_get_string(void* ctx, const char* key, char* value, unsigned int max_len) { return 0; }
@@ -79,8 +80,8 @@ int asp_plugin_settings_get_int(void* ctx, const char* key, int* value) { return
 int asp_plugin_settings_set_int(void* ctx, const char* key, int value) { return 0; }
 
 // I2C API
-void* asp_i2c_open(void* ctx, unsigned char bus, unsigned short address, unsigned int speed_hz) { return 0; }
-void asp_i2c_close(void* device) {}
+int asp_i2c_open(void* ctx, void* out_i2c_device_handle, unsigned char bus, unsigned short address, unsigned int speed_hz) { return 0; }
+int asp_i2c_close(void* device) { return 0; }
 int asp_i2c_write(void* device, const unsigned char* data, unsigned int len) { return 0; }
 int asp_i2c_read(void* device, unsigned char* data, unsigned int len) { return 0; }
 int asp_i2c_write_read(void* device, const unsigned char* write_data, unsigned int write_len, unsigned char* read_data, unsigned int read_len) { return 0; }
@@ -93,5 +94,5 @@ int asp_power_get_battery_voltage(unsigned short* out_millivolt) { return 0; }
 int asp_power_get_input_voltage(unsigned short* out_millivolt) { return 0; }
 int asp_power_get_charging_config(int* out_disabled, unsigned short* out_current_ma) { return 0; }
 int asp_power_set_charging(int disable, unsigned short current_ma) { return 0; }
-int asp_power_get_usb_boost(int* out_enabled) { return 0; }
-int asp_power_set_usb_boost(int enable) { return 0; }
+int asp_power_get_usb_host_boost_enabled(int* out_enabled) { return 0; }
+int asp_power_set_usb_host_boost_enabled(int enable) { return 0; }
