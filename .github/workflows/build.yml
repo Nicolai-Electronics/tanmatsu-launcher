@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v4
       - run: make prepare
       - run: make build DEVICE=${{ matrix.device }} FAT=1
+      - run: make merge DEVICE=${{ matrix.device }} FAT=1
       - run: mv build/${{ matrix.device }}/bootloader/*.bin build/${{ matrix.device }}/
       - run: mv build/${{ matrix.device }}/bootloader/*.elf build/${{ matrix.device }}/
       - run: mv build/${{ matrix.device }}/partition_table/*.bin build/${{ matrix.device }}/
@@ -33,3 +34,4 @@ jobs:
             build/${{ matrix.device }}/bootloader.bin
             build/${{ matrix.device }}/bootloader.elf
             build/${{ matrix.device }}/partition-table.bin
+            build/${{ matrix.device }}/merged-binary.bin

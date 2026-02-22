@@ -127,6 +127,10 @@ checkbuildenv:
 build: icons checkbuildenv submodules
 	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py $(IDF_PARAMS)
 
+.PHONY: merge
+merge: build
+	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py $(IDF_PARAMS) merge-bin
+
 # Hardware
 
 .PHONY: flash
