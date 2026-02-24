@@ -5,7 +5,16 @@ endif()
 
 idf_build_get_property(idf_target IDF_TARGET)
 if("${idf_target}" STREQUAL "esp32p4")
-list(APPEND extra_requires esp-hosted-tanmatsu badge-elf)
+list(APPEND extra_requires
+	esp-hosted-tanmatsu
+	badge-elf
+	plugin-api
+)
+list(APPEND extra_sources
+	# Plugin system
+	"plugin_api.c"
+	"plugin_manager.c"
+)
 endif()
 
 idf_component_register(
@@ -85,12 +94,9 @@ idf_component_register(
 		"bootloader_update.c"
 		"synthwave.c"
 
-		# Plugin system
-		"plugin_api.c"
-		"plugin_manager.c"
+		${extra_sources}
 
 	PRIV_REQUIRES
-		plugin-api
 		esp_lcd
 		fatfs
 		nvs_flash
