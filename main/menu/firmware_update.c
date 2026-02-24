@@ -21,8 +21,6 @@
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/p4-function-ev-board-"
 #elif defined(CONFIG_BSP_TARGET_MCH2022)
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/mch2022-"
-#elif defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
-#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/hackerhotel-2024-"
 #elif defined(CONFIG_BSP_TARGET_KAMI)
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/kami-"
 #else

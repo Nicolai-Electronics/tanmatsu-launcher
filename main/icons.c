@@ -15,10 +15,11 @@
 static char const TAG[] = "icons";
 
 #if defined(CONFIG_BSP_TARGET_KAMI)
-#define ICON_WIDTH        32
-#define ICON_HEIGHT       32
-#define ICON_BUFFER_SIZE  (ICON_WIDTH * ICON_HEIGHT * 4)  // 32x32 pixels, 2 bits per pixel
-#define ICON_COLOR_FORMAT PAX_BUF_2_PAL
+#define ICON_WIDTH        16
+#define ICON_HEIGHT       16
+#define ICON_BUFFER_SIZE  (ICON_WIDTH * ICON_HEIGHT * 4)  // 16x16 pixels, 2 bits per pixel
+#define ICON_COLOR_FORMAT PAX_BUF_32_8888ARGB
+// #define ICON_COLOR_FORMAT PAX_BUF_2_PAL
 #else
 #define ICON_WIDTH        32
 #define ICON_HEIGHT       32
@@ -29,14 +30,11 @@ static char const TAG[] = "icons";
 #define ICON_BASE_PATH "/int/icons"
 #define ICON_EXT       ".png"
 
-#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
-char icon_suffix[64] = "_f_r_black_16";
+#if defined(CONFIG_BSP_TARGET_KAMI)
+char             icon_suffix[64] = "_f_r_black_16";
+static pax_col_t palette[]       = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
 #else
 char icon_suffix[64] = "_f_r_black_32";
-#endif
-
-#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
-static pax_col_t palette[] = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
 #endif
 
 static const char* icon_paths[] = {
@@ -156,9 +154,9 @@ void load_icons(void) {
             continue;
         }
         pax_buf_init(&icons[i], buffer, ICON_WIDTH, ICON_HEIGHT, ICON_COLOR_FORMAT);
-#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
-        icons[i].palette      = palette;
-        icons[i].palette_size = sizeof(palette) / sizeof(pax_col_t);
+#if defined(CONFIG_BSP_TARGET_KAMI)
+        // icons[i].palette      = palette;
+        // icons[i].palette_size = sizeof(palette) / sizeof(pax_col_t);
 #endif
         if (!pax_insert_png_fd(&icons[i], fd, 0, 0, 0)) {
             pax_buf_destroy(&icons[i]);

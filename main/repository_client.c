@@ -1,6 +1,7 @@
 #include "repository_client.h"
 #include <stdio.h>
 #include <string.h>
+#include "bsp/device.h"
 #include "cJSON.h"
 #include "device_settings.h"
 #include "http_download.h"
@@ -45,7 +46,9 @@ bool load_categories(const char* base_url, repository_json_data_t* out_data) {
     char base_uri[64] = {0};
     device_settings_get_repo_base_uri(base_uri, sizeof(base_uri));
     char url[256];
-    sprintf(url, "%s%s/categories?device=%s", base_url, base_uri, "tanmatsu");
+    char device_name[64] = {0};
+    bsp_device_get_name(device_name, sizeof(device_name));
+    sprintf(url, "%s%s/categories?device=%s", base_url, base_uri, device_name);
     bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
     if (!success) return false;
     out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);

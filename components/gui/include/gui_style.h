@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include "pax_types.h"
 
 typedef struct {
@@ -65,4 +66,5 @@ typedef struct {
     gui_scrollbar_style_t   scrollbar;
     gui_progressbar_style_t progressbar;
     gui_element_style_t     chat;
+    bool                    show_clock;
 } gui_theme_t;

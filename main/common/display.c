@@ -25,7 +25,7 @@ static lcd_color_rgb_pixel_format_t display_color_format = LCD_COLOR_PIXEL_FORMA
 static lcd_rgb_data_endian_t        display_data_endian  = LCD_RGB_DATA_ENDIAN_LITTLE;
 static pax_buf_t                    fb                   = {0};
 
-#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
+#if defined(CONFIG_BSP_TARGET_KAMI)
 static pax_col_t palette[] = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
 #endif
 
@@ -56,14 +56,14 @@ esp_err_t display_init(void) {
             break;
     }
 
-#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
+#if defined(CONFIG_BSP_TARGET_KAMI)
     format = PAX_BUF_2_PAL;
 #endif
 
     pax_buf_init(&fb, NULL, display_h_res, display_v_res, format);
     pax_buf_reversed(&fb, display_data_endian == LCD_RGB_DATA_ENDIAN_BIG);
 
-#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
+#if defined(CONFIG_BSP_TARGET_KAMI)
     fb.palette      = palette;
     fb.palette_size = sizeof(palette) / sizeof(pax_col_t);
 #endif
@@ -114,7 +114,7 @@ bool display_is_initialized(void) {
 }
 
 bool display_is_epaper(void) {
-#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
+#if defined(CONFIG_BSP_TARGET_KAMI)
     return true;
 #else
     return false;

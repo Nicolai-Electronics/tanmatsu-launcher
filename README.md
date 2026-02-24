@@ -6,12 +6,10 @@ A launcher firmware for ESP32 based devices which allows users to configure WiFi
 
 This application supports the following boards:
 
- - Tanmatsu (including Konsool variant)
+ - Tanmatsu
  - MCH2022 badge
- - Hackerhotel 2024 badge
- - Kami epaper badge
+ - Kami e-paper badge
  - ESP32-P4 function EV board
-
 
 ## License
 
@@ -28,4 +26,4 @@ make build
 make flashmonitor
 ```
 
-For more information and more detailed instructions please visit [our documentation website](https://docs.tanmatsu.cloud/software/)
+For more information and more detailed instructions please visit [our documentation website](https://docs.tanmatsu.cloud/)

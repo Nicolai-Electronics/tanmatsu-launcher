@@ -30,8 +30,6 @@ else ifeq ($(DEVICE), mch2022)
 IDF_TARGET ?= esp32
 else ifeq ($(DEVICE), kami)
 IDF_TARGET ?= esp32
-else ifeq ($(DEVICE), hackerhotel-2024)
-IDF_TARGET ?= esp32c6
 else
 $(warning "Unknown device, defaulting to ESP32 $(DEVICE)")
 IDF_TARGET ?= esp32
@@ -234,17 +232,9 @@ main/fat/icons/%.png: main/static/icons/%.svg
 .PHONY: buildall
 buildall:
 	$(MAKE) build DEVICE=tanmatsu
-	$(MAKE) build DEVICE=konsool
-	$(MAKE) build DEVICE=hackerhotel-2026
-	$(MAKE) build DEVICE=esp32-p4-function-ev-board
+	$(MAKE) build DEVICE=kami
 	$(MAKE) build DEVICE=mch2022
-	$(MAKE) build DEVICE=hackerhotel-2024
-
-# Flash all: assumes Tanmatsu P4 is /dev/ttyACM0, C6 is /dev/ttyACM1 and MCH2022 badge is /dev/ttyACM2
-.PHONY: flashall
-flashall:
-	$(MAKE) flash DEVICE=tanmatsu PORT=/dev/ttyACM0
-	$(MAKE) flash DEVICE=mch2022 PORT=/dev/ttyACM2
+	$(MAKE) build DEVICE=esp32-p4-function-ev-board
 
 # Vscode
 .PHONY: vscode

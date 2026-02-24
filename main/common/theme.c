@@ -95,15 +95,15 @@ void theme_initialize(void) {
         palette.color_highlight_tertiary  = 0xFFFF017F;  // #FF017F
     }
 
-#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
+#if defined(CONFIG_BSP_TARGET_KAMI)
     // Override for e-paper (red/black) devices
-    palette.color_foreground          = 0xFF000000;  // #000000
-    palette.color_background          = 0xFFFFFFFF;  // #FFFFFF
-    palette.color_active_foreground   = 0xFF000000;  // #000000
-    palette.color_active_background   = 0xFFFFFFFF;  // #FFFFFF
-    palette.color_highlight_primary   = 0xFFFFFFFF;  // #FFFFFF
-    palette.color_highlight_secondary = 0xFFFF0000;  // #FF0000
-    palette.color_highlight_tertiary  = 0xFFFF0000;  // #FF0000
+    palette.color_foreground          = 1;
+    palette.color_background          = 0;
+    palette.color_active_foreground   = 2;
+    palette.color_active_background   = 0;
+    palette.color_highlight_primary   = 2;
+    palette.color_highlight_secondary = 2;
+    palette.color_highlight_tertiary  = 2;
 #endif
 
     memcpy((void*)&theme.palette, &palette, sizeof(gui_palette_t));
@@ -150,6 +150,8 @@ void theme_initialize(void) {
     theme.chat.text_font                 = &rajdhani;
     theme.chat.list_entry_height         = 64;
 
+    theme.show_clock = true;
+
 #if defined(CONFIG_BSP_TARGET_MCH2022)
     theme.footer.height             = 24;
     theme.footer.vertical_margin    = 0;
@@ -179,33 +181,35 @@ void theme_initialize(void) {
     theme.menu.grid_vertical_count   = 3;
 #endif
 
-#if defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_HACKERHOTEL_2024)
-    theme.footer.height             = 24;
+#if defined(CONFIG_BSP_TARGET_KAMI)
+    theme.footer.height             = 16;
     theme.footer.vertical_margin    = 0;
     theme.footer.horizontal_margin  = 0;
-    theme.footer.text_height        = 18;
+    theme.footer.text_height        = 14;
     theme.footer.vertical_padding   = 0;
     theme.footer.horizontal_padding = 0;
-    theme.footer.text_font          = &chakrapetchmedium;
+    theme.footer.text_font          = pax_font_saira_regular;
 
-    theme.header.height             = 32;
+    theme.header.height             = 16;
     theme.header.vertical_margin    = 0;
     theme.header.horizontal_margin  = 0;
-    theme.header.text_height        = 18;
+    theme.header.text_height        = 14;
     theme.header.vertical_padding   = 0;
     theme.header.horizontal_padding = 0;
-    theme.header.text_font          = &chakrapetchmedium;
+    theme.header.text_font          = pax_font_saira_regular;
 
-    theme.menu.height                = 240 - 32 - 16;
+    theme.menu.height                = 128 - 16 - 16;
     theme.menu.vertical_margin       = 0;
     theme.menu.horizontal_margin     = 0;
-    theme.menu.text_height           = 18;
-    theme.menu.vertical_padding      = 3;
-    theme.menu.horizontal_padding    = 3;
-    theme.menu.text_font             = &chakrapetchmedium;
+    theme.menu.text_height           = 16;
+    theme.menu.vertical_padding      = 0;
+    theme.menu.horizontal_padding    = 0;
+    theme.menu.text_font             = pax_font_saira_regular;
     theme.menu.list_entry_height     = 32;
-    theme.menu.grid_horizontal_count = 3;
-    theme.menu.grid_vertical_count   = 3;
+    theme.menu.grid_horizontal_count = 5;
+    theme.menu.grid_vertical_count   = 2;
+
+    theme.show_clock = false;
 #endif
 }
 

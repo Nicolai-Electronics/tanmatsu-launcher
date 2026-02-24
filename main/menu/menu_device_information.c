@@ -60,6 +60,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
         line++;
+#ifdef CONFIG_IDF_TARGET_ESP32P4
         device_identity_t identity = {0};
         if (read_device_identity(&identity) != ESP_OK) {
             snprintf(identity.name, sizeof(identity.name), "Unknown");
@@ -110,6 +111,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
         line++;
+#endif
     }
     display_blit_buffer(buffer);
 }

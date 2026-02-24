@@ -2,7 +2,7 @@ dependencies:
   idf:
     version: ">=5.5.0"
   badgeteam/badge-bsp:
-    version: "^0.9.0"
+    version: "^0.9.1"
   robotman2412/pax-gfx:
     version: ">=2.0.6"
   robotman2412/pax-codecs:
