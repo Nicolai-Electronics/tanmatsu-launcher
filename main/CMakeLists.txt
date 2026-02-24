@@ -85,7 +85,12 @@ idf_component_register(
 		"bootloader_update.c"
 		"synthwave.c"
 
+		# Plugin system
+		"plugin_api.c"
+		"plugin_manager.c"
+
 	PRIV_REQUIRES
+		plugin-api
 		esp_lcd
 		fatfs
 		nvs_flash
