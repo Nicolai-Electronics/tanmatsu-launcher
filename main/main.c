@@ -52,6 +52,9 @@
 #include "usb_device.h"
 #include "wifi_connection.h"
 #include "wifi_remote.h"
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+#include "plugin_manager.h"
+#endif
 
 #if defined(CONFIG_IDF_TARGET_ESP32P4)
 #include "esp_hosted_custom.h"
@@ -533,6 +536,12 @@ void app_main(void) {
 #if 0
     python_initialize();
 #endif
+#endif
+
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+    startup_dialog("Initializing plugins...");
+    plugin_manager_init();
+    plugin_manager_load_autostart();
 #endif
 
     menu_home();

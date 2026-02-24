@@ -67,6 +67,13 @@ static uint32_t led_claim_count = 0;
 bool asp_plugin_led_claim(plugin_context_t* ctx, uint32_t index) {
     if (led_claims == NULL || index >= led_claim_count || ctx == NULL) return false;
 
+    // Only allow plugins to claim the last two LEDs (user LEDs A and B).
+    // System LEDs (power, radio, message, etc.) are managed by the coprocessor
+    // in automatic mode and must not be overridden by plugins.
+    // LED numbering is preserved for API compatibility: the user LEDs are
+    // always the highest-numbered indices (typically 4 and 5 on 6-LED hardware).
+    if (index < led_claim_count - 2) return false;
+
     // Can only claim if unclaimed or already owned by this plugin
     if (!led_claims[index].claimed || led_claims[index].owner == ctx) {
         led_claims[index].claimed = true;
