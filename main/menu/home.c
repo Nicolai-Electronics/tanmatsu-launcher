@@ -27,6 +27,10 @@
 #include "menu/menu_rftest.h"
 #include "menu/message_dialog.h"
 #include "menu/nametag.h"
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+#include "menu/menu_plugins.h"
+#include "plugin_manager.h"
+#endif
 #include "menu_repository_client.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
@@ -51,6 +55,9 @@ typedef enum {
     ACTION_NAMETAG,
     ACTION_REPOSITORY,
     ACTION_SETTINGS,
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+    ACTION_PLUGINS,
+#endif
     ACTION_TOOLS,
     ACTION_INFORMATION,
     ACTION_RFTEST,
@@ -64,10 +71,16 @@ static void execute_action(menu_home_action_t action) {
     switch (action) {
         case ACTION_RADIO_OTA:
             radio_ota_update();
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+            plugin_manager_shutdown();
+#endif
             esp_restart();
             break;
         case ACTION_DOWNLOAD_ICONS:
             download_icons(true);
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+            plugin_manager_shutdown();
+#endif
             esp_restart();
         case ACTION_APPS:
             menu_apps(fb, theme);
@@ -81,6 +94,11 @@ static void execute_action(menu_home_action_t action) {
         case ACTION_SETTINGS:
             menu_settings();
             break;
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+        case ACTION_PLUGINS:
+            menu_plugins(fb, theme);
+            break;
+#endif
         case ACTION_TOOLS:
             menu_tools();
             break;
@@ -285,8 +303,9 @@ void menu_home(void) {
     }
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_STOREFRONT));
     menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
-    //  menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_EXTENSION));
-    //  menu_insert_item_icon(&menu, "Information", NULL, (void*)ACTION_INFORMATION, -1, get_icon(ICON_INFO));
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+    menu_insert_item_icon(&menu, "Plugins", NULL, (void*)ACTION_PLUGINS, -1, get_icon(ICON_EXTENSION));
+#endif
     if (access("/int/rftest_local.bin", F_OK) == 0) {
         menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_BUG_REPORT));
     }

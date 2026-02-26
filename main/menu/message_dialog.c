@@ -20,6 +20,9 @@
 #include "sdkconfig.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+#include "plugin_manager.h"
+#endif
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "bsp/tanmatsu.h"
 #include "synthwave.h"
@@ -197,6 +200,16 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
     render_base_screen(buffer, theme, background, header || footer, footer, header_left, header_left_count,
                        header_right, header_right_count, footer_left, footer_left_count, footer_right,
                        footer_right_count);
+
+#ifdef CONFIG_IDF_TARGET_ESP32P4
+    // Render plugin status widgets in the header area
+    if (header) {
+        int widget_x_right = 380;
+        int widget_y = theme->header.vertical_margin;
+        int widget_height = theme->header.height;
+        plugin_api_render_status_widgets(buffer, widget_x_right, widget_y, widget_height);
+    }
+#endif
 }
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, pax_buf_t* icon, const char* title,

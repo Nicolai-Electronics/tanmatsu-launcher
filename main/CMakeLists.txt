@@ -14,6 +14,7 @@ list(APPEND extra_sources
 	# Plugin system
 	"plugin_api.c"
 	"plugin_manager.c"
+	"menu/menu_plugins.c"
 )
 endif()
 
