@@ -88,3 +88,12 @@ int asp_power_get_charging_config(int* out_disabled, unsigned short* out_current
 int asp_power_set_charging(int disable, unsigned short current_ma) { return 0; }
 int asp_power_get_usb_host_boost_enabled(int* out_enabled) { return 0; }
 int asp_power_set_usb_host_boost_enabled(int enable) { return 0; }
+
+// Orientation API
+int asp_orientation_enable_gyroscope(void) { return 0; }
+int asp_orientation_disable_gyroscope(void) { return 0; }
+int asp_orientation_enable_accelerometer(void) { return 0; }
+int asp_orientation_disable_accelerometer(void) { return 0; }
+int asp_orientation_get(int* out_gyro_ready, int* out_accel_ready,
+                        float* out_gyro_x, float* out_gyro_y, float* out_gyro_z,
+                        float* out_accel_x, float* out_accel_y, float* out_accel_z) { return 0; }
