@@ -114,9 +114,8 @@ static bool _download_file(const char* url, const char* path) {
 
     esp_http_client_config_t config = {.url                 = url,
                                        .use_global_ca_store = true,
-                                       .keep_alive_enable   = false,
+                                       .keep_alive_enable   = true,
                                        .timeout_ms          = 10000,
-                                       .buffer_size         = 4096,
                                        .user_data           = (void*)&info,
                                        .event_handler       = _event_handler,
                                        .user_agent          = user_agent};
@@ -131,11 +130,11 @@ static bool _download_file(const char* url, const char* path) {
 bool download_file(const char* url, const char* path, download_callback_t callback, const char* callback_text) {
     global_callback      = callback;
     global_callback_text = callback_text;
-    int retry            = 5;
+    int retry            = 3;
     while (retry--) {
         if (_download_file(url, path)) return true;
         ESP_LOGI(TAG, "Download file waiting to retry (attempts left: %d) ...", retry);
-        vTaskDelay(pdMS_TO_TICKS(3000));
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
     return false;
 }
@@ -149,7 +148,7 @@ static bool _download_ram(const char* url, uint8_t** ptr, size_t* size) {
 
     esp_http_client_config_t config  = {.url                 = url,
                                         .use_global_ca_store = true,
-                                        .keep_alive_enable   = false,
+                                        .keep_alive_enable   = true,
                                         .timeout_ms          = 10000,
                                         .buffer_size         = 4096,
                                         .user_data           = (void*)&info,
@@ -168,7 +167,7 @@ bool download_ram(const char* url, uint8_t** ptr, size_t* size, download_callbac
                   const char* callback_text) {
     global_callback      = callback;
     global_callback_text = callback_text;
-    int retry            = 5;
+    int retry            = 3;
     while (retry--) {
         if (_download_ram(url, ptr, size)) return true;
         // Free partially allocated buffer before retrying to prevent memory leaks
@@ -177,7 +176,7 @@ bool download_ram(const char* url, uint8_t** ptr, size_t* size, download_callbac
             *ptr = NULL;
         }
         ESP_LOGI(TAG, "Download RAM waiting to retry (attempts left: %d) ...", retry);
-        vTaskDelay(pdMS_TO_TICKS(3000));
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
     return false;
 }
