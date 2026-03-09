@@ -62,7 +62,7 @@ static esp_err_t _event_handler(esp_http_client_event_t* evt) {
             break;
         }
         case HTTP_EVENT_ON_DATA:
-            if (global_callback != NULL && info->size > 0) {
+            if (global_callback != NULL) {
                 global_callback(info->received + evt->data_len, info->size, global_callback_text);
             }
             if (info->fd != NULL) {  // Write directly to file on filesystem
