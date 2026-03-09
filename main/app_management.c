@@ -191,10 +191,10 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             char status_text[64] = {0};
             snprintf(status_text, sizeof(status_text), "Downloading asset '%s'...", target_file->valuestring);
             if (!download_file(file_url, target_path, download_callback, status_text)) {
+                ESP_LOGE(TAG, "Failed to download asset: %s", source_file->valuestring);
                 free_repository_data_json(&metadata);
                 free_repository_data_json(&information);
                 app_mgmt_uninstall(slug, location);
-                ESP_LOGE(TAG, "Failed to download asset: %s", source_file->valuestring);
                 return ESP_FAIL;
             }
         }
@@ -232,10 +232,10 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             char status_text[64] = {0};
             snprintf(status_text, sizeof(status_text), "Downloading executable '%s'...", executable);
             if (!download_ram(file_url, &file_data, &file_size, download_callback, status_text)) {
+                ESP_LOGE(TAG, "Failed to download executable: %s", executable);
                 free_repository_data_json(&metadata);
                 free_repository_data_json(&information);
                 app_mgmt_uninstall(slug, location);
-                ESP_LOGE(TAG, "Failed to download executable: %s", executable);
                 return ESP_FAIL;
             }
 

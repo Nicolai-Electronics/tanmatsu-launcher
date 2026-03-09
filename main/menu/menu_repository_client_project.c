@@ -92,6 +92,10 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
 }
 
 static void download_callback(size_t download_position, size_t file_size, const char* status_text) {
+    if (file_size == 0) {
+        ESP_LOGD(TAG, "Download callback called with file_size == 0");
+        return;
+    }
     uint8_t        percentage      = 100 * download_position / file_size;
     static uint8_t last_percentage = 0;
     if (percentage == last_percentage) {
@@ -99,7 +103,7 @@ static void download_callback(size_t download_position, size_t file_size, const 
     }
     last_percentage = percentage;
     char text[64];
-    sprintf(text, "%s (%u%%)", status_text, percentage);
+    snprintf(text, sizeof(text), "%s (%u%%)", status_text ? status_text : "Downloading", percentage);
     busy_dialog(get_icon(ICON_DOWNLOADING), "Downloading", text, true);
 };
 

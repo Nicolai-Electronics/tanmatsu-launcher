@@ -357,7 +357,7 @@ message_dialog_return_type_t adv_dialog_yes_no_cancel(pax_buf_t* icon, const cha
 }
 
 void busy_dialog(pax_buf_t* icon, const char* title, const char* message, bool header) {
-    printf("BUSY: [%s] %s\n", title, message);
+    printf("BUSY: [%s] %s\n", title ? title : "(null)", message ? message : "(null)");
     if (!display_is_initialized()) {
         return;
     }
