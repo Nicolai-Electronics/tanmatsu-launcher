@@ -62,7 +62,7 @@ static esp_err_t _event_handler(esp_http_client_event_t* evt) {
             break;
         }
         case HTTP_EVENT_ON_DATA:
-            if (global_callback != NULL) {
+            if (global_callback != NULL && info->size > 0) {
                 global_callback(info->received + evt->data_len, info->size, global_callback_text);
             }
             if (info->fd != NULL) {  // Write directly to file on filesystem
@@ -122,8 +122,9 @@ static bool _download_file(const char* url, const char* path) {
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t                err    = esp_http_client_perform(client);
     fastclose(fd);
+    int status_code = esp_http_client_get_status_code(client);
     esp_http_client_cleanup(client);
-    return download_success(err, &info) && (esp_http_client_get_status_code(client) == 200);
+    return download_success(err, &info) && (status_code == 200);
 }
 
 bool download_file(const char* url, const char* path, download_callback_t callback, const char* callback_text) {
