@@ -234,7 +234,7 @@ esp_err_t device_settings_set_display_brightness(uint8_t percentage) {
 }
 
 esp_err_t device_settings_get_keyboard_brightness(uint8_t* out_percentage) {
-    return device_settings_get_percentage("kb.brightness", 0, 0, out_percentage);
+    return device_settings_get_percentage("kb.brightness", 100, 0, out_percentage);
 }
 
 esp_err_t device_settings_set_keyboard_brightness(uint8_t percentage) {
