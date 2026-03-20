@@ -1,4 +1,5 @@
 #include "apps.h"
+#include <esp_log.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -25,6 +26,8 @@
 #include "pax_types.h"
 #include "sdkconfig.h"
 #include "usb_device.h"
+
+static const char* TAG = "apps";
 
 #define MAX_NUM_APPS 128
 
@@ -102,6 +105,11 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                 return;
             }
 
+            if (app->executable_filename == NULL) {
+                message_dialog(get_icon(ICON_ERROR), "Error", "No executable specified for script", "OK");
+                return;
+            }
+
             // TODO: properly parse app entry for interpreter, for now just assume it's in AppFS
             appfs_handle_t interpreter_fd = find_appfs_handle_for_slug(app->executable_interpreter_slug);
             if (interpreter_fd == APPFS_INVALID_FD) {
@@ -127,6 +135,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                 return;
             }
 
+            ESP_LOGI(TAG, "Launching script: interpreter=%s path=%s", app->executable_interpreter_slug, path);
             appfsBootSelect(interpreter_fd, path);
             while (wifi_stack_get_task_done() == false) {
                 printf("Waiting for wifi stack task to finish...\n");
