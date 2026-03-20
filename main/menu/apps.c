@@ -60,7 +60,11 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                 message_dialog(get_icon(ICON_ERROR), "Error", "App not found in AppFS", "OK");
                 return;
             }
-            appfsBootSelect(app->executable_appfs_fd, NULL);
+            {
+                char app_path[256];
+                snprintf(app_path, sizeof(app_path), "%s/%s", app->path, app->slug);
+                appfsBootSelect(app->executable_appfs_fd, app_path);
+            }
             while (wifi_stack_get_task_done() == false) {
                 printf("Waiting for wifi stack task to finish...\n");
                 vTaskDelay(pdMS_TO_TICKS(100));
