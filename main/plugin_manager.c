@@ -21,8 +21,6 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "freertos/timers.h"
-#include "hal/cache_hal.h"
-#include "soc/soc.h"
 
 static const char* TAG = "plugin_mgr";
 
@@ -412,11 +410,6 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
     elf_path = NULL;  // Prevent double-free if we goto error_cleanup later
     ctx->elf_handle = dyn;
     ctx->state = PLUGIN_STATE_LOADED;
-
-#if SOC_CACHE_WRITEBACK_SUPPORTED
-    // Sync caches
-    cache_hal_writeback_addr(SOC_DRAM_LOW, SOC_DRAM_HIGH - SOC_DRAM_LOW);
-#endif
 
     // Run preinit and init functions
     size_t preinit_count = kbelf_dyn_preinit_len(dyn);
