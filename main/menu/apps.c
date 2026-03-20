@@ -127,7 +127,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                 return;
             }
 
-            appfsBootSelect(app->executable_appfs_fd, path);
+            appfsBootSelect(interpreter_fd, path);
             while (wifi_stack_get_task_done() == false) {
                 printf("Waiting for wifi stack task to finish...\n");
                 vTaskDelay(pdMS_TO_TICKS(100));
