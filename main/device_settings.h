@@ -56,6 +56,11 @@ esp_err_t device_settings_set_meshcore_private_key(const char* value);
 esp_err_t device_settings_get_meshcore_public_key(char* out_value, size_t max_length);
 esp_err_t device_settings_set_meshcore_public_key(const char* value);
 
+// USB mode
+#include "usb_device.h"
+esp_err_t device_settings_get_default_usb_mode(usb_mode_t* out_mode);
+esp_err_t device_settings_set_default_usb_mode(usb_mode_t mode);
+
 // Theme
 
 typedef enum {

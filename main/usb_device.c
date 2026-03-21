@@ -11,6 +11,7 @@
 #include <string.h>
 #include "badgelink.h"
 #include "bsp/device.h"
+#include "device_settings.h"
 #include "esp_log.h"
 #include "esp_mac.h"
 #include "esp_timer.h"
@@ -256,8 +257,11 @@ void usb_initialize(void) {
 
     ESP_LOGI(TAG, "USB initialization DONE");
 
-    // vTaskDelay(pdMS_TO_TICKS(10000));
-    // usb_serial_jtag_ll_phy_select(0);
+    usb_mode_t default_mode = USB_DEBUG;
+    device_settings_get_default_usb_mode(&default_mode);
+    if (default_mode != USB_DEBUG) {
+        usb_mode_set(default_mode);
+    }
 }
 
 uint16_t webusb_esp32_status                      = 0x0000;

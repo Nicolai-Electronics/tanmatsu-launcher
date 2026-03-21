@@ -23,6 +23,7 @@
 #include "radio_update.h"
 #include "settings_clock.h"
 #include "settings_repository.h"
+#include "settings_usb_mode.h"
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
@@ -42,6 +43,7 @@ typedef enum {
     ACTION_RADIO_OTA,
     ACTION_HARDWARE_TEST,
     ACTION_DOWNLOAD_ICONS,
+    ACTION_USB_MODE,
 } menu_home_action_t;
 
 static void radio_update_v2(void) {
@@ -69,6 +71,9 @@ static void execute_action(pax_buf_t* fb, menu_home_action_t action, gui_theme_t
             break;
         case ACTION_DOWNLOAD_ICONS:
             download_icons(false);
+            break;
+        case ACTION_USB_MODE:
+            menu_settings_usb_mode();
             break;
         default:
             break;
@@ -104,6 +109,7 @@ void menu_tools(void) {
                           get_icon(ICON_RELEASE_ALERT));
     menu_insert_item_icon(&menu, "Hardware test", NULL, (void*)ACTION_HARDWARE_TEST, -1, get_icon(ICON_BUG_REPORT));
     menu_insert_item_icon(&menu, "Download icons", NULL, (void*)ACTION_DOWNLOAD_ICONS, -1, get_icon(ICON_COLORS));
+    menu_insert_item_icon(&menu, "Default USB mode", NULL, (void*)ACTION_USB_MODE, -1, get_icon(ICON_USB));
 
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();

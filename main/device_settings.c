@@ -408,6 +408,22 @@ esp_err_t device_settings_set_meshcore_public_key(const char* value) {
     return device_settings_set_string("mc.public_key", value);
 }
 
+// USB mode
+
+esp_err_t device_settings_get_default_usb_mode(usb_mode_t* out_mode) {
+    uint8_t   value;
+    esp_err_t res = device_settings_get_u8("usb.defmode", USB_DEBUG, &value);
+    if (value > USB_DISABLED) {
+        value = USB_DEBUG;
+    }
+    *out_mode = (usb_mode_t)value;
+    return res;
+}
+
+esp_err_t device_settings_set_default_usb_mode(usb_mode_t mode) {
+    return device_settings_set_u8("usb.defmode", (uint8_t)mode);
+}
+
 // Theme
 
 esp_err_t device_settings_get_theme(theme_setting_t* out_theme) {

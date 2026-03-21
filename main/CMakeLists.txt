@@ -63,6 +63,7 @@ idf_component_register(
 		"menu/chat/lora_presets.c"
 		"menu/chat/messages.c"
 		"menu/settings_theme.c"
+		"menu/settings_usb_mode.c"
 		"radio_ota.c"
 		"lora_settings_handler.c"
 
