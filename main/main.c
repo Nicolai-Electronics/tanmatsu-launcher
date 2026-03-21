@@ -22,6 +22,7 @@
 #include "eeprom.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
+#include "esp_hosted.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
 #include "esp_log.h"
@@ -54,10 +55,6 @@
 #include "wifi_remote.h"
 #ifdef CONFIG_IDF_TARGET_ESP32P4
 #include "plugin_manager.h"
-#endif
-
-#if defined(CONFIG_IDF_TARGET_ESP32P4)
-#include "esp_hosted_custom.h"
 #endif
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
@@ -121,31 +118,24 @@ bool wifi_stack_get_task_done(void) {
     return wifi_stack_task_done;
 }
 
-static void radio_firmware_callback(uint32_t version) {
-    ESP_LOGI(TAG, "Radio firmware version: 0x%" PRIX32, version);
-    if (version == 0x00020703) {
-        wifi_firmware_version_match = true;
-    } else {
-        ESP_LOGE(TAG, "Incompatible radio firmware version detected, expected 0x00020703");
-        wifi_firmware_version_mismatch = true;
-    }
-}
-
-static void radio_callback(uint8_t type, uint8_t* payload, uint16_t payload_length) {
-    if (type == 1) {
-        lora_transaction_receive(payload, payload_length);
-    } else {
-        ESP_LOGI(TAG, "Received message from radio: type: %d, payload length: %d", type, payload_length);
-        for (int i = 0; i < payload_length; i++) {
-            printf("%02X ", payload[i]);
-        }
-        printf("\r\n");
-    }
-}
-
 static void wifi_task(void* pvParameters) {
     while (!wifi_stack_get_initialized()) {
         vTaskDelay(pdMS_TO_TICKS(500));
+    }
+
+    ESP_LOGI("INFO", "getting fw version");
+    esp_hosted_coprocessor_fwver_t fwver;
+    if (ESP_OK == esp_hosted_get_coprocessor_fwversion(&fwver)) {
+        ESP_LOGI("INFO", "FW Version: %" PRIu32 ".%" PRIu32 ".%" PRIu32, fwver.major1, fwver.minor1, fwver.patch1);
+        if (fwver.major1 != 2 || fwver.minor1 != 12 || fwver.patch1 != 3) {
+            ESP_LOGW(TAG, "WiFi firmware version mismatch detected. Expected version 2.12.3");
+            wifi_firmware_version_mismatch = true;
+        } else {
+            wifi_firmware_version_match = true;
+        }
+    } else {
+        ESP_LOGW("INFO", "failed to get fw version");
+        wifi_firmware_version_match = true;
     }
 
     if (ntp_get_enabled()) {
@@ -471,11 +461,6 @@ void app_main(void) {
 
     startup_dialog("Initializing radio...");
     ESP_ERROR_CHECK(lora_init(16));
-
-#if defined(CONFIG_IDF_TARGET_ESP32P4)
-    esp_hosted_set_custom_callback(radio_callback);
-    esp_hosted_set_firmware_version_callback(radio_firmware_callback);
-#endif
 
     if (wifi_remote_initialize() == ESP_OK) {
         res = wifi_connection_init_stack();
