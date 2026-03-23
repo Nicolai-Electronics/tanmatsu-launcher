@@ -22,7 +22,6 @@
 #include "eeprom.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
-#include "esp_hosted.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
 #include "esp_log.h"
@@ -60,6 +59,10 @@
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "bsp/tanmatsu.h"
 #include "tanmatsu_coprocessor.h"
+#endif
+
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
+#include "esp_hosted.h"
 #endif
 
 // Constants
@@ -123,6 +126,7 @@ static void wifi_task(void* pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
     ESP_LOGI("INFO", "getting fw version");
     esp_hosted_coprocessor_fwver_t fwver;
     if (ESP_OK == esp_hosted_get_coprocessor_fwversion(&fwver)) {
@@ -137,6 +141,9 @@ static void wifi_task(void* pvParameters) {
         ESP_LOGW("INFO", "failed to get fw version");
         wifi_firmware_version_match = true;
     }
+#else
+    wifi_firmware_version_match = true;
+#endif
 
     if (ntp_get_enabled()) {
         if (wifi_connect_try_all() == ESP_OK) {
