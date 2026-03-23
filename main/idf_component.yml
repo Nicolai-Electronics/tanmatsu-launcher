@@ -10,7 +10,7 @@ dependencies:
   nicolaielectronics/pocketpy: "^2.0.0"
   badgeteam/terminal-emulator: "^0.0.4"
   badgeteam/badgelink: "^0.1.0"
-  nicolaielectronics/tanmatsu-lora: "^0.1.0"
+  nicolaielectronics/tanmatsu-lora: "^0.1.1"
   nicolaielectronics/tanmatsu-addon: "^0.0.1"
   nicolaielectronics/rvswd:
     version: "^0.2.1"
