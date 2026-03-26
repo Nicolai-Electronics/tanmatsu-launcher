@@ -2,6 +2,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include "addon.h"
+#include "airplane_mode.h"
 #include "appfs.h"
 #include "badgelink.h"
 #include "bootloader_update.h"
@@ -468,6 +469,7 @@ void app_main(void) {
 
     startup_dialog("Initializing radio...");
     ESP_ERROR_CHECK(lora_init(16));
+    ESP_ERROR_CHECK(airplane_mode_init());
 
     if (wifi_remote_initialize() == ESP_OK) {
         res = wifi_connection_init_stack();
