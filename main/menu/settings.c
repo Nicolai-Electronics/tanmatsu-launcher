@@ -1,4 +1,10 @@
 #include "settings.h"
+#include "airplane_mode.h"
+#include "bsp/rtc.h"
+#include "esp_log.h"
+#include "ntp.h"
+#include "menu/message_dialog.h"
+#include "wifi_connection.h"
 #include "bsp/display.h"
 #include "bsp/input.h"
 #include "common/device.h"
@@ -25,6 +31,9 @@
 #include "settings_lora.h"
 #include "settings_repository.h"
 #include "settings_theme.h"
+#include <time.h>
+
+static const char* TAG = "settings";
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
@@ -49,6 +58,7 @@ typedef enum {
     ACTION_TOOLS,
     ACTION_INFO,
     ACTION_THEME,
+    ACTION_AIRPLANE,
 } menu_home_action_t;
 
 static void execute_action(menu_home_action_t action) {
@@ -83,6 +93,37 @@ static void execute_action(menu_home_action_t action) {
         case ACTION_THEME:
             menu_settings_theme();
             break;
+        case ACTION_AIRPLANE: {
+            bool current = false;
+            if (airplane_mode_get(&current) == ESP_OK) {
+                airplane_mode_set(!current);
+                if (current && ntp_get_enabled()) {
+                    // Switched from airplane to normal: try WiFi for NTP sync
+                    ESP_LOGI(TAG, "Airplane mode disabled, attempting WiFi connection for NTP sync");
+                    busy_dialog(get_icon(ICON_WIFI), "Airplane mode", "Connecting to WiFi...", true);
+                    if (wifi_connect_try_all() == ESP_OK) {
+                        ESP_LOGI(TAG, "WiFi connected, starting NTP sync");
+                        busy_dialog(get_icon(ICON_CLOCK), "Airplane mode", "Syncing clock...", true);
+                        esp_err_t ntp_res = ntp_start_service("pool.ntp.org");
+                        if (ntp_res == ESP_OK) {
+                            ntp_res = ntp_sync_wait();
+                            if (ntp_res == ESP_OK) {
+                                time_t rtc_time = time(NULL);
+                                bsp_rtc_set_time(rtc_time);
+                                ESP_LOGI(TAG, "NTP sync successful, RTC updated");
+                            } else {
+                                ESP_LOGW(TAG, "NTP sync failed: %s", esp_err_to_name(ntp_res));
+                            }
+                        } else {
+                            ESP_LOGE(TAG, "Failed to start NTP service: %s", esp_err_to_name(ntp_res));
+                        }
+                    } else {
+                        ESP_LOGW(TAG, "Could not connect to WiFi for NTP sync");
+                    }
+                }
+            }
+            break;
+        }
         default:
             break;
     }
@@ -101,28 +142,40 @@ static void render(menu_t* menu, pax_vec2_t position, bool partial, bool icons) 
     display_blit_buffer(buffer);
 }
 
+static void build_menu(menu_t* menu) {
+    menu_initialize(menu);
+    menu_insert_item_icon(menu, "Owner", NULL, (void*)ACTION_OWNER, -1, get_icon(ICON_BADGE));
+    uint8_t dummy;
+    if (bsp_display_get_backlight_brightness(&dummy) == ESP_OK) {
+        menu_insert_item_icon(menu, "Brightness", NULL, (void*)ACTION_BRIGHTNESS, -1, get_icon(ICON_BRIGHTNESS));
+    }
+    if (!display_is_epaper()) {
+        menu_insert_item_icon(menu, "Theme", NULL, (void*)ACTION_THEME, -1, get_icon(ICON_COLORS));
+    }
+
+    // Airplane mode: query current state from radio coprocessor for label
+    bool airplane_enabled = false;
+    airplane_mode_get(&airplane_enabled);
+    const char* airplane_label = airplane_enabled ? "Airplane: ON" : "Airplane: OFF";
+    // AIRPLANE_MODE_ICON: change the icon constant below to update the airplane mode icon
+    menu_insert_item_icon(menu, airplane_label, NULL, (void*)ACTION_AIRPLANE, -1, get_icon(ICON_WIFI_OFF));
+
+    menu_insert_item_icon(menu, "WiFi", NULL, (void*)ACTION_WIFI, -1, get_icon(ICON_WIFI));
+    menu_insert_item_icon(menu, "Clock", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
+    menu_insert_item_icon(menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_STOREFRONT));
+    if (device_has_lora()) {
+        menu_insert_item_icon(menu, "LoRa radio", NULL, (void*)ACTION_LORA, -1, get_icon(ICON_CHAT));
+    }
+    menu_insert_item_icon(menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_SETTINGS));
+    menu_insert_item_icon(menu, "Info", NULL, (void*)ACTION_INFO, -1, get_icon(ICON_INFO));
+}
+
 void menu_settings(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
     menu_t menu = {0};
-    menu_initialize(&menu);
-    menu_insert_item_icon(&menu, "Owner", NULL, (void*)ACTION_OWNER, -1, get_icon(ICON_BADGE));
-    uint8_t dummy;
-    if (bsp_display_get_backlight_brightness(&dummy) == ESP_OK) {
-        menu_insert_item_icon(&menu, "Brightness", NULL, (void*)ACTION_BRIGHTNESS, -1, get_icon(ICON_BRIGHTNESS));
-    }
-    if (!display_is_epaper()) {
-        menu_insert_item_icon(&menu, "Theme", NULL, (void*)ACTION_THEME, -1, get_icon(ICON_COLORS));
-    }
-    menu_insert_item_icon(&menu, "WiFi", NULL, (void*)ACTION_WIFI, -1, get_icon(ICON_WIFI));
-    menu_insert_item_icon(&menu, "Clock", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
-    menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_STOREFRONT));
-    if (device_has_lora()) {
-        menu_insert_item_icon(&menu, "LoRa radio", NULL, (void*)ACTION_LORA, -1, get_icon(ICON_CHAT));
-    }
-    menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_SETTINGS));
-    menu_insert_item_icon(&menu, "Info", NULL, (void*)ACTION_INFO, -1, get_icon(ICON_INFO));
+    build_menu(&menu);
 
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
@@ -172,6 +225,9 @@ void menu_settings(void) {
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                 execute_action((menu_home_action_t)arg);
+                                // Rebuild menu to update dynamic labels (e.g. airplane mode state)
+                                menu_free(&menu);
+                                build_menu(&menu);
                                 render(&menu, position, false, true);
                                 break;
                             }

@@ -122,6 +122,7 @@ idf_component_register(
 		eeprom
 		tanmatsu-addon
 		tanmatsu-lora
+		airplane_mode
 		${extra_requires}
 	INCLUDE_DIRS
 		"."

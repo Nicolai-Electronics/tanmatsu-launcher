@@ -1,0 +1,9 @@
+idf_component_register(
+	SRCS
+		airplane_mode.c
+	INCLUDE_DIRS
+		"include"
+	REQUIRES
+		badge-bsp
+		nicolaielectronics__esp-hosted-tanmatsu
+)
