@@ -182,6 +182,42 @@ esp_err_t fs_utils_copy_recursive(const char* src, const char* dst) {
     return result;
 }
 
+uint64_t fs_utils_get_directory_size(const char* path) {
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        return 0;
+    }
+
+    if (!S_ISDIR(st.st_mode)) {
+        return st.st_size;
+    }
+
+    DIR* dir = opendir(path);
+    if (dir == NULL) {
+        return 0;
+    }
+
+    uint64_t       total = 0;
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        size_t full_len  = strlen(path) + strlen(entry->d_name) + 2;
+        char*  full_path = malloc(full_len);
+        if (full_path == NULL) {
+            break;
+        }
+        snprintf(full_path, full_len, "%s/%s", path, entry->d_name);
+        total += fs_utils_get_directory_size(full_path);
+        free(full_path);
+    }
+
+    closedir(dir);
+    return total;
+}
+
 size_t fs_utils_get_file_size(FILE* fd) {
     fseek(fd, 0, SEEK_END);
     size_t fsize = ftell(fd);

@@ -21,6 +21,8 @@ bool      app_mgmt_can_uncache(const char* slug);
 esp_err_t app_mgmt_copy_appfs_to_install_dir(const char* slug);
 esp_err_t app_mgmt_remove_from_appfs(const char* slug);
 esp_err_t app_mgmt_ensure_in_appfs(const char* slug, const char* name, uint32_t revision, const char* firmware_path);
+esp_err_t app_mgmt_cache_to_appfs(const char* slug, const char* name, uint32_t revision, const char* firmware_path);
 esp_err_t app_mgmt_appfs_evict_lru(size_t needed_bytes);
+char*     app_mgmt_find_firmware_path(const char* slug);
 esp_err_t app_mgmt_move(const char* slug, app_mgmt_location_t from, app_mgmt_location_t to);
 bool      app_mgmt_can_move(const char* slug, app_mgmt_location_t from, app_mgmt_location_t to);
