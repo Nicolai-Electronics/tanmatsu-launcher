@@ -1,11 +1,17 @@
 #include "app_management.h"
 #include <ctype.h>
+#include <dirent.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include "app_metadata_parser.h"
 #include "appfs.h"
 #include "bsp/device.h"
 #include "cJSON.h"
+#include "device_settings.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "esp_vfs_fat.h"
 #include "fastopen.h"
 #include "filesystem_utils.h"
 #include "http_download.h"
@@ -206,16 +212,11 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
         return ESP_ERR_INVALID_RESPONSE;
     }
 
-    // Install binary to AppFS
+    // Download and store executable binary to the install directory (not to AppFS)
+    // The binary will be loaded into AppFS on-demand when the app is launched
     cJSON* type = cJSON_GetObjectItem(application, "type");
     if (type != NULL && cJSON_IsString(type) && strcmp(type->valuestring, "appfs") == 0 &&
         strlen(type->valuestring) == strlen("appfs")) {
-        uint32_t revision     = 0;
-        cJSON*   revision_obj = cJSON_GetObjectItem(application, "revision");
-        if (revision_obj != NULL && cJSON_IsNumber(revision_obj)) {
-            revision = (uint32_t)revision_obj->valueint;
-        }
-
         char*  executable     = NULL;
         cJSON* executable_obj = cJSON_GetObjectItem(application, "executable");
         if (executable_obj != NULL && cJSON_IsString(executable_obj)) {
@@ -226,64 +227,18 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             char file_url[256] = {0};
             snprintf(file_url, sizeof(file_url), "%s/%s/%s/%s", repository_url, repository_data_url, slug, executable);
 
-            uint8_t* file_data = NULL;
-            size_t   file_size = 0;
+            char target_path[512] = {0};
+            snprintf(target_path, sizeof(target_path), "%s/%s", app_path, executable);
 
             char status_text[64] = {0};
             snprintf(status_text, sizeof(status_text), "Downloading executable '%s'...", executable);
-            if (!download_ram(file_url, &file_data, &file_size, download_callback, status_text)) {
+            if (!download_file(file_url, target_path, download_callback, status_text)) {
                 ESP_LOGE(TAG, "Failed to download executable: %s", executable);
                 free_repository_data_json(&metadata);
                 free_repository_data_json(&information);
                 app_mgmt_uninstall(slug, location);
                 return ESP_FAIL;
             }
-
-            appfs_handle_t appfs_file = APPFS_INVALID_FD;
-            if (appfsCreateFileExt(slug, name, revision, file_size, &appfs_file) != ESP_OK) {
-                free(file_data);
-                free_repository_data_json(&metadata);
-                free_repository_data_json(&information);
-                app_mgmt_uninstall(slug, location);
-                ESP_LOGE(TAG, "Failed to create appfs file: %s", slug);
-                return ESP_FAIL;
-            }
-
-            int rounded_size = (file_size + (SPI_FLASH_MMU_PAGE_SIZE - 1)) & (~(SPI_FLASH_MMU_PAGE_SIZE - 1));
-            if (appfsErase(appfs_file, 0, rounded_size) != ESP_OK) {
-                free(file_data);
-                free_repository_data_json(&metadata);
-                free_repository_data_json(&information);
-                app_mgmt_uninstall(slug, location);
-                ESP_LOGE(TAG, "Failed to erase appfs file: %s", slug);
-                return ESP_FAIL;
-            }
-
-            if (appfsWrite(appfs_file, 0, file_data, file_size) != ESP_OK) {
-                free(file_data);
-                free_repository_data_json(&metadata);
-                free_repository_data_json(&information);
-                app_mgmt_uninstall(slug, location);
-                ESP_LOGE(TAG, "Failed to install executable to AppFS: %s", slug);
-                return ESP_FAIL;
-            }
-
-            if (location == APP_MGMT_LOCATION_SD) {
-                snprintf(file_path, sizeof(file_path), "%s/%s", app_path, executable);
-                FILE* fd = fastopen(file_path, "wb");
-                if (fd == NULL) {
-                    free(file_data);
-                    free_repository_data_json(&metadata);
-                    free_repository_data_json(&information);
-                    app_mgmt_uninstall(slug, location);
-                    ESP_LOGE(TAG, "Failed to write executable to SD card: %s", slug);
-                    return ESP_FAIL;
-                }
-                fwrite(file_data, 1, file_size, fd);
-                fastclose(fd);
-            }
-
-            free(file_data);
         }
     }
 
@@ -343,6 +298,9 @@ esp_err_t app_mgmt_uninstall(const char* slug, app_mgmt_location_t location) {
         }
     }
 
+    // Clean up last-used timestamp from NVS
+    device_settings_remove_app_last_used(slug);
+
     return res;
 }
 
@@ -389,4 +347,384 @@ esp_err_t app_mgmt_install_from_file(const char* slug, const char* name, uint32_
     free(file_data);
 
     return ESP_OK;
+}
+
+// --- AppFS cache management ---
+
+bool app_mgmt_has_binary_in_install_dir(const char* slug) {
+    const char* base_paths[] = {"/int/apps", "/sd/apps"};
+    for (int i = 0; i < 2; i++) {
+        uint32_t revision    = 0;
+        char*    exec_path   = NULL;
+        if (get_executable_revision(base_paths[i], slug, &revision, &exec_path)) {
+            if (exec_path != NULL) {
+                bool exists = fs_utils_exists(exec_path);
+                free(exec_path);
+                if (exists) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+esp_err_t app_mgmt_copy_appfs_to_install_dir(const char* slug) {
+    // Find which install directory exists for this app
+    char        app_dir[256] = {0};
+    const char* base_paths[] = {"/int/apps", "/sd/apps"};
+    bool        found        = false;
+    for (int i = 0; i < 2; i++) {
+        snprintf(app_dir, sizeof(app_dir), "%s/%s", base_paths[i], slug);
+        if (fs_utils_exists(app_dir)) {
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        ESP_LOGE(TAG, "No install directory found for app %s", slug);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    // Get executable filename from metadata
+    uint32_t revision  = 0;
+    char*    exec_path = NULL;
+    if (!get_executable_revision(app_dir, slug, &revision, &exec_path)) {
+        ESP_LOGE(TAG, "Failed to get executable info for app %s", slug);
+        return ESP_FAIL;
+    }
+
+    // Note: get_executable_revision builds exec_path as "{base}/{slug}/{filename}"
+    // but we called it with app_dir which is already "{base}/{slug}",
+    // so exec_path is "{base}/{slug}/{slug}/{filename}" which is wrong.
+    // We need to call it with the base path instead.
+    free(exec_path);
+    exec_path = NULL;
+
+    // Re-derive base path from app_dir by finding the parent
+    // app_dir is like "/int/apps/slug" or "/sd/apps/slug"
+    char base_path[256] = {0};
+    strncpy(base_path, app_dir, sizeof(base_path) - 1);
+    char* last_slash = strrchr(base_path, '/');
+    if (last_slash != NULL) {
+        *last_slash = '\0';
+    }
+
+    if (!get_executable_revision(base_path, slug, &revision, &exec_path)) {
+        ESP_LOGE(TAG, "Failed to get executable info for app %s", slug);
+        return ESP_FAIL;
+    }
+
+    // Read binary from appfs
+    appfs_handle_t appfs_fd = appfsOpen(slug);
+    if (appfs_fd == APPFS_INVALID_FD) {
+        ESP_LOGE(TAG, "Failed to open appfs entry for %s", slug);
+        free(exec_path);
+        return ESP_FAIL;
+    }
+
+    int appfs_size = 0;
+    appfsEntryInfoExt(appfs_fd, NULL, NULL, NULL, &appfs_size);
+    if (appfs_size <= 0) {
+        ESP_LOGE(TAG, "Invalid appfs file size for %s", slug);
+        free(exec_path);
+        return ESP_FAIL;
+    }
+
+    uint8_t* file_data = malloc(appfs_size);
+    if (file_data == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for appfs read (%d bytes)", appfs_size);
+        free(exec_path);
+        return ESP_ERR_NO_MEM;
+    }
+
+    if (appfsRead(appfs_fd, 0, file_data, appfs_size) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read appfs entry for %s", slug);
+        free(file_data);
+        free(exec_path);
+        return ESP_FAIL;
+    }
+
+    // Write to install directory
+    FILE* fd = fastopen(exec_path, "wb");
+    if (fd == NULL) {
+        ESP_LOGE(TAG, "Failed to open %s for writing", exec_path);
+        free(file_data);
+        free(exec_path);
+        return ESP_FAIL;
+    }
+
+    size_t written = fwrite(file_data, 1, appfs_size, fd);
+    fastclose(fd);
+    free(file_data);
+
+    if (written != (size_t)appfs_size) {
+        ESP_LOGE(TAG, "Failed to write complete binary to %s", exec_path);
+        free(exec_path);
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Copied appfs binary for %s to %s", slug, exec_path);
+    free(exec_path);
+    return ESP_OK;
+}
+
+bool app_mgmt_can_uncache(const char* slug) {
+    // Check if the app has an install directory with metadata.
+    // Apps without one (dev/legacy, manually copied to appfs) cannot be
+    // uncached since removing from appfs would permanently lose the binary.
+    char path[256];
+    const char* base_paths[] = {"/int/apps", "/sd/apps"};
+    for (int i = 0; i < 2; i++) {
+        snprintf(path, sizeof(path), "%s/%s/metadata.json", base_paths[i], slug);
+        if (fs_utils_exists(path)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+esp_err_t app_mgmt_remove_from_appfs(const char* slug) {
+    if (!appfsExists(slug)) {
+        return ESP_OK;
+    }
+
+    // Ensure binary exists in install dir before removing from appfs (backward compat)
+    if (!app_mgmt_has_binary_in_install_dir(slug)) {
+        esp_err_t res = app_mgmt_copy_appfs_to_install_dir(slug);
+        if (res != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to back up appfs binary for %s, not removing", slug);
+            return res;
+        }
+    }
+
+    return appfsDeleteFile(slug);
+}
+
+esp_err_t app_mgmt_ensure_in_appfs(const char* slug, const char* name, uint32_t revision, const char* firmware_path) {
+    if (appfsExists(slug)) {
+        return ESP_OK;
+    }
+
+    FILE* fd = fastopen(firmware_path, "rb");
+    if (fd == NULL) {
+        ESP_LOGE(TAG, "Failed to open firmware file %s", firmware_path);
+        return ESP_FAIL;
+    }
+    size_t file_size = fs_utils_get_file_size(fd);
+    fastclose(fd);
+
+    if (file_size == 0) {
+        ESP_LOGE(TAG, "Firmware file %s is empty", firmware_path);
+        return ESP_FAIL;
+    }
+
+    size_t rounded_size = (file_size + (SPI_FLASH_MMU_PAGE_SIZE - 1)) & (~(SPI_FLASH_MMU_PAGE_SIZE - 1));
+    if (appfsGetFreeMem() < rounded_size) {
+        ESP_LOGW(TAG, "Not enough space in AppFS for %s (need %u, have %u)", slug, rounded_size, appfsGetFreeMem());
+        return ESP_ERR_NO_MEM;
+    }
+
+    return app_mgmt_install_from_file(slug, name, revision, (char*)firmware_path);
+}
+
+// Comparison function for qsort — sort by timestamp ascending (oldest first)
+typedef struct {
+    char     slug[48];
+    uint32_t timestamp;
+} appfs_usage_entry_t;
+
+static int compare_usage_entries(const void* a, const void* b) {
+    const appfs_usage_entry_t* ea = (const appfs_usage_entry_t*)a;
+    const appfs_usage_entry_t* eb = (const appfs_usage_entry_t*)b;
+    if (ea->timestamp < eb->timestamp) return -1;
+    if (ea->timestamp > eb->timestamp) return 1;
+    return 0;
+}
+
+esp_err_t app_mgmt_appfs_evict_lru(size_t needed_bytes) {
+    // Collect appfs entries that have a backup in the install directory.
+    // Apps without install dirs (dev/legacy apps only in appfs) are never auto-evicted
+    // since removing them would permanently lose the binary.
+    appfs_usage_entry_t entries[128];
+    size_t              count = 0;
+
+    appfs_handle_t appfs_fd = appfsNextEntry(APPFS_INVALID_FD);
+    while (appfs_fd != APPFS_INVALID_FD && count < 128) {
+        const char* slug = NULL;
+        appfsEntryInfoExt(appfs_fd, &slug, NULL, NULL, NULL);
+        if (slug != NULL && app_mgmt_can_uncache(slug)) {
+            strncpy(entries[count].slug, slug, sizeof(entries[count].slug) - 1);
+            entries[count].slug[sizeof(entries[count].slug) - 1] = '\0';
+
+            uint32_t ts = 0;
+            device_settings_get_app_last_used(slug, &ts);
+            entries[count].timestamp = ts;
+            count++;
+        }
+        appfs_fd = appfsNextEntry(appfs_fd);
+    }
+
+    if (count == 0) {
+        ESP_LOGW(TAG, "No appfs entries to evict");
+        return ESP_ERR_NO_MEM;
+    }
+
+    // Sort by timestamp ascending (oldest first)
+    qsort(entries, count, sizeof(appfs_usage_entry_t), compare_usage_entries);
+
+    // Evict entries until we have enough space
+    for (size_t i = 0; i < count; i++) {
+        if (appfsGetFreeMem() >= needed_bytes) {
+            return ESP_OK;
+        }
+        ESP_LOGI(TAG, "Evicting %s from AppFS (last used: %u)", entries[i].slug, entries[i].timestamp);
+        app_mgmt_remove_from_appfs(entries[i].slug);
+    }
+
+    if (appfsGetFreeMem() >= needed_bytes) {
+        return ESP_OK;
+    }
+
+    ESP_LOGW(TAG, "Could not free enough AppFS space (need %u, have %u)", needed_bytes, appfsGetFreeMem());
+    return ESP_ERR_NO_MEM;
+}
+
+// --- App move between storage locations ---
+
+static uint64_t get_directory_size(const char* path) {
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        return 0;
+    }
+
+    if (!S_ISDIR(st.st_mode)) {
+        return st.st_size;
+    }
+
+    DIR* dir = opendir(path);
+    if (dir == NULL) {
+        return 0;
+    }
+
+    uint64_t       total = 0;
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        size_t full_len  = strlen(path) + strlen(entry->d_name) + 2;
+        char*  full_path = malloc(full_len);
+        if (full_path == NULL) {
+            break;
+        }
+        snprintf(full_path, full_len, "%s/%s", path, entry->d_name);
+        total += get_directory_size(full_path);
+        free(full_path);
+    }
+
+    closedir(dir);
+    return total;
+}
+
+esp_err_t app_mgmt_move(const char* slug, app_mgmt_location_t from, app_mgmt_location_t to) {
+    const char* src_base = app_mgmt_location_to_path(from);
+    const char* dst_base = app_mgmt_location_to_path(to);
+    if (src_base == NULL || dst_base == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    char src_path[256] = {0};
+    char dst_path[256] = {0};
+    snprintf(src_path, sizeof(src_path), "%s/%s", src_base, slug);
+    snprintf(dst_path, sizeof(dst_path), "%s/%s", dst_base, slug);
+
+    if (!fs_utils_exists(src_path)) {
+        ESP_LOGE(TAG, "Source app directory does not exist: %s", src_path);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    // Check free space on target filesystem
+    uint64_t dir_size = get_directory_size(src_path);
+    if (dir_size == 0) {
+        ESP_LOGE(TAG, "Failed to calculate directory size for %s", src_path);
+        return ESP_FAIL;
+    }
+
+    // Determine target mount point for free space check
+    const char* mount_point = (to == APP_MGMT_LOCATION_SD) ? "/sd" : "/int";
+    uint64_t    total_bytes = 0;
+    uint64_t    free_bytes  = 0;
+    esp_err_t   res         = esp_vfs_fat_info(mount_point, &total_bytes, &free_bytes);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get filesystem info for %s", mount_point);
+        return res;
+    }
+
+    if (free_bytes < dir_size) {
+        ESP_LOGW(TAG, "Not enough space on %s (need %llu, have %llu)", mount_point, dir_size, free_bytes);
+        return ESP_ERR_NO_MEM;
+    }
+
+    // Create base apps directory on target if needed
+    if (!fs_utils_exists(dst_base)) {
+        if (mkdir(dst_base, 0777) != 0) {
+            ESP_LOGE(TAG, "Failed to create apps directory: %s", dst_base);
+            return ESP_FAIL;
+        }
+    }
+
+    // Remove destination if it already exists
+    if (fs_utils_exists(dst_path)) {
+        fs_utils_remove(dst_path);
+    }
+
+    // Copy directory recursively
+    res = fs_utils_copy_recursive(src_path, dst_path);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to copy app from %s to %s", src_path, dst_path);
+        // Clean up partial copy
+        if (fs_utils_exists(dst_path)) {
+            fs_utils_remove(dst_path);
+        }
+        return res;
+    }
+
+    // Remove source directory
+    res = fs_utils_remove(src_path);
+    if (res != ESP_OK) {
+        ESP_LOGW(TAG, "App copied but failed to remove source at %s", src_path);
+    }
+
+    ESP_LOGI(TAG, "Moved app %s from %s to %s", slug, src_base, dst_base);
+    return ESP_OK;
+}
+
+bool app_mgmt_can_move(const char* slug, app_mgmt_location_t from, app_mgmt_location_t to) {
+    const char* src_base = app_mgmt_location_to_path(from);
+    const char* dst_base = app_mgmt_location_to_path(to);
+    if (src_base == NULL || dst_base == NULL) {
+        return false;
+    }
+
+    char src_path[256] = {0};
+    snprintf(src_path, sizeof(src_path), "%s/%s", src_base, slug);
+    if (!fs_utils_exists(src_path)) {
+        return false;
+    }
+
+    uint64_t dir_size = get_directory_size(src_path);
+    if (dir_size == 0) {
+        return false;
+    }
+
+    const char* mount_point = (to == APP_MGMT_LOCATION_SD) ? "/sd" : "/int";
+    uint64_t    total_bytes = 0;
+    uint64_t    free_bytes  = 0;
+    if (esp_vfs_fat_info(mount_point, &total_bytes, &free_bytes) != ESP_OK) {
+        return false;
+    }
+
+    return free_bytes >= dir_size;
 }

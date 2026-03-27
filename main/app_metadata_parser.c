@@ -45,16 +45,12 @@ bool get_executable_revision(const char* path, const char* slug, uint32_t* out_r
     printf("Finding executable revision for app %s in %s\n", slug, path);
     bool result = false;
 
-    app_t* app = calloc(1, sizeof(app_t));
-    app->path  = strdup(path);
-    app->slug  = strdup(slug);
-
     char path_buffer[256] = {0};
     snprintf(path_buffer, sizeof(path_buffer), "%s/%s/metadata.json", path, slug);
     FILE* fd = fastopen(path_buffer, "r");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open metadata file %s", path_buffer);
-        return app;
+        return false;
     }
 
     char* json_data = (char*)load_file_to_ram(fd);
@@ -62,14 +58,14 @@ bool get_executable_revision(const char* path, const char* slug, uint32_t* out_r
 
     if (json_data == NULL) {
         ESP_LOGE(TAG, "Failed to read from metadata file %s", path_buffer);
-        return app;
+        return false;
     }
 
     cJSON* root = cJSON_Parse(json_data);
     if (root == NULL) {
         free(json_data);
         ESP_LOGE(TAG, "Failed to parse metadata file %s", path_buffer);
-        return app;
+        return false;
     }
 
     char device_name[32] = {0};
@@ -102,25 +98,21 @@ bool get_executable_revision(const char* path, const char* slug, uint32_t* out_r
     }
 
     if (matched_executable != NULL) {
-        // Parse application
         cJSON* type_obj = cJSON_GetObjectItem(matched_executable, "type");
         if (type_obj && (type_obj->valuestring != NULL)) {
             if (strcmp(type_obj->valuestring, "appfs") == 0) {
-                app->executable_type     = EXECUTABLE_TYPE_APPFS;
-                app->executable_appfs_fd = find_appfs_handle_for_slug(app->slug);
-
                 cJSON* revision_obj = cJSON_GetObjectItem(matched_executable, "revision");
                 if (revision_obj) {
                     *out_revision = revision_obj->valueint;
                     if (out_executable != NULL) {
-                        cJSON* executable_obj = cJSON_GetObjectItem(matched_executable, "executable");
-                        if (executable_obj != NULL && cJSON_IsString(executable_obj)) {
-                            size_t length = snprintf(NULL, 0, "%s/%s/%s", path, slug, executable_obj->valuestring);
+                        cJSON* exec_name_obj = cJSON_GetObjectItem(matched_executable, "executable");
+                        if (exec_name_obj != NULL && cJSON_IsString(exec_name_obj)) {
+                            size_t length = snprintf(NULL, 0, "%s/%s/%s", path, slug, exec_name_obj->valuestring);
                             if (length > 0) {
                                 *out_executable = malloc(length + 1);
                                 if (*out_executable) {
                                     snprintf(*out_executable, length + 1, "%s/%s/%s", path, slug,
-                                             executable_obj->valuestring);
+                                             exec_name_obj->valuestring);
                                     result = true;
                                 }
                             }

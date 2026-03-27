@@ -73,3 +73,12 @@ typedef enum {
 
 esp_err_t device_settings_get_theme(theme_setting_t* out_theme);
 esp_err_t device_settings_set_theme(theme_setting_t theme);
+
+// AppFS settings
+esp_err_t device_settings_get_appfs_auto_cleanup(uint8_t* out_value);
+esp_err_t device_settings_set_appfs_auto_cleanup(uint8_t value);
+
+// App usage tracking
+esp_err_t device_settings_get_app_last_used(const char* slug, uint32_t* out_timestamp);
+esp_err_t device_settings_set_app_last_used(const char* slug, uint32_t timestamp);
+esp_err_t device_settings_remove_app_last_used(const char* slug);

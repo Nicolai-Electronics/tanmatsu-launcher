@@ -40,6 +40,7 @@ typedef struct {
 } app_t;
 
 appfs_handle_t find_appfs_handle_for_slug(const char* search_slug);
+bool           get_executable_revision(const char* path, const char* slug, uint32_t* out_revision, char** out_executable);
 app_t*         create_app(const char* path, const char* slug, bool sdcard);
 void           free_app(app_t* app);
 

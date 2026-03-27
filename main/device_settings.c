@@ -417,3 +417,81 @@ esp_err_t device_settings_get_theme(theme_setting_t* out_theme) {
 esp_err_t device_settings_set_theme(theme_setting_t theme) {
     return device_settings_set_u32("owner.theme", (uint32_t)theme);
 }
+
+// AppFS settings
+
+esp_err_t device_settings_get_appfs_auto_cleanup(uint8_t* out_value) {
+    return device_settings_get_u8("appfs_ac", 0, out_value);
+}
+
+esp_err_t device_settings_set_appfs_auto_cleanup(uint8_t value) {
+    return device_settings_set_u8("appfs_ac", value);
+}
+
+// App usage tracking (separate NVS namespace)
+
+static const char* APP_USAGE_NAMESPACE = "app_usage";
+
+esp_err_t device_settings_get_app_last_used(const char* slug, uint32_t* out_timestamp) {
+    if (slug == NULL || out_timestamp == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    nvs_handle_t nvs_handle;
+    esp_err_t    res = nvs_open(APP_USAGE_NAMESPACE, NVS_READONLY, &nvs_handle);
+    if (res != ESP_OK) {
+        *out_timestamp = 0;
+        return res;
+    }
+    uint32_t value;
+    res = nvs_get_u32(nvs_handle, slug, &value);
+    if (res != ESP_OK) {
+        *out_timestamp = 0;
+        nvs_close(nvs_handle);
+        return res;
+    }
+    nvs_close(nvs_handle);
+    *out_timestamp = value;
+    return res;
+}
+
+esp_err_t device_settings_set_app_last_used(const char* slug, uint32_t timestamp) {
+    if (slug == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    nvs_handle_t nvs_handle;
+    esp_err_t    res = nvs_open(APP_USAGE_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (res != ESP_OK) {
+        return res;
+    }
+    res = nvs_set_u32(nvs_handle, slug, timestamp);
+    if (res != ESP_OK) {
+        nvs_close(nvs_handle);
+        return res;
+    }
+    res = nvs_commit(nvs_handle);
+    nvs_close(nvs_handle);
+    return res;
+}
+
+esp_err_t device_settings_remove_app_last_used(const char* slug) {
+    if (slug == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    nvs_handle_t nvs_handle;
+    esp_err_t    res = nvs_open(APP_USAGE_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (res != ESP_OK) {
+        return res;
+    }
+    res = nvs_erase_key(nvs_handle, slug);
+    if (res == ESP_ERR_NVS_NOT_FOUND) {
+        nvs_close(nvs_handle);
+        return ESP_OK;
+    }
+    if (res != ESP_OK) {
+        nvs_close(nvs_handle);
+        return res;
+    }
+    res = nvs_commit(nvs_handle);
+    nvs_close(nvs_handle);
+    return res;
+}
