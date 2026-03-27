@@ -10,7 +10,6 @@
 #include "app_metadata_parser.h"
 #include "appfs.h"
 #include "device_settings.h"
-#include "fastopen.h"
 #if CONFIG_IDF_TARGET_ESP32P4
 #include "badge_elf.h"
 #endif
@@ -56,47 +55,23 @@ static appfs_handle_t ensure_interpreter_in_appfs(const char* interpreter_slug) 
         return fd;
     }
 
-    // Interpreter not in appfs — try to find its binary in install dirs and load it
-    const char* base_paths[] = {"/int/apps", "/sd/apps"};
-    for (int i = 0; i < 2; i++) {
-        uint32_t revision  = 0;
-        char*    exec_path = NULL;
-        if (get_executable_revision(base_paths[i], interpreter_slug, &revision, &exec_path)) {
-            if (exec_path != NULL && fs_utils_exists(exec_path)) {
-                busy_dialog(get_icon(ICON_APPS), "Loading", "Loading interpreter to AppFS...", true);
-                esp_err_t res = app_mgmt_ensure_in_appfs(interpreter_slug, interpreter_slug, revision, exec_path);
-                if (res == ESP_ERR_NO_MEM) {
-                    uint8_t auto_cleanup = 0;
-                    device_settings_get_appfs_auto_cleanup(&auto_cleanup);
-                    if (auto_cleanup) {
-                        busy_dialog(get_icon(ICON_APPS), "Loading", "Freeing up space...", true);
-                        FILE* f = fastopen(exec_path, "rb");
-                        if (f != NULL) {
-                            size_t file_size    = fs_utils_get_file_size(f);
-                            fastclose(f);
-                            size_t rounded_size = (file_size + (SPI_FLASH_MMU_PAGE_SIZE - 1)) &
-                                                  (~(SPI_FLASH_MMU_PAGE_SIZE - 1));
-                            app_mgmt_appfs_evict_lru(rounded_size);
-                            busy_dialog(get_icon(ICON_APPS), "Loading", "Loading interpreter to AppFS...", true);
-                            res = app_mgmt_ensure_in_appfs(interpreter_slug, interpreter_slug, revision, exec_path);
-                        }
-                    }
-                    if (res == ESP_ERR_NO_MEM) {
-                        message_dialog(get_icon(ICON_ERROR), "No space",
-                                       "Not enough space in AppFS for interpreter.\nRemove cached apps (F4).", "OK");
-                    }
-                }
-                free(exec_path);
-                if (res == ESP_OK) {
-                    return find_appfs_handle_for_slug(interpreter_slug);
-                }
-                return APPFS_INVALID_FD;
-            }
-            free(exec_path);
-        }
+    char* exec_path = app_mgmt_find_firmware_path(interpreter_slug);
+    if (exec_path == NULL) {
+        message_dialog(get_icon(ICON_ERROR), "Error", "Interpreter binary not found", "OK");
+        return APPFS_INVALID_FD;
     }
 
-    message_dialog(get_icon(ICON_ERROR), "Error", "Interpreter binary not found", "OK");
+    busy_dialog(get_icon(ICON_APPS), "Loading", "Loading interpreter to AppFS...", true);
+    esp_err_t res = app_mgmt_cache_to_appfs(interpreter_slug, interpreter_slug, 0, exec_path);
+    free(exec_path);
+
+    if (res == ESP_ERR_NO_MEM) {
+        message_dialog(get_icon(ICON_ERROR), "No space",
+                       "Not enough space in AppFS for interpreter.\nRemove cached apps (F4).", "OK");
+    }
+    if (res == ESP_OK) {
+        return find_appfs_handle_for_slug(interpreter_slug);
+    }
     return APPFS_INVALID_FD;
 }
 
@@ -293,56 +268,15 @@ typedef enum {
 
 static app_menu_footer_type_t previous_footer_type = APP_MENU_FOOTER_TYPE_COUNT;
 
-// Helper to find firmware path for an app (checks SD then internal install dir)
-// Returns malloc'd string or NULL. Caller must free.
-static char* find_firmware_path(app_t* app) {
-    if (app->executable_on_sd_available && app->executable_on_sd_filename != NULL) {
-        if (fs_utils_exists(app->executable_on_sd_filename)) {
-            return strdup(app->executable_on_sd_filename);
-        }
-    }
-    // Check internal install dir
-    const char* base_paths[] = {"/int/apps", "/sd/apps"};
-    for (int i = 0; i < 2; i++) {
-        uint32_t revision  = 0;
-        char*    exec_path = NULL;
-        if (get_executable_revision(base_paths[i], app->slug, &revision, &exec_path)) {
-            if (exec_path != NULL && fs_utils_exists(exec_path)) {
-                return exec_path;
-            }
-            free(exec_path);
-        }
-    }
-    return NULL;
-}
-
 // Helper to load an app into AppFS on-demand, with auto-cleanup support.
 // Returns ESP_OK on success, error otherwise. Shows dialogs.
 static esp_err_t load_app_to_appfs(app_t* app, const char* firmware_path) {
     busy_dialog(get_icon(ICON_APPS), "Loading", "Copying app to AppFS...", true);
-    esp_err_t res = app_mgmt_ensure_in_appfs(app->slug, app->name, app->executable_revision, firmware_path);
+    esp_err_t res = app_mgmt_cache_to_appfs(app->slug, app->name, app->executable_revision, firmware_path);
     if (res == ESP_ERR_NO_MEM) {
-        uint8_t auto_cleanup = 0;
-        device_settings_get_appfs_auto_cleanup(&auto_cleanup);
-        if (auto_cleanup) {
-            busy_dialog(get_icon(ICON_APPS), "Loading", "Freeing up space...", true);
-            // Calculate needed size
-            FILE* fd = fastopen(firmware_path, "rb");
-            if (fd != NULL) {
-                size_t file_size    = fs_utils_get_file_size(fd);
-                fastclose(fd);
-                size_t rounded_size = (file_size + (SPI_FLASH_MMU_PAGE_SIZE - 1)) & (~(SPI_FLASH_MMU_PAGE_SIZE - 1));
-                app_mgmt_appfs_evict_lru(rounded_size);
-                busy_dialog(get_icon(ICON_APPS), "Loading", "Copying app to AppFS...", true);
-                res = app_mgmt_ensure_in_appfs(app->slug, app->name, app->executable_revision, firmware_path);
-            }
-        }
-        if (res == ESP_ERR_NO_MEM) {
-            message_dialog(get_icon(ICON_ERROR), "No space",
-                           "Not enough space in AppFS.\nRemove cached apps (F4) to free space.", "OK");
-        }
-    }
-    if (res != ESP_OK && res != ESP_ERR_NO_MEM) {
+        message_dialog(get_icon(ICON_ERROR), "No space",
+                       "Not enough space in AppFS.\nRemove cached apps (F4) to free space.", "OK");
+    } else if (res != ESP_OK) {
         message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to load app to AppFS", "OK");
     }
     return res;
@@ -499,7 +433,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     // On-demand AppFS loading for appfs-type apps
                                     if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
                                         app->executable_appfs_fd == APPFS_INVALID_FD) {
-                                        char* firmware_path = find_firmware_path(app);
+                                        char* firmware_path = app_mgmt_find_firmware_path(app->slug);
                                         if (firmware_path == NULL) {
                                             message_dialog(get_icon(ICON_ERROR), "Error",
                                                            "App binary not found", "OK");
@@ -545,7 +479,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     } else if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
                                                app->executable_appfs_fd == APPFS_INVALID_FD) {
                                         // Not cached → cache (pre-cache without launching)
-                                        char* firmware_path = find_firmware_path(app);
+                                        char* firmware_path = app_mgmt_find_firmware_path(app->slug);
                                         if (firmware_path == NULL) {
                                             message_dialog(get_icon(ICON_ERROR), "Error",
                                                            "App binary not found", "OK");

@@ -1,15 +1,10 @@
 
 #include "app_inspect.h"
 #include <string.h>
-#include <time.h>
 #include "app_management.h"
-#include "app_metadata_parser.h"
 #include "appfs.h"
 #include "bsp/input.h"
 #include "common/display.h"
-#include "device_settings.h"
-#include "fastopen.h"
-#include "filesystem_utils.h"
 #include "gui_element_icontext.h"
 #include "gui_style.h"
 #include "icons.h"
@@ -60,15 +55,19 @@
 #define TEXT_FONT    pax_font_sky_mono
 #define TEXT_SIZE    18
 #elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT_CACHE   ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
-#define FOOTER_LEFT_UNCACHE ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
-#define FOOTER_LEFT_PLAIN   ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
+#define FOOTER_LEFT_CACHE_MOVE   ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
+#define FOOTER_LEFT_UNCACHE_MOVE ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
+#define FOOTER_LEFT_CACHE        ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
+#define FOOTER_LEFT_UNCACHE      ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
+#define FOOTER_LEFT_PLAIN        ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
 #define TEXT_FONT    pax_font_sky_mono
 #define TEXT_SIZE    9
 #else
-#define FOOTER_LEFT_CACHE   NULL, 0
-#define FOOTER_LEFT_UNCACHE NULL, 0
-#define FOOTER_LEFT_PLAIN   NULL, 0
+#define FOOTER_LEFT_CACHE_MOVE   NULL, 0
+#define FOOTER_LEFT_UNCACHE_MOVE NULL, 0
+#define FOOTER_LEFT_CACHE        NULL, 0
+#define FOOTER_LEFT_UNCACHE      NULL, 0
+#define FOOTER_LEFT_PLAIN        NULL, 0
 #define TEXT_FONT    pax_font_sky_mono
 #define TEXT_SIZE    9
 #endif
@@ -287,61 +286,27 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                 } else if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
                                            app->executable_appfs_fd == APPFS_INVALID_FD) {
                                     // Not cached → cache
-                                    const char* base_paths[] = {"/int/apps", "/sd/apps"};
-                                    char*       firmware_path = NULL;
-                                    for (int i = 0; i < 2; i++) {
-                                        uint32_t rev = 0;
-                                        if (get_executable_revision(base_paths[i], app->slug, &rev,
-                                                                     &firmware_path)) {
-                                            if (firmware_path != NULL && fs_utils_exists(firmware_path)) {
-                                                break;
-                                            }
-                                            free(firmware_path);
-                                            firmware_path = NULL;
-                                        }
-                                    }
+                                    char* firmware_path = app_mgmt_find_firmware_path(app->slug);
                                     if (firmware_path == NULL) {
                                         message_dialog(get_icon(ICON_ERROR), "Error",
                                                        "App binary not found", "OK");
                                     } else {
                                         busy_dialog(get_icon(ICON_APPS), "Caching",
                                                     "Copying app to AppFS...", true);
-                                        esp_err_t res = app_mgmt_ensure_in_appfs(
+                                        esp_err_t res = app_mgmt_cache_to_appfs(
                                             app->slug, app->name, app->executable_revision, firmware_path);
+                                        free(firmware_path);
                                         if (res == ESP_ERR_NO_MEM) {
-                                            uint8_t auto_cleanup = 0;
-                                            device_settings_get_appfs_auto_cleanup(&auto_cleanup);
-                                            if (auto_cleanup) {
-                                                busy_dialog(get_icon(ICON_APPS), "Caching",
-                                                            "Freeing up space...", true);
-                                                FILE* f = fastopen(firmware_path, "rb");
-                                                if (f != NULL) {
-                                                    size_t fsize = fs_utils_get_file_size(f);
-                                                    fastclose(f);
-                                                    size_t rounded = (fsize + (SPI_FLASH_MMU_PAGE_SIZE - 1)) &
-                                                                     (~(SPI_FLASH_MMU_PAGE_SIZE - 1));
-                                                    app_mgmt_appfs_evict_lru(rounded);
-                                                    busy_dialog(get_icon(ICON_APPS), "Caching",
-                                                                "Copying app to AppFS...", true);
-                                                    res = app_mgmt_ensure_in_appfs(
-                                                        app->slug, app->name, app->executable_revision,
-                                                        firmware_path);
-                                                }
-                                            }
-                                            if (res == ESP_ERR_NO_MEM) {
-                                                message_dialog(get_icon(ICON_ERROR), "No space",
-                                                               "Not enough space in AppFS.\n"
-                                                               "Remove cached apps (F4).", "OK");
-                                            }
-                                        }
-                                        if (res == ESP_OK) {
+                                            message_dialog(get_icon(ICON_ERROR), "No space",
+                                                           "Not enough space in AppFS.\n"
+                                                           "Remove cached apps (F4).", "OK");
+                                        } else if (res == ESP_OK) {
                                             message_dialog(get_icon(ICON_INFO), "Success",
                                                            "App cached in AppFS", "OK");
-                                        } else if (res != ESP_ERR_NO_MEM) {
+                                        } else {
                                             message_dialog(get_icon(ICON_ERROR), "Failed",
                                                            "Failed to cache app", "OK");
                                         }
-                                        free(firmware_path);
                                     }
                                     return true;  // Trigger app list refresh
                                 }

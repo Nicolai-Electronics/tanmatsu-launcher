@@ -1,9 +1,7 @@
 #include "app_management.h"
 #include <ctype.h>
-#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include "app_metadata_parser.h"
 #include "appfs.h"
 #include "bsp/device.h"
@@ -370,47 +368,27 @@ bool app_mgmt_has_binary_in_install_dir(const char* slug) {
 }
 
 esp_err_t app_mgmt_copy_appfs_to_install_dir(const char* slug) {
-    // Find which install directory exists for this app
-    char        app_dir[256] = {0};
+    // Find which base path has an install directory for this app
     const char* base_paths[] = {"/int/apps", "/sd/apps"};
-    bool        found        = false;
+    const char* found_base   = NULL;
+    char        app_dir[256] = {0};
     for (int i = 0; i < 2; i++) {
         snprintf(app_dir, sizeof(app_dir), "%s/%s", base_paths[i], slug);
         if (fs_utils_exists(app_dir)) {
-            found = true;
+            found_base = base_paths[i];
             break;
         }
     }
-    if (!found) {
+    if (found_base == NULL) {
         ESP_LOGE(TAG, "No install directory found for app %s", slug);
         return ESP_ERR_NOT_FOUND;
     }
 
     // Get executable filename from metadata
+    // get_executable_revision(base, slug, ...) returns path as "{base}/{slug}/{filename}"
     uint32_t revision  = 0;
     char*    exec_path = NULL;
-    if (!get_executable_revision(app_dir, slug, &revision, &exec_path)) {
-        ESP_LOGE(TAG, "Failed to get executable info for app %s", slug);
-        return ESP_FAIL;
-    }
-
-    // Note: get_executable_revision builds exec_path as "{base}/{slug}/{filename}"
-    // but we called it with app_dir which is already "{base}/{slug}",
-    // so exec_path is "{base}/{slug}/{slug}/{filename}" which is wrong.
-    // We need to call it with the base path instead.
-    free(exec_path);
-    exec_path = NULL;
-
-    // Re-derive base path from app_dir by finding the parent
-    // app_dir is like "/int/apps/slug" or "/sd/apps/slug"
-    char base_path[256] = {0};
-    strncpy(base_path, app_dir, sizeof(base_path) - 1);
-    char* last_slash = strrchr(base_path, '/');
-    if (last_slash != NULL) {
-        *last_slash = '\0';
-    }
-
-    if (!get_executable_revision(base_path, slug, &revision, &exec_path)) {
+    if (!get_executable_revision(found_base, slug, &revision, &exec_path)) {
         ESP_LOGE(TAG, "Failed to get executable info for app %s", slug);
         return ESP_FAIL;
     }
@@ -501,6 +479,21 @@ esp_err_t app_mgmt_remove_from_appfs(const char* slug) {
     return appfsDeleteFile(slug);
 }
 
+char* app_mgmt_find_firmware_path(const char* slug) {
+    const char* base_paths[] = {"/int/apps", "/sd/apps"};
+    for (int i = 0; i < 2; i++) {
+        uint32_t revision  = 0;
+        char*    exec_path = NULL;
+        if (get_executable_revision(base_paths[i], slug, &revision, &exec_path)) {
+            if (exec_path != NULL && fs_utils_exists(exec_path)) {
+                return exec_path;
+            }
+            free(exec_path);
+        }
+    }
+    return NULL;
+}
+
 esp_err_t app_mgmt_ensure_in_appfs(const char* slug, const char* name, uint32_t revision, const char* firmware_path) {
     if (appfsExists(slug)) {
         return ESP_OK;
@@ -526,6 +519,25 @@ esp_err_t app_mgmt_ensure_in_appfs(const char* slug, const char* name, uint32_t 
     }
 
     return app_mgmt_install_from_file(slug, name, revision, (char*)firmware_path);
+}
+
+esp_err_t app_mgmt_cache_to_appfs(const char* slug, const char* name, uint32_t revision, const char* firmware_path) {
+    esp_err_t res = app_mgmt_ensure_in_appfs(slug, name, revision, firmware_path);
+    if (res == ESP_ERR_NO_MEM) {
+        uint8_t auto_cleanup = 0;
+        device_settings_get_appfs_auto_cleanup(&auto_cleanup);
+        if (auto_cleanup) {
+            FILE* fd = fastopen(firmware_path, "rb");
+            if (fd != NULL) {
+                size_t file_size    = fs_utils_get_file_size(fd);
+                fastclose(fd);
+                size_t rounded_size = (file_size + (SPI_FLASH_MMU_PAGE_SIZE - 1)) & (~(SPI_FLASH_MMU_PAGE_SIZE - 1));
+                app_mgmt_appfs_evict_lru(rounded_size);
+                res = app_mgmt_ensure_in_appfs(slug, name, revision, firmware_path);
+            }
+        }
+    }
+    return res;
 }
 
 // Comparison function for qsort — sort by timestamp ascending (oldest first)
@@ -601,42 +613,6 @@ esp_err_t app_mgmt_appfs_evict_lru(size_t needed_bytes) {
 
 // --- App move between storage locations ---
 
-static uint64_t get_directory_size(const char* path) {
-    struct stat st;
-    if (stat(path, &st) != 0) {
-        return 0;
-    }
-
-    if (!S_ISDIR(st.st_mode)) {
-        return st.st_size;
-    }
-
-    DIR* dir = opendir(path);
-    if (dir == NULL) {
-        return 0;
-    }
-
-    uint64_t       total = 0;
-    struct dirent* entry;
-    while ((entry = readdir(dir)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-
-        size_t full_len  = strlen(path) + strlen(entry->d_name) + 2;
-        char*  full_path = malloc(full_len);
-        if (full_path == NULL) {
-            break;
-        }
-        snprintf(full_path, full_len, "%s/%s", path, entry->d_name);
-        total += get_directory_size(full_path);
-        free(full_path);
-    }
-
-    closedir(dir);
-    return total;
-}
-
 esp_err_t app_mgmt_move(const char* slug, app_mgmt_location_t from, app_mgmt_location_t to) {
     const char* src_base = app_mgmt_location_to_path(from);
     const char* dst_base = app_mgmt_location_to_path(to);
@@ -655,7 +631,7 @@ esp_err_t app_mgmt_move(const char* slug, app_mgmt_location_t from, app_mgmt_loc
     }
 
     // Check free space on target filesystem
-    uint64_t dir_size = get_directory_size(src_path);
+    uint64_t dir_size = fs_utils_get_directory_size(src_path);
     if (dir_size == 0) {
         ESP_LOGE(TAG, "Failed to calculate directory size for %s", src_path);
         return ESP_FAIL;
@@ -723,7 +699,7 @@ bool app_mgmt_can_move(const char* slug, app_mgmt_location_t from, app_mgmt_loca
         return false;
     }
 
-    uint64_t dir_size = get_directory_size(src_path);
+    uint64_t dir_size = fs_utils_get_directory_size(src_path);
     if (dir_size == 0) {
         return false;
     }
