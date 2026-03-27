@@ -1,8 +1,12 @@
 #include "menu_repository_client_project.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/_intsup.h>
 #include "app_management.h"
+#include "app_metadata_parser.h"
+#include "appfs.h"
+#include "bsp/device.h"
 #include "bsp/input.h"
 #include "cJSON.h"
 #include "common/display.h"
@@ -108,34 +112,197 @@ static void download_callback(size_t download_position, size_t file_size, const 
     busy_dialog(get_icon(ICON_DOWNLOADING), "Downloading", text, true);
 };
 
+// Find the interpreter slug for the current device from project metadata.
+// Returns NULL if the app is not a script type or has no interpreter.
+// The returned string points into the cJSON tree — do not free.
+static const char* find_interpreter_slug(cJSON* project) {
+    cJSON* applications = cJSON_GetObjectItem(project, "application");
+    if (applications == NULL || !cJSON_IsArray(applications)) {
+        return NULL;
+    }
+
+    char device_name[32] = {0};
+    bsp_device_get_name(device_name, sizeof(device_name));
+    for (int i = 0; device_name[i]; i++) {
+        device_name[i] = tolower(device_name[i]);
+    }
+
+    cJSON* application = NULL;
+    cJSON_ArrayForEach(application, applications) {
+        cJSON* targets = cJSON_GetObjectItem(application, "targets");
+        if (targets == NULL || !cJSON_IsArray(targets)) {
+            continue;
+        }
+        cJSON* target = NULL;
+        bool   matched = false;
+        cJSON_ArrayForEach(target, targets) {
+            if (target != NULL && cJSON_IsString(target) &&
+                strcmp(target->valuestring, device_name) == 0 &&
+                strlen(target->valuestring) == strlen(device_name)) {
+                matched = true;
+                break;
+            }
+        }
+        if (matched) {
+            cJSON* type_obj = cJSON_GetObjectItem(application, "type");
+            if (type_obj != NULL && cJSON_IsString(type_obj) &&
+                strcmp(type_obj->valuestring, "script") == 0) {
+                cJSON* interp_obj = cJSON_GetObjectItem(application, "interpreter");
+                if (interp_obj != NULL && cJSON_IsString(interp_obj)) {
+                    return interp_obj->valuestring;
+                }
+            }
+            return NULL;  // Found matching app but it's not a script
+        }
+    }
+    return NULL;
+}
+
+// Check if interpreter is already available (in appfs or install dirs)
+static bool interpreter_available(const char* interpreter_slug) {
+    if (appfsExists(interpreter_slug)) {
+        return true;
+    }
+    return app_mgmt_has_binary_in_install_dir(interpreter_slug);
+}
+
+// Prompt user to install the interpreter and handle the download
+static void prompt_install_interpreter(pax_buf_t* buffer, gui_theme_t* theme, const char* interpreter_slug) {
+    char msg[128];
+    snprintf(msg, sizeof(msg), "This app requires interpreter '%s'.\nInstall it?", interpreter_slug);
+    message_dialog_return_type_t result = adv_dialog_yes_no(get_icon(ICON_HELP), "Interpreter needed", msg);
+    if (result != MSG_DIALOG_RETURN_OK) {
+        return;
+    }
+
+    // Ask where to install
+    QueueHandle_t input_event_queue = NULL;
+    ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
+
+    menu_t loc_menu = {0};
+    menu_initialize(&loc_menu);
+    menu_insert_item(&loc_menu, "Install on\nSD card", NULL, (void*)ACTION_INSTALL_SD, -1);
+    menu_insert_item(&loc_menu, "Install on\nInternal memory", NULL, (void*)ACTION_INSTALL, -1);
+
+    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
+    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
+
+    render_base_screen_statusbar(
+        buffer, theme, true, true, true,
+        ((gui_element_icontext_t[]){{get_icon(ICON_STOREFRONT), "Install interpreter"}}), 1,
+        ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Skip"}}), 2,
+        ((gui_element_icontext_t[]){{NULL, "← / → | ⏎ Select"}}), 1);
+
+    pax_vec2_t menu_position = {
+        .x0 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding - 400,
+        .y0 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding -
+              128,
+        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
+        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
+    };
+
+    gui_theme_t modified_theme                = *theme;
+    modified_theme.menu.grid_horizontal_count = menu_get_length(&loc_menu);
+    modified_theme.menu.grid_vertical_count   = 1;
+    menu_render_grid(buffer, &loc_menu, menu_position, &modified_theme, false);
+    display_blit_buffer(buffer);
+
+    while (1) {
+        bsp_input_event_t event;
+        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.state) {
+                switch (event.args_navigation.key) {
+                    case BSP_INPUT_NAVIGATION_KEY_ESC:
+                    case BSP_INPUT_NAVIGATION_KEY_F1:
+                    case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                        menu_free(&loc_menu);
+                        return;
+                    case BSP_INPUT_NAVIGATION_KEY_LEFT:
+                        menu_navigate_previous(&loc_menu);
+                        menu_render_grid(buffer, &loc_menu, menu_position, &modified_theme, true);
+                        display_blit_buffer(buffer);
+                        break;
+                    case BSP_INPUT_NAVIGATION_KEY_RIGHT:
+                        menu_navigate_next(&loc_menu);
+                        menu_render_grid(buffer, &loc_menu, menu_position, &modified_theme, true);
+                        display_blit_buffer(buffer);
+                        break;
+                    case BSP_INPUT_NAVIGATION_KEY_RETURN:
+                    case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
+                    case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
+                        void*               arg = menu_get_callback_args(&loc_menu, menu_get_position(&loc_menu));
+                        app_mgmt_location_t location = ((menu_repository_client_project_action_t)arg == ACTION_INSTALL)
+                                                           ? APP_MGMT_LOCATION_INTERNAL
+                                                           : APP_MGMT_LOCATION_SD;
+                        const char* loc_text = (location == APP_MGMT_LOCATION_SD) ? "SD card" : "internal memory";
+                        char        busy_msg[64];
+                        snprintf(busy_msg, sizeof(busy_msg), "Installing interpreter on %s...", loc_text);
+                        busy_dialog(get_icon(ICON_STOREFRONT), "Repository", busy_msg, true);
+
+                        char server[128] = {0};
+                        device_settings_get_repo_server(server, sizeof(server));
+                        esp_err_t res = app_mgmt_install(server, interpreter_slug, location, download_callback);
+                        if (res == ESP_OK) {
+                            message_dialog(get_icon(ICON_STOREFRONT), "Repository",
+                                           "Interpreter installed successfully", "OK");
+                        } else {
+                            message_dialog(get_icon(ICON_ERROR), "Repository",
+                                           "Interpreter not found in repository.\n"
+                                           "You may need to install it manually.",
+                                           "OK");
+                        }
+                        menu_free(&loc_menu);
+                        return;
+                    }
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+}
+
 static void execute_action(pax_buf_t* buffer, menu_repository_client_project_action_t action, gui_theme_t* theme,
                            cJSON* wrapper) {
     char server[128] = {0};
     nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
 
     cJSON* slug_obj = cJSON_GetObjectItem(wrapper, "slug");
+    cJSON* project  = cJSON_GetObjectItem(wrapper, "project");
+
+    app_mgmt_location_t location;
+    const char*         loc_text;
     switch (action) {
-        case ACTION_INSTALL: {
-            busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Installing on internal memory...", true);
-            if (app_mgmt_install(server, slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL, download_callback) !=
-                ESP_OK) {
-                message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK");
-            } else {
-                message_dialog(get_icon(ICON_STOREFRONT), "Repository", "App successfully installed", "OK");
-            }
+        case ACTION_INSTALL:
+            location = APP_MGMT_LOCATION_INTERNAL;
+            loc_text = "internal memory";
             break;
-        }
-        case ACTION_INSTALL_SD: {
-            busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Installing on SD card...", true);
-            if (app_mgmt_install(server, slug_obj->valuestring, APP_MGMT_LOCATION_SD, download_callback) != ESP_OK) {
-                message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK, download_callback");
-            } else {
-                message_dialog(get_icon(ICON_STOREFRONT), "Repository", "App successfully installed", "OK");
-            }
+        case ACTION_INSTALL_SD:
+            location = APP_MGMT_LOCATION_SD;
+            loc_text = "SD card";
             break;
-        }
         default:
-            break;
+            return;
+    }
+
+    char busy_msg[64];
+    snprintf(busy_msg, sizeof(busy_msg), "Installing on %s...", loc_text);
+    busy_dialog(get_icon(ICON_STOREFRONT), "Repository", busy_msg, true);
+
+    esp_err_t res = app_mgmt_install(server, slug_obj->valuestring, location, download_callback);
+    if (res != ESP_OK) {
+        message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK");
+        return;
+    }
+
+    message_dialog(get_icon(ICON_STOREFRONT), "Repository", "App successfully installed", "OK");
+
+    // Check if this is a script app that needs an interpreter
+    if (project != NULL) {
+        const char* interpreter_slug = find_interpreter_slug(project);
+        if (interpreter_slug != NULL && !interpreter_available(interpreter_slug)) {
+            prompt_install_interpreter(buffer, theme, interpreter_slug);
+        }
     }
 }
 
