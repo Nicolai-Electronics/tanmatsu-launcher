@@ -421,7 +421,7 @@ esp_err_t device_settings_set_theme(theme_setting_t theme) {
 // AppFS settings
 
 esp_err_t device_settings_get_appfs_auto_cleanup(uint8_t* out_value) {
-    return device_settings_get_u8("appfs_ac", 0, out_value);
+    return device_settings_get_u8("appfs_ac", 1, out_value);
 }
 
 esp_err_t device_settings_set_appfs_auto_cleanup(uint8_t value) {
