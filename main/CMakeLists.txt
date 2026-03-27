@@ -90,6 +90,8 @@ idf_component_register(
 		"app_management.c"
 		"ntp.c"
 		"device_settings.c"
+		"appfs_settings.c"
+		"app_usage.c"
 		"fastopen.c"
 		"global_event_handler.c"
 		"bootloader_update.c"
