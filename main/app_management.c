@@ -546,8 +546,13 @@ esp_err_t app_mgmt_appfs_evict_lru(size_t needed_bytes) {
     // Collect appfs entries that have a backup in the install directory.
     // Apps without install dirs (dev/legacy apps only in appfs) are never auto-evicted
     // since removing them would permanently lose the binary.
-    appfs_usage_entry_t entries[128];
-    size_t              count = 0;
+    // Heap-allocated to avoid stack overflow in the deep call chain.
+    appfs_usage_entry_t* entries = malloc(sizeof(appfs_usage_entry_t) * 128);
+    if (entries == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for LRU eviction");
+        return ESP_ERR_NO_MEM;
+    }
+    size_t count = 0;
 
     appfs_handle_t appfs_fd = appfsNextEntry(APPFS_INVALID_FD);
     while (appfs_fd != APPFS_INVALID_FD && count < 128) {
@@ -567,6 +572,7 @@ esp_err_t app_mgmt_appfs_evict_lru(size_t needed_bytes) {
 
     if (count == 0) {
         ESP_LOGW(TAG, "No appfs entries to evict");
+        free(entries);
         return ESP_ERR_NO_MEM;
     }
 
@@ -576,11 +582,14 @@ esp_err_t app_mgmt_appfs_evict_lru(size_t needed_bytes) {
     // Evict entries until we have enough space
     for (size_t i = 0; i < count; i++) {
         if (appfsGetFreeMem() >= needed_bytes) {
+            free(entries);
             return ESP_OK;
         }
         ESP_LOGI(TAG, "Evicting %s from AppFS (last used: %u)", entries[i].slug, entries[i].timestamp);
         app_mgmt_remove_from_appfs(entries[i].slug);
     }
+
+    free(entries);
 
     if (appfsGetFreeMem() >= needed_bytes) {
         return ESP_OK;
