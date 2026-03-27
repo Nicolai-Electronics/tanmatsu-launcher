@@ -31,8 +31,6 @@
 
 static const char* TAG = "apps";
 
-#define MAX_NUM_APPS 128
-
 static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
     for (size_t i = 0; i < app_count; i++) {
         if (apps[i] != NULL && apps[i]->slug != NULL && apps[i]->name != NULL) {

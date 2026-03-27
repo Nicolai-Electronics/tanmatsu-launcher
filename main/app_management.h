@@ -5,6 +5,8 @@
 #include "esp_err.h"
 #include "http_download.h"
 
+#define MAX_NUM_APPS 128
+
 typedef enum {
     APP_MGMT_LOCATION_INTERNAL = 0,
     APP_MGMT_LOCATION_SD,

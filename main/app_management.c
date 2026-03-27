@@ -560,15 +560,16 @@ esp_err_t app_mgmt_appfs_evict_lru(size_t needed_bytes) {
     // Apps without install dirs (dev/legacy apps only in appfs) are never auto-evicted
     // since removing them would permanently lose the binary.
     // Heap-allocated to avoid stack overflow in the deep call chain.
-    appfs_usage_entry_t* entries = malloc(sizeof(appfs_usage_entry_t) * 128);
+    appfs_usage_entry_t* entries = malloc(sizeof(appfs_usage_entry_t) * MAX_NUM_APPS);
     if (entries == NULL) {
         ESP_LOGE(TAG, "Failed to allocate memory for LRU eviction");
         return ESP_ERR_NO_MEM;
     }
-    size_t count = 0;
 
+    // Collect evictable entries
+    size_t         count   = 0;
     appfs_handle_t appfs_fd = appfsNextEntry(APPFS_INVALID_FD);
-    while (appfs_fd != APPFS_INVALID_FD && count < 128) {
+    while (appfs_fd != APPFS_INVALID_FD && count < MAX_NUM_APPS) {
         const char* slug = NULL;
         appfsEntryInfoExt(appfs_fd, &slug, NULL, NULL, NULL);
         if (slug != NULL && app_mgmt_can_uncache(slug)) {
