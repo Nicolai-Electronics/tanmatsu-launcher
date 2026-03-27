@@ -67,7 +67,7 @@ static void menu_populate(menu_t* menu) {
     menu_insert_item_value(menu, "Server", server, NULL, (void*)ACTION_SERVER, -1);
     menu_insert_item_value(menu, "Base URI", base_uri, NULL, (void*)ACTION_BASE_URI, -1);
     menu_insert_item_value(menu, "User Agent", user_agent, NULL, (void*)ACTION_USER_AGENT, -1);
-    menu_insert_item_value(menu, "Auto-cleanup AppFS", auto_cleanup ? "X" : "", NULL, (void*)ACTION_AUTO_CLEANUP, -1);
+    menu_insert_item_value(menu, "Auto-cleanup AppFS", auto_cleanup ? "Enabled" : "Disabled", NULL, (void*)ACTION_AUTO_CLEANUP, -1);
 
     if (previous_position >= menu_get_length(menu)) {
         previous_position = menu_get_length(menu) - 1;
@@ -125,7 +125,7 @@ static void reset_defaults(menu_t* menu) {
     menu_set_value(menu, 0, DEFAULT_REPO_SERVER);
     menu_set_value(menu, 1, DEFAULT_REPO_BASE_URI);
     menu_set_value(menu, 2, default_ua);
-    menu_set_value(menu, 3, "");
+    menu_set_value(menu, 3, "Disabled");
 }
 
 void menu_settings_repository(void) {
@@ -194,7 +194,7 @@ void menu_settings_repository(void) {
                                         appfs_settings_get_auto_cleanup(&current);
                                         current = current ? 0 : 1;
                                         appfs_settings_set_auto_cleanup(current);
-                                        menu_set_value(&menu, 3, current ? "X" : "");
+                                        menu_set_value(&menu, 3, current ? "Enabled" : "Disabled");
                                         break;
                                     }
                                     default:
