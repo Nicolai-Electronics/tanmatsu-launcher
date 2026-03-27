@@ -178,6 +178,9 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                 return;
             }
 
+            // Update last-used timestamp for the interpreter so it's not evicted prematurely
+            device_settings_set_app_last_used(app->executable_interpreter_slug, (uint32_t)time(NULL));
+
             size_t req = snprintf(NULL, 0, "%s/%s/%s", app->path, app->slug, app->executable_filename);
             if (req > PATH_MAX) {
                 message_dialog(get_icon(ICON_ERROR), "Error", "Script path is too long", "OK");
