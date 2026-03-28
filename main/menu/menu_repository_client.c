@@ -12,6 +12,7 @@
 #include "gui_style.h"
 #include "http_download.h"
 #include "icons.h"
+#include "mbedtls/base64.h"
 #include "menu/message_dialog.h"
 #include "menu_repository_client_project.h"
 #include "pax_codecs.h"
@@ -52,7 +53,56 @@ repository_json_data_t projects = {0};
 typedef struct {
     const char* name;
     int         index;
+    pax_buf_t*  icon;
 } project_sort_entry_t;
+
+// Decode a base64-encoded PNG into a pax_buf_t. Returns NULL on failure.
+static pax_buf_t* decode_base64_icon(const char* base64_data) {
+    size_t b64_len = strlen(base64_data);
+    size_t decoded_len = 0;
+
+    // Get decoded size
+    if (mbedtls_base64_decode(NULL, 0, &decoded_len, (const unsigned char*)base64_data, b64_len) != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL) {
+        return NULL;
+    }
+
+    uint8_t* png_data = malloc(decoded_len);
+    if (png_data == NULL) {
+        return NULL;
+    }
+
+    size_t actual_len = 0;
+    if (mbedtls_base64_decode(png_data, decoded_len, &actual_len, (const unsigned char*)base64_data, b64_len) != 0) {
+        free(png_data);
+        return NULL;
+    }
+
+    pax_buf_t* icon = calloc(1, sizeof(pax_buf_t));
+    if (icon == NULL) {
+        free(png_data);
+        return NULL;
+    }
+
+    if (!pax_decode_png_buf(icon, png_data, actual_len, ICON_COLOR_FORMAT, 0)) {
+        free(icon);
+        free(png_data);
+        return NULL;
+    }
+
+    free(png_data);
+    return icon;
+}
+
+// Free all icons attached to menu items
+static void free_menu_icons(menu_t* menu) {
+    for (size_t i = 0; i < menu_get_length(menu); i++) {
+        pax_buf_t* icon = menu_get_icon(menu, i);
+        if (icon != NULL) {
+            pax_buf_destroy(icon);
+            free(icon);
+        }
+    }
+}
 
 static int compare_projects_by_name(const void* a, const void* b) {
     const project_sort_entry_t* ea = (const project_sort_entry_t*)a;
@@ -100,6 +150,14 @@ static void populate_project_list(menu_t* menu, cJSON* json_projects) {
         }
         sorted[i].name  = name_obj->valuestring;
         sorted[i].index = idx;
+        sorted[i].icon  = NULL;
+
+        // Decode optional base64 icon
+        cJSON* icon_obj = cJSON_GetObjectItem(entry_obj, "icon");
+        if (icon_obj != NULL && cJSON_IsString(icon_obj)) {
+            sorted[i].icon = decode_base64_icon(icon_obj->valuestring);
+        }
+
         i++;
         idx++;
     }
@@ -108,7 +166,7 @@ static void populate_project_list(menu_t* menu, cJSON* json_projects) {
 
     for (int j = 0; j < i; j++) {
         printf("Project: %s\r\n", sorted[j].name);
-        menu_insert_item(menu, sorted[j].name, NULL, (void*)sorted[j].index, -1);
+        menu_insert_item_icon(menu, sorted[j].name, NULL, (void*)sorted[j].index, -1, sorted[j].icon);
     }
 
     free(sorted);
@@ -201,6 +259,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                                free_menu_icons(&menu);
                                 menu_free(&menu);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
