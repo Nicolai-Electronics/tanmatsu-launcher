@@ -1,6 +1,8 @@
 #include "menu_repository_client.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include "bsp/input.h"
 #include "cJSON.h"
 #include "common/display.h"
@@ -47,29 +49,69 @@ repository_json_data_t projects = {0};
 #define ICON_COLOR_FORMAT PAX_BUF_32_8888ARGB
 #endif
 
+typedef struct {
+    const char* name;
+    int         index;
+} project_sort_entry_t;
+
+static int compare_projects_by_name(const void* a, const void* b) {
+    const project_sort_entry_t* ea = (const project_sort_entry_t*)a;
+    const project_sort_entry_t* eb = (const project_sort_entry_t*)b;
+    return strcasecmp(ea->name, eb->name);
+}
+
 static void populate_project_list(menu_t* menu, cJSON* json_projects) {
+    // Count valid entries
+    int    total = 0;
     cJSON* entry_obj;
-    int    i = 0;
+    cJSON_ArrayForEach(entry_obj, json_projects) {
+        cJSON* project_obj = cJSON_GetObjectItem(entry_obj, "project");
+        if (project_obj != NULL && cJSON_GetObjectItem(project_obj, "name") != NULL) {
+            total++;
+        }
+    }
+
+    if (total == 0) return;
+
+    // Collect entries for sorting
+    project_sort_entry_t* sorted = malloc(sizeof(project_sort_entry_t) * total);
+    if (sorted == NULL) return;
+
+    int i = 0;
+    int idx = 0;
     cJSON_ArrayForEach(entry_obj, json_projects) {
         cJSON* slug_obj = cJSON_GetObjectItem(entry_obj, "slug");
         if (slug_obj == NULL) {
-            ESP_LOGE(TAG, "Slug object is NULL for entry %d", i);
+            ESP_LOGE(TAG, "Slug object is NULL for entry %d", idx);
+            idx++;
             continue;
         }
         cJSON* project_obj = cJSON_GetObjectItem(entry_obj, "project");
         if (project_obj == NULL) {
-            ESP_LOGE(TAG, "Project object is NULL for entry %d", i);
+            ESP_LOGE(TAG, "Project object is NULL for entry %d", idx);
+            idx++;
             continue;
         }
         cJSON* name_obj = cJSON_GetObjectItem(project_obj, "name");
         if (name_obj == NULL) {
-            ESP_LOGE(TAG, "Name object is NULL for entry %d", i);
+            ESP_LOGE(TAG, "Name object is NULL for entry %d", idx);
+            idx++;
             continue;
         }
-        printf("Project [%s]: %s\r\n", slug_obj->valuestring, name_obj->valuestring);
-        menu_insert_item(menu, name_obj->valuestring, NULL, (void*)i, -1);
+        sorted[i].name  = name_obj->valuestring;
+        sorted[i].index = idx;
         i++;
+        idx++;
     }
+
+    qsort(sorted, i, sizeof(project_sort_entry_t), compare_projects_by_name);
+
+    for (int j = 0; j < i; j++) {
+        printf("Project: %s\r\n", sorted[j].name);
+        menu_insert_item(menu, sorted[j].name, NULL, (void*)sorted[j].index, -1);
+    }
+
+    free(sorted);
 }
 
 static cJSON* get_project_by_index(cJSON* json_projects, int index) {
