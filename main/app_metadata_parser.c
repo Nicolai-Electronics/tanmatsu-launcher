@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include "bsp/device.h"
 #include "cJSON.h"
 #include "esp_log.h"
@@ -129,7 +130,7 @@ bool get_executable_revision(const char* path, const char* slug, uint32_t* out_r
     return result;
 }
 
-app_t* create_app(const char* path, const char* slug, bool sdcard) {
+app_t* create_app(const char* path, const char* slug) {
     app_t* app = calloc(1, sizeof(app_t));
     app->path  = strdup(path);
     app->slug  = strdup(slug);
@@ -297,24 +298,22 @@ app_t* create_app(const char* path, const char* slug, bool sdcard) {
             if (filename_obj && (filename_obj->valuestring != NULL)) {
                 app->executable_filename = strdup(filename_obj->valuestring);
 
-                if (app->executable_type == EXECUTABLE_TYPE_APPFS && sdcard) {
-                    // Check for SD card executable
-                    app->executable_on_sd_revision = app->executable_revision;
-                    app->executable_on_sd_filename = strdup(app->executable_filename);
-
-                    printf("Check\r\n");
-
+                if (app->executable_type == EXECUTABLE_TYPE_APPFS) {
+                    // Check for executable binary in install directory
                     size_t length = snprintf(NULL, 0, "%s/%s/%s", path, slug, app->executable_filename);
                     if (length > 0) {
-                        app->executable_on_sd_filename = malloc(length + 1);
-                        if (app->executable_on_sd_filename) {
-                            snprintf(app->executable_on_sd_filename, length + 1, "%s/%s/%s", path, slug,
-                                     app->executable_filename);
-                            if (access(app->executable_on_sd_filename, F_OK) == 0) {
-                                printf("Found!!!!\r\n");
-                                app->executable_on_sd_available = true;
+                        char* fs_path = malloc(length + 1);
+                        if (fs_path) {
+                            snprintf(fs_path, length + 1, "%s/%s/%s", path, slug, app->executable_filename);
+                            struct stat fs_stat;
+                            if (stat(fs_path, &fs_stat) == 0) {
+                                free(app->executable_on_fs_filename);
+                                app->executable_on_fs_filename  = fs_path;
+                                app->executable_on_fs_revision  = app->executable_revision;
+                                app->executable_on_fs_filesize  = (int)fs_stat.st_size;
+                                app->executable_on_fs_available = true;
                             } else {
-                                printf("Not found (%s)!!!\r\n", app->executable_on_sd_filename);
+                                free(fs_path);
                             }
                         }
                     }
@@ -367,12 +366,12 @@ void free_app(app_t* app) {
         pax_buf_destroy(app->icon);
         free(app->icon);
     }
-    if (app->executable_on_sd_filename != NULL) free(app->executable_on_sd_filename);
+    if (app->executable_on_fs_filename != NULL) free(app->executable_on_fs_filename);
     free(app);
 }
 
 size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, const char* path, app_t** full_list,
-                                          size_t full_list_size, bool sdcard) {
+                                          size_t full_list_size) {
     DIR* dir = opendir(path);
     if (dir == NULL) {
         return 0;
@@ -390,18 +389,28 @@ size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, co
                     strcmp(full_list[i]->slug, entry->d_name) == 0) {
                     already_in_list = true;
 
-                    // Add SD card executable info if applicable
-                    if (sdcard && get_executable_revision(path, entry->d_name, &full_list[i]->executable_on_sd_revision,
-                                                          &full_list[i]->executable_on_sd_filename)) {
-                        if (access(full_list[i]->executable_on_sd_filename, F_OK) == 0) {
-                            full_list[i]->executable_on_sd_available = true;
+                    // Update filesystem executable info (SD overrides internal due to scan order)
+                    {
+                        uint32_t rev       = 0;
+                        char*    exec_path = NULL;
+                        if (get_executable_revision(path, entry->d_name, &rev, &exec_path)) {
+                            struct stat fs_stat;
+                            if (exec_path != NULL && stat(exec_path, &fs_stat) == 0) {
+                                free(full_list[i]->executable_on_fs_filename);
+                                full_list[i]->executable_on_fs_filename  = exec_path;
+                                full_list[i]->executable_on_fs_revision  = rev;
+                                full_list[i]->executable_on_fs_filesize  = (int)fs_stat.st_size;
+                                full_list[i]->executable_on_fs_available = true;
+                            } else {
+                                free(exec_path);
+                            }
                         }
                     }
                     break;
                 }
             }
             if (!already_in_list) {
-                app_t* app = create_app(path, entry->d_name, sdcard);
+                app_t* app = create_app(path, entry->d_name);
                 if (app != NULL && count < list_size) {
                     out_list[count++] = app;
                 }
@@ -458,10 +467,8 @@ size_t create_list_of_apps_from_other_appfs_entries(app_t** out_list, size_t lis
 size_t create_list_of_apps(app_t** out_list, size_t list_size) {
     size_t count = 0;
 
-    count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/int/apps", out_list, list_size,
-                                                false);
-    count +=
-        create_list_of_apps_from_directory(&out_list[count], list_size - count, "/sd/apps", out_list, list_size, true);
+    count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/int/apps", out_list, list_size);
+    count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/sd/apps", out_list, list_size);
     count += create_list_of_apps_from_other_appfs_entries(&out_list[count], list_size - count, out_list, list_size);
     return count;
 }

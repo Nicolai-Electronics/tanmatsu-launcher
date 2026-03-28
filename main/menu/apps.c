@@ -12,6 +12,7 @@
 #include "app_metadata_parser.h"
 #include "app_usage.h"
 #include "appfs.h"
+#include "appfs_settings.h"
 #if CONFIG_IDF_TARGET_ESP32P4
 #include "badge_elf.h"
 #endif
@@ -48,10 +49,26 @@ static int compare_apps_by_name(const void* a, const void* b) {
 static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
     for (size_t i = 0; i < app_count; i++) {
         if (apps[i] != NULL && apps[i]->slug != NULL && apps[i]->name != NULL) {
-            char label[128];
-            bool in_appfs = (apps[i]->executable_type == EXECUTABLE_TYPE_APPFS &&
-                             apps[i]->executable_appfs_fd != APPFS_INVALID_FD);
-            snprintf(label, sizeof(label), "%s %s", in_appfs ? "[C]" : "   ", apps[i]->name);
+            char        label[128];
+            const char* prefix = "   ";
+            if (apps[i]->executable_type == EXECUTABLE_TYPE_APPFS &&
+                apps[i]->executable_appfs_fd != APPFS_INVALID_FD) {
+                bool mismatch = false;
+                if (apps[i]->executable_on_fs_available) {
+                    // Check revision mismatch
+                    if (apps[i]->executable_on_fs_revision != apps[i]->executable_revision) {
+                        mismatch = true;
+                    }
+                    // Check filesize mismatch
+                    int appfs_size = 0;
+                    appfsEntryInfoExt(apps[i]->executable_appfs_fd, NULL, NULL, NULL, &appfs_size);
+                    if (appfs_size != apps[i]->executable_on_fs_filesize) {
+                        mismatch = true;
+                    }
+                }
+                prefix = mismatch ? "[M]" : "[C]";
+            }
+            snprintf(label, sizeof(label), "%s %s", prefix, apps[i]->name);
             menu_insert_item_icon(menu, label, NULL, (void*)apps[i], -1, apps[i]->icon);
         }
     }
@@ -166,7 +183,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
             }
 
             // Update last-used timestamp for the interpreter so it's not evicted prematurely
-            device_settings_set_app_last_used(app->executable_interpreter_slug, (uint32_t)time(NULL));
+            app_usage_set_last_used(app->executable_interpreter_slug, (uint32_t)time(NULL));
 
             size_t req = snprintf(NULL, 0, "%s/%s/%s", app->path, app->slug, app->executable_filename);
             if (req > PATH_MAX) {
@@ -218,14 +235,6 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                                 {get_icon(ICON_F4), "Uncache"},    \
                                 {get_icon(ICON_F5), "Remove"}}),   \
         5
-#define FOOTER_LEFT_UNCACHE_UPDATE                                 \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},         \
-                                {get_icon(ICON_F1), "Back"},       \
-                                {get_icon(ICON_F2), "Details"},    \
-                                {get_icon(ICON_F4), "Uncache"},    \
-                                {get_icon(ICON_F5), "Remove"},     \
-                                {get_icon(ICON_F6), "Update"}}),   \
-        6
 #define FOOTER_LEFT_PLAIN                                          \
     ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},         \
                                 {get_icon(ICON_F1), "Back"},       \
@@ -235,7 +244,6 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
 #elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
 #define FOOTER_LEFT_CACHE          NULL, 0
 #define FOOTER_LEFT_UNCACHE        NULL, 0
-#define FOOTER_LEFT_UNCACHE_UPDATE NULL, 0
 #define FOOTER_LEFT_PLAIN          NULL, 0
 #else
 #define FOOTER_LEFT_CACHE                                          \
@@ -252,14 +260,6 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                                 {NULL, "F4 Uncache"},              \
                                 {NULL, "F5 Remove"}}),             \
         5
-#define FOOTER_LEFT_UNCACHE_UPDATE                                 \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},         \
-                                {NULL, "F1 Back"},                 \
-                                {NULL, "F2 Details"},              \
-                                {NULL, "F4 Uncache"},              \
-                                {NULL, "F5 Remove"},               \
-                                {NULL, "F6 Update"}}),             \
-        6
 #define FOOTER_LEFT_PLAIN                                          \
     ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},         \
                                 {NULL, "F1 Back"},                 \
@@ -272,7 +272,6 @@ typedef enum {
     APP_MENU_FOOTER_TYPE_NORMAL_CACHED = 0,  // In appfs, has install dir → F4 "Uncache"
     APP_MENU_FOOTER_TYPE_NORMAL_UNCACHED,    // Not in appfs, has install dir → F4 "Cache"
     APP_MENU_FOOTER_TYPE_NORMAL_PLAIN,       // In appfs, no install dir (dev/legacy) → no F4
-    APP_MENU_FOOTER_TYPE_UPDATE_CACHED,      // In appfs, update available → F4 "Uncache" + F6 "Update"
     APP_MENU_FOOTER_TYPE_INSTALL,            // Binary on disk, not in appfs → F4 "Cache"
     APP_MENU_FOOTER_TYPE_UNAVAILABLE,        // Nothing available → no F4
     APP_MENU_FOOTER_TYPE_COUNT,
@@ -305,15 +304,13 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
         if (app->executable_type == EXECUTABLE_TYPE_APPFS) {
             bool can_uncache = app_mgmt_can_uncache(app->slug);
             if (app->executable_appfs_fd == APPFS_INVALID_FD) {
-                if (app->executable_on_sd_available || app_mgmt_has_binary_in_install_dir(app->slug)) {
+                if (app->executable_on_fs_available || app_mgmt_has_binary_in_install_dir(app->slug)) {
                     footer_type = APP_MENU_FOOTER_TYPE_INSTALL;
                 } else {
                     footer_type = APP_MENU_FOOTER_TYPE_UNAVAILABLE;
                 }
             } else {
-                if (app->executable_on_sd_available && app->executable_on_sd_revision > app->executable_revision) {
-                    footer_type = APP_MENU_FOOTER_TYPE_UPDATE_CACHED;
-                } else if (can_uncache) {
+                if (can_uncache) {
                     footer_type = APP_MENU_FOOTER_TYPE_NORMAL_CACHED;
                 } else {
                     // App only exists in appfs (dev/legacy), no cache toggle available
@@ -369,11 +366,6 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                 render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
                                              ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
                                              FOOTER_LEFT_CACHE, footer_right, 1);
-                break;
-            case APP_MENU_FOOTER_TYPE_UPDATE_CACHED:
-                render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                             ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
-                                             FOOTER_LEFT_UNCACHE_UPDATE, footer_right, 1);
                 break;
             case APP_MENU_FOOTER_TYPE_UNAVAILABLE:
                 render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
@@ -467,6 +459,31 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                             break;
                                         }
                                         app->executable_appfs_fd = find_appfs_handle_for_slug(app->slug);
+                                    } else if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
+                                               app->executable_appfs_fd != APPFS_INVALID_FD &&
+                                               app->executable_on_fs_available) {
+                                        // Check for mismatch reinstall
+                                        uint8_t mismatch_reinstall = 0;
+                                        appfs_settings_get_mismatch_reinstall(&mismatch_reinstall);
+                                        if (mismatch_reinstall) {
+                                            int appfs_size = 0;
+                                            appfsEntryInfoExt(app->executable_appfs_fd, NULL, NULL, NULL, &appfs_size);
+                                            bool mismatch = (app->executable_on_fs_revision != app->executable_revision) ||
+                                                            (appfs_size != app->executable_on_fs_filesize);
+                                            if (mismatch) {
+                                                busy_dialog(get_icon(ICON_APPS), "Loading",
+                                                            "Reinstalling to AppFS...", true);
+                                                appfsDeleteFile(app->slug);
+                                                char* firmware_path = app_mgmt_find_firmware_path(app->slug);
+                                                if (firmware_path != NULL) {
+                                                    app_mgmt_cache_to_appfs(app->slug, app->name,
+                                                                            app->executable_on_fs_revision,
+                                                                            firmware_path);
+                                                    free(firmware_path);
+                                                }
+                                                app->executable_appfs_fd = find_appfs_handle_for_slug(app->slug);
+                                            }
+                                        }
                                     }
                                     execute_app(buffer, theme, position, app);
                                     render(buffer, theme, &menu, position, false, false);
@@ -485,10 +502,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                             busy_dialog(get_icon(ICON_APPS), "Removing",
                                                         "Removing from AppFS...", true);
                                             esp_err_t res = app_mgmt_remove_from_appfs(app->slug);
-                                            if (res == ESP_OK) {
-                                                message_dialog(get_icon(ICON_INFO), "Success",
-                                                               "Removed from AppFS", "OK");
-                                            } else {
+                                            if (res != ESP_OK) {
                                                 message_dialog(get_icon(ICON_ERROR), "Failed",
                                                                "Failed to remove from AppFS", "OK");
                                             }
@@ -504,12 +518,8 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                             message_dialog(get_icon(ICON_ERROR), "Error",
                                                            "App binary not found", "OK");
                                         } else {
-                                            esp_err_t res = load_app_to_appfs(app, firmware_path, "Caching");
+                                            load_app_to_appfs(app, firmware_path, "Caching");
                                             free(firmware_path);
-                                            if (res == ESP_OK) {
-                                                message_dialog(get_icon(ICON_INFO), "Success",
-                                                               "App cached in AppFS", "OK");
-                                            }
                                         }
                                         refresh = true;
                                     }
@@ -536,10 +546,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     if (msg_ret == MSG_DIALOG_RETURN_OK) {
                                         esp_err_t res_int = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_INTERNAL);
                                         esp_err_t res_sd  = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_SD);
-                                        if (res_int == ESP_OK || res_sd == ESP_OK) {
-                                            message_dialog(get_icon(ICON_INFO), "Success", "App removed successfully",
-                                                           "OK");
-                                        } else {
+                                        if (res_int != ESP_OK && res_sd != ESP_OK) {
                                             message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to remove app",
                                                            "OK");
                                         }
@@ -547,30 +554,6 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     } else {
                                         render(buffer, theme, &menu, position, false, true);
                                     }
-                                    break;
-                                }
-                                case BSP_INPUT_NAVIGATION_KEY_F6: {
-                                    void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                    app_t* app = (app_t*)arg;
-                                    if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
-                                        app->executable_on_sd_available &&
-                                        app->executable_revision != app->executable_on_sd_revision) {
-                                        // Install from SD card
-                                        busy_dialog(get_icon(ICON_APPS), "Updating", "Updating application...", true);
-                                        esp_err_t res = app_mgmt_install_from_file(app->slug, app->name,
-                                                                                   app->executable_on_sd_revision,
-                                                                                   app->executable_on_sd_filename);
-                                        if (res == ESP_OK) {
-                                            message_dialog(get_icon(ICON_INFO), "Success", "App updated successfully",
-                                                           "OK");
-                                        } else {
-                                            message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to update app",
-                                                           "OK");
-                                        }
-                                    } else {
-                                        message_dialog(get_icon(ICON_ERROR), "Failed", "Nothing to update", "OK");
-                                    }
-                                    refresh = true;
                                     break;
                                 }
                                 default:
