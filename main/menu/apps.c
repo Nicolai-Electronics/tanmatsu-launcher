@@ -2,7 +2,9 @@
 #include <esp_log.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/syslimits.h>
 #include <time.h>
 #include "app_inspect.h"
@@ -30,6 +32,18 @@
 #include "usb_device.h"
 
 static const char* TAG = "apps";
+
+static int compare_apps_by_name(const void* a, const void* b) {
+    const app_t* app_a = *(const app_t* const*)a;
+    const app_t* app_b = *(const app_t* const*)b;
+    if (app_a == NULL && app_b == NULL) return 0;
+    if (app_a == NULL) return 1;
+    if (app_b == NULL) return -1;
+    if (app_a->name == NULL && app_b->name == NULL) return 0;
+    if (app_a->name == NULL) return 1;
+    if (app_b->name == NULL) return -1;
+    return strcasecmp(app_a->name, app_b->name);
+}
 
 static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
     for (size_t i = 0; i < app_count; i++) {
@@ -383,6 +397,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
 
         app_t* apps[MAX_NUM_APPS] = {0};
         size_t number_of_apps     = create_list_of_apps(apps, MAX_NUM_APPS);
+        qsort(apps, number_of_apps, sizeof(app_t*), compare_apps_by_name);
 
         menu_t menu = {0};
         menu_initialize(&menu);
