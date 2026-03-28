@@ -268,8 +268,8 @@ static app_menu_footer_type_t previous_footer_type = APP_MENU_FOOTER_TYPE_COUNT;
 
 // Helper to load an app into AppFS on-demand, with auto-cleanup support.
 // Returns ESP_OK on success, error otherwise. Shows dialogs.
-static esp_err_t load_app_to_appfs(app_t* app, const char* firmware_path) {
-    busy_dialog(get_icon(ICON_APPS), "Loading", "Copying app to AppFS...", true);
+static esp_err_t load_app_to_appfs(app_t* app, const char* firmware_path, const char* dialog_title) {
+    busy_dialog(get_icon(ICON_APPS), dialog_title, "Copying app to AppFS...", true);
     esp_err_t res = app_mgmt_cache_to_appfs(app->slug, app->name, app->executable_revision, firmware_path);
     if (res == ESP_ERR_NO_MEM) {
         message_dialog(get_icon(ICON_ERROR), "No space",
@@ -323,7 +323,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
         const char* action_text;
         switch (footer_type) {
             case APP_MENU_FOOTER_TYPE_INSTALL:
-                action_text = "⏎ Cache app";
+                action_text = "⏎ Start app";
                 break;
             case APP_MENU_FOOTER_TYPE_UNAVAILABLE:
                 action_text = "⏎ (Unavailable)";
@@ -438,7 +438,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                             render(buffer, theme, &menu, position, false, false);
                                             break;
                                         }
-                                        esp_err_t res = load_app_to_appfs(app, firmware_path);
+                                        esp_err_t res = load_app_to_appfs(app, firmware_path, "Loading");
                                         free(firmware_path);
                                         if (res != ESP_OK) {
                                             refresh = true;
@@ -482,7 +482,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                             message_dialog(get_icon(ICON_ERROR), "Error",
                                                            "App binary not found", "OK");
                                         } else {
-                                            esp_err_t res = load_app_to_appfs(app, firmware_path);
+                                            esp_err_t res = load_app_to_appfs(app, firmware_path, "Caching");
                                             free(firmware_path);
                                             if (res == ESP_OK) {
                                                 message_dialog(get_icon(ICON_INFO), "Success",
