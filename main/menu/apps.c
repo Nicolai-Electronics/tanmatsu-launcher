@@ -392,7 +392,8 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
-    bool exit = false;
+    bool   exit           = false;
+    size_t saved_position = 0;
     while (!exit) {
 
         app_t* apps[MAX_NUM_APPS] = {0};
@@ -402,6 +403,12 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
         menu_t menu = {0};
         menu_initialize(&menu);
         populate_menu(&menu, apps, number_of_apps);
+
+        // Restore previous position (clamped to list bounds)
+        if (saved_position >= menu_get_length(&menu) && menu_get_length(&menu) > 0) {
+            saved_position = menu_get_length(&menu) - 1;
+        }
+        menu_set_position(&menu, saved_position);
 
         int header_height = theme->header.height + (theme->header.vertical_margin * 2);
         int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
@@ -579,6 +586,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                 render(buffer, theme, &menu, position, true, true);
             }
         }
+        saved_position = menu_get_position(&menu);
         menu_free(&menu);
         free_list_of_apps(apps, MAX_NUM_APPS);
     }
