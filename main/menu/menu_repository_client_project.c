@@ -19,6 +19,7 @@
 #include "pax_fonts.h"
 #include "pax_text.h"
 #include "pax_types.h"
+#include "repository_client.h"
 
 static const char* TAG = "Repository client: project";
 
@@ -165,7 +166,7 @@ static bool interpreter_available(const char* interpreter_slug) {
     return app_mgmt_has_binary_in_install_dir(interpreter_slug);
 }
 
-// Prompt user to install the interpreter and handle the download
+// Prompt user to install the interpreter using the standard project install dialog
 static void prompt_install_interpreter(pax_buf_t* buffer, gui_theme_t* theme, const char* interpreter_slug) {
     char msg[128];
     snprintf(msg, sizeof(msg), "This app requires interpreter '%s'.\nInstall it?", interpreter_slug);
@@ -174,90 +175,27 @@ static void prompt_install_interpreter(pax_buf_t* buffer, gui_theme_t* theme, co
         return;
     }
 
-    // Ask where to install
-    QueueHandle_t input_event_queue = NULL;
-    ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
+    // Fetch interpreter project metadata from repo
+    char server[128] = {0};
+    device_settings_get_repo_server(server, sizeof(server));
 
-    menu_t loc_menu = {0};
-    menu_initialize(&loc_menu);
-    menu_insert_item(&loc_menu, "Install on\nSD card", NULL, (void*)ACTION_INSTALL_SD, -1);
-    menu_insert_item(&loc_menu, "Install on\nInternal memory", NULL, (void*)ACTION_INSTALL, -1);
-
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-
-    render_base_screen_statusbar(
-        buffer, theme, true, true, true,
-        ((gui_element_icontext_t[]){{get_icon(ICON_STOREFRONT), "Install interpreter"}}), 1,
-        ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Skip"}}), 2,
-        ((gui_element_icontext_t[]){{NULL, "← / → | ⏎ Select"}}), 1);
-
-    pax_vec2_t menu_position = {
-        .x0 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding - 400,
-        .y0 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding -
-              128,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
-
-    gui_theme_t modified_theme                = *theme;
-    modified_theme.menu.grid_horizontal_count = menu_get_length(&loc_menu);
-    modified_theme.menu.grid_vertical_count   = 1;
-    menu_render_grid(buffer, &loc_menu, menu_position, &modified_theme, false);
-    display_blit_buffer(buffer);
-
-    while (1) {
-        bsp_input_event_t event;
-        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
-            if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.state) {
-                switch (event.args_navigation.key) {
-                    case BSP_INPUT_NAVIGATION_KEY_ESC:
-                    case BSP_INPUT_NAVIGATION_KEY_F1:
-                    case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
-                        menu_free(&loc_menu);
-                        return;
-                    case BSP_INPUT_NAVIGATION_KEY_LEFT:
-                        menu_navigate_previous(&loc_menu);
-                        menu_render_grid(buffer, &loc_menu, menu_position, &modified_theme, true);
-                        display_blit_buffer(buffer);
-                        break;
-                    case BSP_INPUT_NAVIGATION_KEY_RIGHT:
-                        menu_navigate_next(&loc_menu);
-                        menu_render_grid(buffer, &loc_menu, menu_position, &modified_theme, true);
-                        display_blit_buffer(buffer);
-                        break;
-                    case BSP_INPUT_NAVIGATION_KEY_RETURN:
-                    case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
-                    case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
-                        void*               arg = menu_get_callback_args(&loc_menu, menu_get_position(&loc_menu));
-                        app_mgmt_location_t location = ((menu_repository_client_project_action_t)arg == ACTION_INSTALL)
-                                                           ? APP_MGMT_LOCATION_INTERNAL
-                                                           : APP_MGMT_LOCATION_SD;
-                        const char* loc_text = (location == APP_MGMT_LOCATION_SD) ? "SD card" : "internal memory";
-                        char        busy_msg[64];
-                        snprintf(busy_msg, sizeof(busy_msg), "Installing interpreter on %s...", loc_text);
-                        busy_dialog(get_icon(ICON_STOREFRONT), "Repository", busy_msg, true);
-
-                        char server[128] = {0};
-                        device_settings_get_repo_server(server, sizeof(server));
-                        esp_err_t res = app_mgmt_install(server, interpreter_slug, location, download_callback);
-                        if (res == ESP_OK) {
-                            message_dialog(get_icon(ICON_STOREFRONT), "Repository",
-                                           "Interpreter installed successfully", "OK");
-                        } else {
-                            message_dialog(get_icon(ICON_ERROR), "Repository",
-                                           "Interpreter not found in repository.\n"
-                                           "You may need to install it manually.",
-                                           "OK");
-                        }
-                        menu_free(&loc_menu);
-                        return;
-                    }
-                    default:
-                        break;
-                }
-            }
-        }
+    busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Loading interpreter info...", true);
+    repository_json_data_t interp_data = {0};
+    if (!load_project(server, &interp_data, interpreter_slug)) {
+        message_dialog(get_icon(ICON_ERROR), "Repository",
+                       "Interpreter not found in repository.\nYou may need to install it manually.", "OK");
+        return;
     }
+
+    // Build a wrapper object like the project list entries have: {"slug": "...", "project": {...}}
+    cJSON* wrapper = cJSON_CreateObject();
+    cJSON_AddStringToObject(wrapper, "slug", interpreter_slug);
+    cJSON_AddItemToObject(wrapper, "project", cJSON_Duplicate(interp_data.json, true));
+    free_repository_data_json(&interp_data);
+
+    // Use the standard project install dialog
+    menu_repository_client_project(buffer, theme, wrapper);
+    cJSON_Delete(wrapper);
 }
 
 static void execute_action(pax_buf_t* buffer, menu_repository_client_project_action_t action, gui_theme_t* theme,

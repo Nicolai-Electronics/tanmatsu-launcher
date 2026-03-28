@@ -376,23 +376,23 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
         char server_info[160];
         snprintf(server_info, sizeof(server_info), "Server: %s", server);
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-        if (has_updates) {
+        {
+            bool is_installed = (current_status == INSTALL_STATUS_INSTALLED ||
+                                 current_status == INSTALL_STATUS_UPDATE_AVAILABLE);
+            gui_element_icontext_t footer_left[4];
+            int                    footer_left_count = 0;
+            footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_ESC), "/"};
+            footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_F1), "Back"};
+            if (is_installed) {
+                footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_F5), "Remove"};
+            }
+            if (has_updates) {
+                footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_F6), "Update all"};
+            }
             render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
                                          ((gui_element_icontext_t[]){{get_icon(ICON_STOREFRONT), "Repository"}}), 1,
-                                         ((gui_element_icontext_t[]){
-                                             {get_icon(ICON_ESC), "/"},
-                                             {get_icon(ICON_F1), "Back"},
-                                             {get_icon(ICON_F6), "Update all"},
-                                         }),
-                                         3, ((gui_element_icontext_t[]){{NULL, footer_right_text}}), 1);
-        } else {
-            render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                         ((gui_element_icontext_t[]){{get_icon(ICON_STOREFRONT), "Repository"}}), 1,
-                                         ((gui_element_icontext_t[]){
-                                             {get_icon(ICON_ESC), "/"},
-                                             {get_icon(ICON_F1), "Back"},
-                                         }),
-                                         2, ((gui_element_icontext_t[]){{NULL, footer_right_text}}), 1);
+                                         footer_left, footer_left_count,
+                                         ((gui_element_icontext_t[]){{NULL, footer_right_text}}), 1);
         }
 #else
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
@@ -507,6 +507,44 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                         break;
                                     }
                                     menu_repository_client_project(buffer, theme, wrapper);
+                                    // Rebuild menu to refresh status markers (app may have been installed)
+                                    free_menu_icons(&menu);
+                                    menu_free(&menu);
+                                    menu_initialize(&menu);
+                                    populate_project_list(&menu, projects.json);
+                                    if (pos >= menu_get_length(&menu) && menu_get_length(&menu) > 0) {
+                                        pos = menu_get_length(&menu) - 1;
+                                    }
+                                    menu_set_position(&menu, pos);
+                                }
+                                render(buffer, theme, &menu, server, false, true);
+                                break;
+                            }
+                            case BSP_INPUT_NAVIGATION_KEY_F5: {
+                                size_t pos = menu_get_position(&menu);
+                                if (pos >= (size_t)project_count || project_statuses == NULL) break;
+                                if (project_statuses[pos] == INSTALL_STATUS_NOT_INSTALLED) break;
+
+                                cJSON* wrapper  = get_project_by_index(projects.json, project_indices[pos]);
+                                cJSON* slug_obj = wrapper ? cJSON_GetObjectItem(wrapper, "slug") : NULL;
+                                if (slug_obj == NULL) break;
+
+                                message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
+                                    get_icon(ICON_HELP), "Delete App",
+                                    "Do you really want to delete the app?");
+                                if (msg_ret == MSG_DIALOG_RETURN_OK) {
+                                    app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL);
+                                    app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_SD);
+
+                                    // Rebuild menu to refresh status markers
+                                    free_menu_icons(&menu);
+                                    menu_free(&menu);
+                                    menu_initialize(&menu);
+                                    populate_project_list(&menu, projects.json);
+                                    if (pos >= menu_get_length(&menu) && menu_get_length(&menu) > 0) {
+                                        pos = menu_get_length(&menu) - 1;
+                                    }
+                                    menu_set_position(&menu, pos);
                                 }
                                 render(buffer, theme, &menu, server, false, true);
                                 break;
