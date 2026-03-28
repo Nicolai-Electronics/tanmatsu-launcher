@@ -183,7 +183,6 @@ static void prompt_install_interpreter(pax_buf_t* buffer, gui_theme_t* theme, co
     menu_insert_item(&loc_menu, "Install on\nSD card", NULL, (void*)ACTION_INSTALL_SD, -1);
     menu_insert_item(&loc_menu, "Install on\nInternal memory", NULL, (void*)ACTION_INSTALL, -1);
 
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
 
     render_base_screen_statusbar(

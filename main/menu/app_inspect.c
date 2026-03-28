@@ -245,10 +245,7 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                     busy_dialog(get_icon(ICON_APPS), "Moving",
                                                 "Moving app...", true);
                                     esp_err_t res = app_mgmt_move(app->slug, from, to);
-                                    if (res == ESP_OK) {
-                                        message_dialog(get_icon(ICON_INFO), "Success",
-                                                       "App moved successfully", "OK");
-                                    } else if (res == ESP_ERR_NO_MEM) {
+                                    if (res == ESP_ERR_NO_MEM) {
                                         char err_msg[128];
                                         snprintf(err_msg, sizeof(err_msg),
                                                  "Not enough space on %s", to_name);
@@ -274,10 +271,7 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                         busy_dialog(get_icon(ICON_APPS), "Removing",
                                                     "Removing from AppFS...", true);
                                         esp_err_t res = app_mgmt_remove_from_appfs(app->slug);
-                                        if (res == ESP_OK) {
-                                            message_dialog(get_icon(ICON_INFO), "Success",
-                                                           "Removed from AppFS", "OK");
-                                        } else {
+                                        if (res != ESP_OK) {
                                             message_dialog(get_icon(ICON_ERROR), "Failed",
                                                            "Failed to remove from AppFS", "OK");
                                         }
@@ -300,10 +294,7 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                             message_dialog(get_icon(ICON_ERROR), "No space",
                                                            "Not enough space in AppFS.\n"
                                                            "Remove cached apps (F4).", "OK");
-                                        } else if (res == ESP_OK) {
-                                            message_dialog(get_icon(ICON_INFO), "Success",
-                                                           "App cached in AppFS", "OK");
-                                        } else {
+                                        } else if (res != ESP_OK) {
                                             message_dialog(get_icon(ICON_ERROR), "Failed",
                                                            "Failed to cache app", "OK");
                                         }
@@ -319,10 +310,7 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                 if (msg_ret == MSG_DIALOG_RETURN_OK) {
                                     esp_err_t res_int = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_INTERNAL);
                                     esp_err_t res_sd  = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_SD);
-                                    if (res_int == ESP_OK || res_sd == ESP_OK) {
-                                        message_dialog(get_icon(ICON_INFO), "Success", "App removed successfully",
-                                                       "OK");
-                                    } else {
+                                    if (res_int != ESP_OK && res_sd != ESP_OK) {
                                         message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to remove app", "OK");
                                     }
                                     return true;

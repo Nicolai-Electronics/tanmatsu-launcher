@@ -56,12 +56,6 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
         return ESP_ERR_INVALID_RESPONSE;
     }
 
-    char*  name     = NULL;
-    cJSON* name_obj = cJSON_GetObjectItem(metadata.json, "name");
-    if (name_obj != NULL && cJSON_IsString(name_obj)) {
-        name = name_obj->valuestring;
-    }
-
     repository_json_data_t information = {0};
     if (!load_information(repository_url, &information)) {
         free_repository_data_json(&metadata);
@@ -258,10 +252,16 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
         }
     }
 
+    // Remove stale appfs cache if present (new version on filesystem should take precedence)
+    if (appfsExists(slug)) {
+        ESP_LOGI(TAG, "Removing stale AppFS cache for %s", slug);
+        appfsDeleteFile(slug);
+    }
+
     free_repository_data_json(&metadata);
     free_repository_data_json(&information);
     ESP_LOGI(TAG, "App %s installed successfully at %s", slug, base_path);
-    return ESP_OK;  // Placeholder return value
+    return ESP_OK;
 }
 
 esp_err_t app_mgmt_uninstall(const char* slug, app_mgmt_location_t location) {

@@ -77,6 +77,8 @@ esp_err_t device_settings_set_theme(theme_setting_t theme);
 // AppFS settings
 esp_err_t device_settings_get_appfs_auto_cleanup(uint8_t* out_value);
 esp_err_t device_settings_set_appfs_auto_cleanup(uint8_t value);
+esp_err_t device_settings_get_appfs_mismatch_reinstall(uint8_t* out_value);
+esp_err_t device_settings_set_appfs_mismatch_reinstall(uint8_t value);
 
 // App usage tracking
 esp_err_t device_settings_get_app_last_used(const char* slug, uint32_t* out_timestamp);

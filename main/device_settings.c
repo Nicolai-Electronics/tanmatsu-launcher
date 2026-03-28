@@ -428,6 +428,14 @@ esp_err_t device_settings_set_appfs_auto_cleanup(uint8_t value) {
     return device_settings_set_u8("appfs_ac", value);
 }
 
+esp_err_t device_settings_get_appfs_mismatch_reinstall(uint8_t* out_value) {
+    return device_settings_get_u8("appfs_mr", 0, out_value);
+}
+
+esp_err_t device_settings_set_appfs_mismatch_reinstall(uint8_t value) {
+    return device_settings_set_u8("appfs_mr", value);
+}
+
 // App usage tracking (separate NVS namespace)
 
 static const char* APP_USAGE_NAMESPACE = "app_usage";
