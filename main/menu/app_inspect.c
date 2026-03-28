@@ -2,6 +2,7 @@
 #include "app_inspect.h"
 #include <string.h>
 #include "app_management.h"
+#include "app_metadata_parser.h"
 #include "appfs.h"
 #include "bsp/input.h"
 #include "common/display.h"
@@ -166,6 +167,12 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
                           position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
         }
 
+        if (app->executable_type == EXECUTABLE_TYPE_SCRIPT && app->executable_interpreter_slug) {
+            snprintf(text_buffer, sizeof(text_buffer), "Interpreter: %s", app->executable_interpreter_slug);
+            pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
+                          position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
+        }
+
         // Install location
         if (app_is_on_sd(app)) {
             snprintf(text_buffer, sizeof(text_buffer), "Location: SD Card");
@@ -261,6 +268,7 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                 break;
                             }
                             case BSP_INPUT_NAVIGATION_KEY_F4: {
+                                if (app->executable_type != EXECUTABLE_TYPE_APPFS) break;
                                 if (app->executable_appfs_fd != APPFS_INVALID_FD &&
                                     app_mgmt_can_uncache(app->slug)) {
                                     // Cached → uncache

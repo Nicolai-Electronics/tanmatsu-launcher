@@ -51,7 +51,9 @@ static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
         if (apps[i] != NULL && apps[i]->slug != NULL && apps[i]->name != NULL) {
             char        label[128];
             const char* prefix = "   ";
-            if (apps[i]->executable_type == EXECUTABLE_TYPE_APPFS &&
+            if (apps[i]->executable_type == EXECUTABLE_TYPE_SCRIPT) {
+                prefix = "[S]";
+            } else if (apps[i]->executable_type == EXECUTABLE_TYPE_APPFS &&
                 apps[i]->executable_appfs_fd != APPFS_INVALID_FD) {
                 bool mismatch = false;
                 if (apps[i]->executable_on_fs_available) {
@@ -297,7 +299,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
     void*  arg = menu_get_callback_args(menu, menu_get_position(menu));
     app_t* app = (app_t*)arg;
 
-    app_menu_footer_type_t footer_type = APP_MENU_FOOTER_TYPE_NORMAL_UNCACHED;
+    app_menu_footer_type_t footer_type = APP_MENU_FOOTER_TYPE_NORMAL_PLAIN;
     if (app == NULL) {
         footer_type = APP_MENU_FOOTER_TYPE_UNAVAILABLE;
     } else {
@@ -492,6 +494,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                 case BSP_INPUT_NAVIGATION_KEY_F4: {
                                     void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                     app_t* app = (app_t*)arg;
+                                    if (app->executable_type != EXECUTABLE_TYPE_APPFS) break;
                                     if (app->executable_appfs_fd != APPFS_INVALID_FD &&
                                         app_mgmt_can_uncache(app->slug)) {
                                         // Cached → uncache
