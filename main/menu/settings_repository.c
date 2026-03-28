@@ -87,7 +87,7 @@ static void edit_server(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu) {
     menu_textedit(buffer, theme, "Server", server, sizeof(server), false, &accepted);
     if (accepted) {
         nvs_settings_set_repo_server(server);
-        menu_set_value(menu, 0, server);
+        menu_populate(menu);
     }
 }
 
@@ -99,7 +99,7 @@ static void edit_base_uri(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu) {
     menu_textedit(buffer, theme, "Base URI", base_uri, sizeof(base_uri), false, &accepted);
     if (accepted) {
         nvs_settings_set_repo_base_uri(base_uri);
-        menu_set_value(menu, 1, base_uri);
+        menu_populate(menu);
     }
 }
 
@@ -114,7 +114,7 @@ static void edit_user_agent(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu)
     menu_textedit(buffer, theme, "User Agent", user_agent, sizeof(user_agent), false, &accepted);
     if (accepted) {
         nvs_settings_set_http_user_agent(user_agent);
-        menu_set_value(menu, 2, user_agent);
+        menu_populate(menu);
     }
 }
 
@@ -127,11 +127,7 @@ static void reset_defaults(menu_t* menu) {
     nvs_settings_set_http_user_agent(default_ua);
     appfs_settings_set_auto_cleanup(DEFAULT_APPFS_AUTO_CLEANUP);
     appfs_settings_set_mismatch_reinstall(DEFAULT_APPFS_MISMATCH_REINSTALL);
-    menu_set_value(menu, 0, DEFAULT_REPO_SERVER);
-    menu_set_value(menu, 1, DEFAULT_REPO_BASE_URI);
-    menu_set_value(menu, 2, default_ua);
-    menu_set_value(menu, 3, "Disabled");
-    menu_set_value(menu, 4, "Disabled");
+    menu_populate(menu);
 }
 
 void menu_settings_repository(void) {
@@ -176,7 +172,13 @@ void menu_settings_repository(void) {
                                 render(buffer, theme, &menu, position, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F4:
-                                reset_defaults(&menu);
+                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_CTRL) {
+                                    nvs_settings_set_repo_server("https://cavac.at/tanmatsu");
+                                    nvs_settings_set_repo_base_uri("/v1");
+                                    menu_populate(&menu);
+                                } else {
+                                    reset_defaults(&menu);
+                                }
                                 render(buffer, theme, &menu, position, false, true);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
@@ -200,7 +202,7 @@ void menu_settings_repository(void) {
                                         appfs_settings_get_auto_cleanup(&current);
                                         current = current ? 0 : 1;
                                         appfs_settings_set_auto_cleanup(current);
-                                        menu_set_value(&menu, 3, current ? "Enabled" : "Disabled");
+                                        menu_populate(&menu);
                                         break;
                                     }
                                     case ACTION_MISMATCH_REINSTALL: {
@@ -208,7 +210,7 @@ void menu_settings_repository(void) {
                                         appfs_settings_get_mismatch_reinstall(&current);
                                         current = current ? 0 : 1;
                                         appfs_settings_set_mismatch_reinstall(current);
-                                        menu_set_value(&menu, 4, current ? "Enabled" : "Disabled");
+                                        menu_populate(&menu);
                                         break;
                                     }
                                     default:
