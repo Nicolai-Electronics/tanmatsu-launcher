@@ -209,11 +209,12 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
         return ESP_ERR_INVALID_RESPONSE;
     }
 
-    // Download and store executable binary to the install directory (not to AppFS)
-    // The binary will be loaded into AppFS on-demand when the app is launched
+    // Download and store executable binary to the install directory
+    // For appfs apps: binary will be loaded into AppFS on-demand when launched
+    // For plugins: binary is loaded directly from the install directory
     cJSON* type = cJSON_GetObjectItem(application, "type");
-    if (type != NULL && cJSON_IsString(type) && strcmp(type->valuestring, "appfs") == 0 &&
-        strlen(type->valuestring) == strlen("appfs")) {
+    if (type != NULL && cJSON_IsString(type) &&
+        (strcmp(type->valuestring, "appfs") == 0 || strcmp(type->valuestring, "plugin") == 0)) {
         char*  executable     = NULL;
         cJSON* executable_obj = cJSON_GetObjectItem(application, "executable");
         if (executable_obj != NULL && cJSON_IsString(executable_obj)) {
@@ -241,18 +242,20 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
 
     cJSON* icon_obj = cJSON_GetObjectItem(metadata.json, "icon");
     if (icon_obj != NULL && cJSON_IsObject(icon_obj)) {
-        cJSON* icon32_obj = cJSON_GetObjectItem(icon_obj, "32x32");
-        if (icon32_obj != NULL && cJSON_IsString(icon32_obj)) {
-            // Download icon if it exists
-            char icon_url[256];
-            snprintf(icon_url, sizeof(icon_url), "%s/%s/%s/%s", repository_url, repository_data_url, slug,
-                     icon32_obj->valuestring);
-            char icon_path[512];
-            snprintf(icon_path, sizeof(icon_path), "%s/%s", app_path, icon32_obj->valuestring);
-            char status_text[64] = {0};
-            snprintf(status_text, sizeof(status_text), "Downloading icon '%s'...", icon32_obj->valuestring);
-            if (!download_file(icon_url, icon_path, download_callback, status_text)) {
-                ESP_LOGE(TAG, "Failed to download icon");
+        const char* icon_keys[] = {"16x16", "32x32", "64x64"};
+        for (int i = 0; i < 3; i++) {
+            cJSON* icon_entry = cJSON_GetObjectItem(icon_obj, icon_keys[i]);
+            if (icon_entry != NULL && cJSON_IsString(icon_entry)) {
+                char icon_url[256];
+                snprintf(icon_url, sizeof(icon_url), "%s/%s/%s/%s", repository_url, repository_data_url, slug,
+                         icon_entry->valuestring);
+                char icon_path[512];
+                snprintf(icon_path, sizeof(icon_path), "%s/%s", app_path, icon_entry->valuestring);
+                char status_text[64] = {0};
+                snprintf(status_text, sizeof(status_text), "Downloading icon '%s'...", icon_entry->valuestring);
+                if (!download_file(icon_url, icon_path, download_callback, status_text)) {
+                    ESP_LOGE(TAG, "Failed to download icon %s", icon_keys[i]);
+                }
             }
         }
     }
