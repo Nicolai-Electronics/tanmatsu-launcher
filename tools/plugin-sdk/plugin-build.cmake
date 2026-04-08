@@ -20,19 +20,34 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "${PLUGIN_SDK_DIR}/toolchain-plugin.cmake" CACHE PATH "" FORCE)
 endif()
 
+# Helper: find a component directory, preferring components/ over managed_components/
+macro(find_component OUT_VAR COMPONENT_NAME SUBPATH)
+    if(EXISTS "${LAUNCHER_DIR}/components/${COMPONENT_NAME}/${SUBPATH}")
+        set(${OUT_VAR} "${LAUNCHER_DIR}/components/${COMPONENT_NAME}/${SUBPATH}")
+    elseif(EXISTS "${LAUNCHER_DIR}/managed_components/${COMPONENT_NAME}/${SUBPATH}")
+        set(${OUT_VAR} "${LAUNCHER_DIR}/managed_components/${COMPONENT_NAME}/${SUBPATH}")
+    else()
+        message(FATAL_ERROR "Component ${COMPONENT_NAME}/${SUBPATH} not found in components/ or managed_components/")
+    endif()
+endmacro()
+
+# Locate component paths
+find_component(BADGE_ELF_API_INCLUDE "badgeteam__badge-elf-api" "include")
+find_component(PAX_GFX_INCLUDE "robotman2412__pax-gfx" "core/include")
+find_component(PAX_CODECS_INCLUDE "robotman2412__pax-codecs" "include")
+find_component(BADGE_ELF_FAKELIB_DIR "badgeteam__badge-elf" "fakelib")
+
 # Include directories for plugin API
 set(PLUGIN_API_INCLUDE_DIRS
     "${LAUNCHER_DIR}/components/plugin-api/include"
-    "${LAUNCHER_DIR}/components/badgeteam__badge-elf-api/include"
-    "${LAUNCHER_DIR}/managed_components/robotman2412__pax-gfx/core/include"
-    "${LAUNCHER_DIR}/managed_components/robotman2412__pax-codecs/include"
+    "${BADGE_ELF_API_INCLUDE}"
+    "${PAX_GFX_INCLUDE}"
+    "${PAX_CODECS_INCLUDE}"
 )
 
 # Stub library paths - link against BadgeELF libraries
 set(PLUGIN_STUB_SOURCE "${PLUGIN_SDK_DIR}/lib/libplugin_stubs.c")
 set(PLUGIN_STUB_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/lib")
-# Use pre-built fake libraries from badge-elf component
-set(BADGE_ELF_FAKELIB_DIR "${LAUNCHER_DIR}/components/badgeteam__badge-elf/fakelib")
 
 # Function to build a Tanmatsu plugin
 function(build_tanmatsu_plugin PLUGIN_NAME PLUGIN_SOURCES)
