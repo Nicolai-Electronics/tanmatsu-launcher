@@ -449,13 +449,38 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
             ctx->registration = reg;
             ESP_LOGI(TAG, "Found plugin registration at %p", (void*)reg_addr);
 
-            // Memory debugging (commented out)
-            // if (!heap_caps_check_integrity_all(true)) {
-            //     ESP_LOGE(TAG, "HEAP CORRUPTED before plugin init!");
-            // }
+            // Memory debugging
+            if (!heap_caps_check_integrity_all(true)) {
+                ESP_LOGE(TAG, "HEAP CORRUPTED before plugin init!");
+            }
+
+            // Debug: dump registration struct contents
+            ESP_LOGI(TAG, "Registration: magic=0x%08lx size=%lu",
+                     (unsigned long)reg->magic, (unsigned long)reg->struct_size);
+            ESP_LOGI(TAG, "Entry points: get_info=%p init=%p cleanup=%p",
+                     reg->entry.get_info, reg->entry.init, reg->entry.cleanup);
+            ESP_LOGI(TAG, "Entry points: menu_render=%p menu_select=%p service_run=%p hook_event=%p",
+                     reg->entry.menu_render, reg->entry.menu_select,
+                     reg->entry.service_run, reg->entry.hook_event);
+            ESP_LOGI(TAG, "Context: slug=%s path=%s ctx=%p",
+                     ctx->plugin_slug ? ctx->plugin_slug : "(null)",
+                     ctx->plugin_path ? ctx->plugin_path : "(null)",
+                     (void*)ctx);
+
+            // Debug: dump GOT.PLT entries (first 16 words after plugin_info section)
+            {
+                uint32_t* base = (uint32_t*)reg_addr;
+                ESP_LOGI(TAG, "GOT.PLT dump (from base %p):", (void*)base);
+                for (int i = 0; i < 16; i++) {
+                    uint32_t offset = 0x614 + i * 4;
+                    uint32_t* addr = (uint32_t*)((uint8_t*)base + offset);
+                    ESP_LOGI(TAG, "  [0x%03lx] = 0x%08lx", (unsigned long)offset, (unsigned long)*addr);
+                }
+            }
 
             // Call the plugin's init function if available
             if (reg->entry.init != NULL) {
+                ESP_LOGI(TAG, "Calling init at %p with ctx=%p", reg->entry.init, (void*)ctx);
                 int init_result = reg->entry.init(ctx);
 
                 // Memory debugging (commented out)
