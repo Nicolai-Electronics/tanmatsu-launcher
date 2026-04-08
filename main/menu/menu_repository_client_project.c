@@ -194,12 +194,12 @@ static void prompt_install_interpreter(pax_buf_t* buffer, gui_theme_t* theme, co
     free_repository_data_json(&interp_data);
 
     // Use the standard project install dialog
-    menu_repository_client_project(buffer, theme, wrapper);
+    menu_repository_client_project(buffer, theme, wrapper, false);
     cJSON_Delete(wrapper);
 }
 
 static void execute_action(pax_buf_t* buffer, menu_repository_client_project_action_t action, gui_theme_t* theme,
-                           cJSON* wrapper) {
+                           cJSON* wrapper, bool is_plugin) {
     char server[128] = {0};
     device_settings_get_repo_server(server, sizeof(server));
 
@@ -210,16 +210,18 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
     const char*         loc_text;
     switch (action) {
         case ACTION_INSTALL:
-            location = APP_MGMT_LOCATION_INTERNAL;
+            location = is_plugin ? APP_MGMT_LOCATION_INTERNAL_PLUGINS : APP_MGMT_LOCATION_INTERNAL;
             loc_text = "internal memory";
             break;
         case ACTION_INSTALL_SD:
-            location = APP_MGMT_LOCATION_SD;
+            location = is_plugin ? APP_MGMT_LOCATION_SD_PLUGINS : APP_MGMT_LOCATION_SD;
             loc_text = "SD card";
             break;
         default:
             return;
     }
+
+    const char* item_type = is_plugin ? "Plugin" : "App";
 
     char busy_msg[64];
     snprintf(busy_msg, sizeof(busy_msg), "Installing on %s...", loc_text);
@@ -231,10 +233,12 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
         return;
     }
 
-    message_dialog(get_icon(ICON_STOREFRONT), "Repository", "App successfully installed", "OK");
+    char success_msg[64];
+    snprintf(success_msg, sizeof(success_msg), "%s successfully installed", item_type);
+    message_dialog(get_icon(ICON_STOREFRONT), "Repository", success_msg, "OK");
 
-    // Check if this is a script app that needs an interpreter
-    if (project != NULL) {
+    // Check if this is a script app that needs an interpreter (not applicable for plugins)
+    if (!is_plugin && project != NULL) {
         const char* interpreter_slug = find_interpreter_slug(project);
         if (interpreter_slug != NULL && !interpreter_available(interpreter_slug)) {
             prompt_install_interpreter(buffer, theme, interpreter_slug);
@@ -242,7 +246,7 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
     }
 }
 
-void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON* wrapper) {
+void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON* wrapper, bool is_plugin) {
     busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Rendering project...", true);
 
     cJSON* project = cJSON_GetObjectItem(wrapper, "project");
@@ -284,7 +288,7 @@ void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                execute_action(buffer, (menu_repository_client_project_action_t)arg, theme, wrapper);
+                                execute_action(buffer, (menu_repository_client_project_action_t)arg, theme, wrapper, is_plugin);
                                 render(buffer, theme, &menu, false, true, project);
                                 break;
                             }

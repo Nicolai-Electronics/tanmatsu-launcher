@@ -13,19 +13,24 @@
 #include "fastopen.h"
 #include "filesystem_utils.h"
 #include "http_download.h"
+#include "plugin_manager.h"
 #include "repository_client.h"
 
 static const char* TAG = "App management";
 
 static const char* app_mgmt_location_to_path(app_mgmt_location_t location) {
     switch (location) {
-        case APP_MGMT_LOCATION_INTERNAL:
-            return "/int/apps";
-        case APP_MGMT_LOCATION_SD:
-            return "/sd/apps";
-        default:
-            return NULL;
+        case APP_MGMT_LOCATION_INTERNAL:         return "/int/apps";
+        case APP_MGMT_LOCATION_SD:               return "/sd/apps";
+        case APP_MGMT_LOCATION_INTERNAL_PLUGINS: return "/int/plugins";
+        case APP_MGMT_LOCATION_SD_PLUGINS:       return "/sd/plugins";
+        default: return NULL;
     }
+}
+
+static bool app_mgmt_location_is_plugin(app_mgmt_location_t location) {
+    return location == APP_MGMT_LOCATION_INTERNAL_PLUGINS ||
+           location == APP_MGMT_LOCATION_SD_PLUGINS;
 }
 
 esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgmt_location_t location,
@@ -253,7 +258,8 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
     }
 
     // Remove stale appfs cache if present (new version on filesystem should take precedence)
-    if (appfsExists(slug)) {
+    // Plugins don't use AppFS
+    if (!app_mgmt_location_is_plugin(location) && appfsExists(slug)) {
         ESP_LOGI(TAG, "Removing stale AppFS cache for %s", slug);
         appfsDeleteFile(slug);
     }
@@ -270,6 +276,17 @@ esp_err_t app_mgmt_uninstall(const char* slug, app_mgmt_location_t location) {
         return ESP_ERR_INVALID_ARG;
     }
 
+    bool is_plugin = app_mgmt_location_is_plugin(location);
+
+    // For plugins: stop and unload before deleting files
+    if (is_plugin) {
+        plugin_context_t* ctx = plugin_manager_get_by_slug(slug);
+        if (ctx != NULL) {
+            plugin_manager_stop_service(ctx);
+            plugin_manager_unload(ctx);
+        }
+    }
+
     esp_err_t res = ESP_OK;
 
     char app_path[256] = {0};
@@ -279,20 +296,21 @@ esp_err_t app_mgmt_uninstall(const char* slug, app_mgmt_location_t location) {
         res = fs_utils_remove(app_path);
     }
 
-    // If app is installed on SD, check if the app is also installed to the internal storage
-    // if it is, do not remove the binary from appfs
-    if (location == APP_MGMT_LOCATION_SD) {
-        snprintf(app_path, sizeof(app_path), "%s/%s", app_mgmt_location_to_path(APP_MGMT_LOCATION_INTERNAL), slug);
-        if (fs_utils_exists(app_path)) {
-            return res;
+    if (!is_plugin) {
+        // If app is installed on SD, check if the app is also installed to the internal storage
+        // if it is, do not remove the binary from appfs
+        if (location == APP_MGMT_LOCATION_SD) {
+            snprintf(app_path, sizeof(app_path), "%s/%s", app_mgmt_location_to_path(APP_MGMT_LOCATION_INTERNAL), slug);
+            if (fs_utils_exists(app_path)) {
+                return res;
+            }
         }
-    }
 
-    if (appfsExists(slug)) {
-        esp_err_t appfs_res = ESP_OK;
-        appfs_res           = appfsDeleteFile(slug);
-        if (appfs_res != ESP_OK) {
-            res = appfs_res;
+        if (appfsExists(slug)) {
+            esp_err_t appfs_res = appfsDeleteFile(slug);
+            if (appfs_res != ESP_OK) {
+                res = appfs_res;
+            }
         }
     }
 
