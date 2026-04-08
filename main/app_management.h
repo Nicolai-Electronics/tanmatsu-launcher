@@ -10,6 +10,8 @@
 typedef enum {
     APP_MGMT_LOCATION_INTERNAL = 0,
     APP_MGMT_LOCATION_SD,
+    APP_MGMT_LOCATION_INTERNAL_PLUGINS,
+    APP_MGMT_LOCATION_SD_PLUGINS,
 } app_mgmt_location_t;
 
 esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgmt_location_t location,

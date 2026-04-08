@@ -71,6 +71,37 @@ typedef struct {
     app_mgmt_location_t install_location;  // Where the app is installed (if applicable)
 } project_sort_entry_t;
 
+typedef enum {
+    VIEW_MODE_APPS = 0,
+    VIEW_MODE_PLUGINS,
+} view_mode_t;
+
+static view_mode_t current_view_mode = VIEW_MODE_APPS;
+
+// Check if a project's application type for the current device is "plugin"
+static bool is_project_plugin(cJSON* project_obj) {
+    cJSON* applications = cJSON_GetObjectItem(project_obj, "application");
+    if (!applications || !cJSON_IsArray(applications)) return false;
+
+    char device_name[32] = {0};
+    bsp_device_get_name(device_name, sizeof(device_name));
+    for (int i = 0; device_name[i]; i++) device_name[i] = tolower(device_name[i]);
+
+    cJSON* app = NULL;
+    cJSON_ArrayForEach(app, applications) {
+        cJSON* targets = cJSON_GetObjectItem(app, "targets");
+        if (!targets) continue;
+        cJSON* t = NULL;
+        cJSON_ArrayForEach(t, targets) {
+            if (cJSON_IsString(t) && strcmp(t->valuestring, device_name) == 0) {
+                cJSON* type = cJSON_GetObjectItem(app, "type");
+                return (type && cJSON_IsString(type) && strcmp(type->valuestring, "plugin") == 0);
+            }
+        }
+    }
+    return false;
+}
+
 // Read the "version" field from an installed app's metadata.json.
 // Returns a malloc'd string or NULL. Caller must free.
 static char* get_installed_version(const char* base_path, const char* slug) {
@@ -112,12 +143,19 @@ static char* get_installed_version(const char* base_path, const char* slug) {
     return version;
 }
 
-// Check install status of an app by slug. Compares version strings.
+// Check install status of an app/plugin by slug. Compares version strings.
 // Sets location if installed.
 static install_status_t check_install_status(const char* slug, const char* repo_version,
-                                              app_mgmt_location_t* out_location) {
-    const char* base_paths[]    = {"/sd/apps", "/int/apps"};  // SD priority
-    app_mgmt_location_t locs[] = {APP_MGMT_LOCATION_SD, APP_MGMT_LOCATION_INTERNAL};
+                                              app_mgmt_location_t* out_location, bool is_plugin) {
+    const char* base_paths[2];
+    app_mgmt_location_t locs[2];
+    if (is_plugin) {
+        base_paths[0] = "/sd/plugins";  base_paths[1] = "/int/plugins";
+        locs[0] = APP_MGMT_LOCATION_SD_PLUGINS;  locs[1] = APP_MGMT_LOCATION_INTERNAL_PLUGINS;
+    } else {
+        base_paths[0] = "/sd/apps";  base_paths[1] = "/int/apps";
+        locs[0] = APP_MGMT_LOCATION_SD;  locs[1] = APP_MGMT_LOCATION_INTERNAL;
+    }
 
     for (int i = 0; i < 2; i++) {
         char check_path[256];
@@ -219,13 +257,17 @@ static int compare_projects_by_name(const void* a, const void* b) {
 }
 
 static void populate_project_list(menu_t* menu, cJSON* json_projects) {
-    // Count valid entries
+    bool want_plugins = (current_view_mode == VIEW_MODE_PLUGINS);
+
+    // Count valid entries matching the current view mode
     int    total = 0;
     cJSON* entry_obj;
     cJSON_ArrayForEach(entry_obj, json_projects) {
         cJSON* project_obj = cJSON_GetObjectItem(entry_obj, "project");
         if (project_obj != NULL && cJSON_GetObjectItem(project_obj, "name") != NULL) {
-            total++;
+            if (is_project_plugin(project_obj) == want_plugins) {
+                total++;
+            }
         }
     }
 
@@ -256,13 +298,19 @@ static void populate_project_list(menu_t* menu, cJSON* json_projects) {
             idx++;
             continue;
         }
+        // Filter by current view mode
+        if (is_project_plugin(project_obj) != want_plugins) {
+            idx++;
+            continue;
+        }
         sorted[i].name  = name_obj->valuestring;
         sorted[i].slug  = slug_obj->valuestring;
         sorted[i].index = idx;
         sorted[i].icon  = NULL;
 
         // Check install status by comparing version strings
-        sorted[i].install_location = APP_MGMT_LOCATION_INTERNAL;
+        sorted[i].install_location = want_plugins ? APP_MGMT_LOCATION_INTERNAL_PLUGINS
+                                                  : APP_MGMT_LOCATION_INTERNAL;
         cJSON* version_obj = cJSON_GetObjectItem(project_obj, "version");
         char   repo_version_buf[32] = {0};
         const char* repo_version    = NULL;
@@ -273,7 +321,7 @@ static void populate_project_list(menu_t* menu, cJSON* json_projects) {
             repo_version = repo_version_buf;
         }
         sorted[i].status = check_install_status(slug_obj->valuestring, repo_version,
-                                                 &sorted[i].install_location);
+                                                 &sorted[i].install_location, want_plugins);
 
         // Decode optional base64 icon
         cJSON* icon_obj = cJSON_GetObjectItem(entry_obj, "icon");
@@ -376,14 +424,19 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
 
         char server_info[160];
         snprintf(server_info, sizeof(server_info), "Server: %s", server);
+
+        char* header_title = (current_view_mode == VIEW_MODE_PLUGINS) ? "Plugins" : "Repository";
+
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
         {
             bool is_installed = (current_status == INSTALL_STATUS_INSTALLED ||
                                  current_status == INSTALL_STATUS_UPDATE_AVAILABLE);
-            gui_element_icontext_t footer_left[4];
+            gui_element_icontext_t footer_left[5];
             int                    footer_left_count = 0;
             footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_ESC), "/"};
             footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_F1), "Back"};
+            footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_F2),
+                current_view_mode == VIEW_MODE_APPS ? "Plugins" : "Apps"};
             if (is_installed) {
                 footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_F5), "Remove"};
             }
@@ -391,7 +444,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
                 footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_F6), "Update all"};
             }
             render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                         ((gui_element_icontext_t[]){{get_icon(ICON_STOREFRONT), "Repository"}}), 1,
+                                         ((gui_element_icontext_t[]){{get_icon(ICON_STOREFRONT), header_title}}), 1,
                                          footer_left, footer_left_count,
                                          ((gui_element_icontext_t[]){{NULL, footer_right_text}}), 1);
         }
@@ -507,7 +560,8 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                         ESP_LOGE(TAG, "Wrapper object is NULL");
                                         break;
                                     }
-                                    menu_repository_client_project(buffer, theme, wrapper);
+                                    menu_repository_client_project(buffer, theme, wrapper,
+                                                                    current_view_mode == VIEW_MODE_PLUGINS);
                                     // Rebuild menu to refresh status markers (app may have been installed)
                                     free_menu_icons(&menu);
                                     menu_free(&menu);
@@ -521,6 +575,18 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                 render(buffer, theme, &menu, server, false, true);
                                 break;
                             }
+                            case BSP_INPUT_NAVIGATION_KEY_F2: {
+                                // Toggle between Apps and Plugins view
+                                current_view_mode = (current_view_mode == VIEW_MODE_APPS)
+                                    ? VIEW_MODE_PLUGINS : VIEW_MODE_APPS;
+                                free_menu_icons(&menu);
+                                menu_free(&menu);
+                                menu_initialize(&menu);
+                                populate_project_list(&menu, projects.json);
+                                menu_set_position(&menu, 0);
+                                render(buffer, theme, &menu, server, false, true);
+                                break;
+                            }
                             case BSP_INPUT_NAVIGATION_KEY_F5: {
                                 size_t pos = menu_get_position(&menu);
                                 if (pos >= (size_t)project_count || project_statuses == NULL) break;
@@ -530,12 +596,21 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                 cJSON* slug_obj = wrapper ? cJSON_GetObjectItem(wrapper, "slug") : NULL;
                                 if (slug_obj == NULL) break;
 
+                                const char* delete_title = (current_view_mode == VIEW_MODE_PLUGINS)
+                                    ? "Delete Plugin" : "Delete App";
+                                const char* delete_msg = (current_view_mode == VIEW_MODE_PLUGINS)
+                                    ? "Do you really want to delete the plugin?"
+                                    : "Do you really want to delete the app?";
                                 message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
-                                    get_icon(ICON_HELP), "Delete App",
-                                    "Do you really want to delete the app?");
+                                    get_icon(ICON_HELP), delete_title, delete_msg);
                                 if (msg_ret == MSG_DIALOG_RETURN_OK) {
-                                    app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL);
-                                    app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_SD);
+                                    if (current_view_mode == VIEW_MODE_PLUGINS) {
+                                        app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL_PLUGINS);
+                                        app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_SD_PLUGINS);
+                                    } else {
+                                        app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL);
+                                        app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_SD);
+                                    }
 
                                     // Rebuild menu to refresh status markers
                                     free_menu_icons(&menu);
