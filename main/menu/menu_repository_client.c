@@ -425,7 +425,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
         char server_info[160];
         snprintf(server_info, sizeof(server_info), "Server: %s", server);
 
-        char* header_title = (current_view_mode == VIEW_MODE_PLUGINS) ? "Plugins" : "Repository";
+        char* header_title = (current_view_mode == VIEW_MODE_PLUGINS) ? "Repository: Plugins" : "Repository: Apps";
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
         {
