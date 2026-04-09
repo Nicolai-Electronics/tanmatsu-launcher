@@ -19,4 +19,6 @@ sdkconfig_*
 REPOLAYOUT.md
 CLAUDE.md
 components/badgeteam__badgelink/
+components/nicolaielectronics__tanmatsu_coprocessor/
+components/badgeteam__badge-bsp/
 .vscode
