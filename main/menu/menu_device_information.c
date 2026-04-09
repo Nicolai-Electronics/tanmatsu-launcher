@@ -8,6 +8,7 @@
 #include "gui_element_footer.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
@@ -120,15 +121,7 @@ void menu_device_information(pax_buf_t* buffer, gui_theme_t* theme) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-
-    pax_vec2_t position = {
-        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
+    pax_vec2_t position = menu_calc_position(buffer, theme);
 
     render(buffer, theme, position, false, true);
     while (1) {

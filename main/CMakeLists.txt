@@ -28,6 +28,7 @@ idf_component_register(
 		
 		# Menus
 		"menu/home.c"
+		"menu/menu_helpers.c"
 		"menu/settings.c"
 		"menu/information.c"
 		"menu/tools.c"
