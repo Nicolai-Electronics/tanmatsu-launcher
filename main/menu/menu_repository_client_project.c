@@ -198,7 +198,7 @@ static void prompt_install_interpreter(pax_buf_t* buffer, gui_theme_t* theme, co
     cJSON_Delete(wrapper);
 }
 
-static void execute_action(pax_buf_t* buffer, menu_repository_client_project_action_t action, gui_theme_t* theme,
+static bool execute_action(pax_buf_t* buffer, menu_repository_client_project_action_t action, gui_theme_t* theme,
                            cJSON* wrapper, bool is_plugin) {
     char server[128] = {0};
     device_settings_get_repo_server(server, sizeof(server));
@@ -218,7 +218,7 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
             loc_text = "SD card";
             break;
         default:
-            return;
+            return false;
     }
 
     const char* item_type = is_plugin ? "Plugin" : "App";
@@ -230,7 +230,7 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
     esp_err_t res = app_mgmt_install(server, slug_obj->valuestring, location, download_callback);
     if (res != ESP_OK) {
         message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK");
-        return;
+        return false;
     }
 
     char success_msg[64];
@@ -244,6 +244,8 @@ static void execute_action(pax_buf_t* buffer, menu_repository_client_project_act
             prompt_install_interpreter(buffer, theme, interpreter_slug);
         }
     }
+
+    return true;
 }
 
 void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON* wrapper, bool is_plugin) {
@@ -288,7 +290,12 @@ void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                execute_action(buffer, (menu_repository_client_project_action_t)arg, theme, wrapper, is_plugin);
+                                bool  installed =
+                                    execute_action(buffer, (menu_repository_client_project_action_t)arg, theme, wrapper, is_plugin);
+                                if (installed) {
+                                    menu_free(&menu);
+                                    return;
+                                }
                                 render(buffer, theme, &menu, false, true, project);
                                 break;
                             }
