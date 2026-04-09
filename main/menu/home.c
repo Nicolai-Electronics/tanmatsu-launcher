@@ -25,6 +25,7 @@
 #include "lora.h"
 #include "menu/lora_information.h"
 #include "menu/menu_rftest.h"
+#include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "menu/nametag.h"
 #ifdef CONFIG_IDF_TARGET_ESP32P4
@@ -315,15 +316,7 @@ void menu_home(void) {
         menu_insert_item_icon(&menu, "LoRa info", NULL, (void*)ACTION_LORA_INFORMATION, -1, get_icon(ICON_INFO));
     }
 
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-
-    pax_vec2_t position = {
-        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
+    pax_vec2_t position = menu_calc_position(buffer, theme);
 
     bool power_button_latch = false;
 

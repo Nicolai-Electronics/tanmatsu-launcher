@@ -10,11 +10,14 @@
 #include "icons.h"
 #include "bsp/input.h"
 #include "common/display.h"
+#include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "esp_log.h"
 #include "pax_gfx.h"
+#include "pax_codecs.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
+#include "fastopen.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
@@ -25,6 +28,33 @@ typedef enum {
     ACTION_BACK,
     ACTION_PLUGIN_TOGGLE,
 } plugin_menu_action_t;
+
+static pax_buf_t* load_plugin_icon(const char* plugin_path) {
+    char icon_path[512];
+    snprintf(icon_path, sizeof(icon_path), "%s/icon32.png", plugin_path);
+    FILE* fd = fastopen(icon_path, "rb");
+    if (fd == NULL) return NULL;
+    pax_buf_t* icon = calloc(1, sizeof(pax_buf_t));
+    if (icon != NULL) {
+        if (!pax_decode_png_fd(icon, fd, PAX_BUF_32_8888ARGB, 0)) {
+            free(icon);
+            icon = NULL;
+        }
+    }
+    fastclose(fd);
+    return icon;
+}
+
+static void free_menu_icons(menu_t* menu) {
+    pax_buf_t* default_icon = get_icon(ICON_EXTENSION);
+    for (size_t i = 0; i < menu_get_length(menu); i++) {
+        pax_buf_t* icon = menu_get_icon(menu, i);
+        if (icon != NULL && icon != default_icon) {
+            pax_buf_destroy(icon);
+            free(icon);
+        }
+    }
+}
 
 static void render_footer(pax_buf_t* buffer, gui_theme_t* theme, bool has_plugins) {
     gui_element_icontext_t footer_left[] = {
@@ -79,9 +109,10 @@ void menu_plugins(pax_buf_t* buffer, gui_theme_t* theme) {
                      type_str,
                      auto_indicator);
 
+            pax_buf_t* icon = load_plugin_icon(plugins[i].path);
             menu_insert_item_icon(&menu, label, NULL,
                                   (void*)(uintptr_t)i, -1,
-                                  get_icon(ICON_EXTENSION));
+                                  icon ? icon : get_icon(ICON_EXTENSION));
         }
 
         // Restore saved position (clamped to valid range)
@@ -93,17 +124,7 @@ void menu_plugins(pax_buf_t* buffer, gui_theme_t* theme) {
         }
 
         // Calculate menu position
-        int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-        int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-
-        pax_vec2_t position = {
-            .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-            .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-            .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin -
-                  theme->menu.horizontal_padding,
-            .y1 = pax_buf_get_height(buffer) - footer_height -
-                  theme->menu.vertical_margin - theme->menu.vertical_padding,
-        };
+        pax_vec2_t position = menu_calc_position(buffer, theme);
 
         // Initial render
         render_base_screen_statusbar(buffer, theme, true, true, false,
@@ -230,6 +251,7 @@ void menu_plugins(pax_buf_t* buffer, gui_theme_t* theme) {
         // Save position before freeing menu
         saved_position = menu_get_position(&menu);
 
+        free_menu_icons(&menu);
         menu_free(&menu);
         plugin_manager_free_discovery(plugins, plugin_count);
     }
