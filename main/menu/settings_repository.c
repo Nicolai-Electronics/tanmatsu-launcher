@@ -8,6 +8,7 @@
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "menu/menu_helpers.h"
 #include "menu/textedit.h"
 #include "message_dialog.h"
 #include "pax_gfx.h"
@@ -132,15 +133,7 @@ void menu_settings_repository(void) {
     menu_initialize(&menu);
     menu_populate(&menu);
 
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-
-    pax_vec2_t position = {
-        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
+    pax_vec2_t position = menu_calc_position(buffer, theme);
 
     render(buffer, theme, &menu, position, false, true);
     while (1) {

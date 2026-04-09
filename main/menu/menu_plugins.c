@@ -10,6 +10,7 @@
 #include "icons.h"
 #include "bsp/input.h"
 #include "common/display.h"
+#include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "esp_log.h"
 #include "pax_gfx.h"
@@ -123,17 +124,7 @@ void menu_plugins(pax_buf_t* buffer, gui_theme_t* theme) {
         }
 
         // Calculate menu position
-        int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-        int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-
-        pax_vec2_t position = {
-            .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-            .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-            .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin -
-                  theme->menu.horizontal_padding,
-            .y1 = pax_buf_get_height(buffer) - footer_height -
-                  theme->menu.vertical_margin - theme->menu.vertical_padding,
-        };
+        pax_vec2_t position = menu_calc_position(buffer, theme);
 
         // Initial render
         render_base_screen_statusbar(buffer, theme, true, true, false,

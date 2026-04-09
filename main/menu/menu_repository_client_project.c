@@ -15,6 +15,7 @@
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "pax_fonts.h"
 #include "pax_text.h"
@@ -57,7 +58,6 @@ static void render_project(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t pos
 }
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool partial, bool icons, cJSON* project) {
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
 
     if (!partial || icons) {
@@ -69,12 +69,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
     }
 
     // Description
-    pax_vec2_t desc_position = {
-        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
+    pax_vec2_t desc_position = menu_calc_position(buffer, theme);
 
     render_project(buffer, theme, desc_position, project);
 
