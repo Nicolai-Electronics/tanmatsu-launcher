@@ -161,12 +161,26 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
     fwrite(metadata.data, 1, metadata.size, fd);
     fastclose(fd);
 
+    // Create a download session for all file downloads (reuses TCP/TLS connection)
+    char base_data_url[256] = {0};
+    snprintf(base_data_url, sizeof(base_data_url), "%s/%s/%s", repository_url, repository_data_url, slug);
+    http_session_t session = http_session_begin(base_data_url);
+    if (session == NULL) {
+        free_repository_data_json(&metadata);
+        free_repository_data_json(&information);
+        app_mgmt_uninstall(slug, location);
+        ESP_LOGE(TAG, "Failed to create HTTP session");
+        return ESP_FAIL;
+    }
+    http_session_set_callback(session, download_callback, NULL);
+
     // Install assets
     cJSON* assets = cJSON_GetObjectItem(application, "assets");
     if (assets != NULL && cJSON_IsArray(assets)) {
         cJSON* asset = NULL;
         cJSON_ArrayForEach(asset, assets) {
             if (asset == NULL || !cJSON_IsObject(asset)) {
+                http_session_end(session);
                 free_repository_data_json(&metadata);
                 free_repository_data_json(&information);
                 app_mgmt_uninstall(slug, location);
@@ -177,6 +191,7 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             cJSON* target_file = cJSON_GetObjectItem(asset, "target_file");
             if (source_file == NULL || target_file == NULL || !cJSON_IsString(source_file) ||
                 !cJSON_IsString(target_file)) {
+                http_session_end(session);
                 free_repository_data_json(&metadata);
                 free_repository_data_json(&information);
                 app_mgmt_uninstall(slug, location);
@@ -193,8 +208,10 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
 
             char status_text[64] = {0};
             snprintf(status_text, sizeof(status_text), "Downloading asset '%s'...", target_file->valuestring);
-            if (!download_file(file_url, target_path, download_callback, status_text)) {
+            http_session_set_callback(session, download_callback, status_text);
+            if (!http_session_download_file(session, file_url, target_path)) {
                 ESP_LOGE(TAG, "Failed to download asset: %s", source_file->valuestring);
+                http_session_end(session);
                 free_repository_data_json(&metadata);
                 free_repository_data_json(&information);
                 app_mgmt_uninstall(slug, location);
@@ -202,6 +219,7 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             }
         }
     } else {
+        http_session_end(session);
         free_repository_data_json(&metadata);
         free_repository_data_json(&information);
         app_mgmt_uninstall(slug, location);
@@ -230,8 +248,10 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
 
             char status_text[64] = {0};
             snprintf(status_text, sizeof(status_text), "Downloading executable '%s'...", executable);
-            if (!download_file(file_url, target_path, download_callback, status_text)) {
+            http_session_set_callback(session, download_callback, status_text);
+            if (!http_session_download_file(session, file_url, target_path)) {
                 ESP_LOGE(TAG, "Failed to download executable: %s", executable);
+                http_session_end(session);
                 free_repository_data_json(&metadata);
                 free_repository_data_json(&information);
                 app_mgmt_uninstall(slug, location);
@@ -253,12 +273,15 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
                 snprintf(icon_path, sizeof(icon_path), "%s/%s", app_path, icon_entry->valuestring);
                 char status_text[64] = {0};
                 snprintf(status_text, sizeof(status_text), "Downloading icon '%s'...", icon_entry->valuestring);
-                if (!download_file(icon_url, icon_path, download_callback, status_text)) {
+                http_session_set_callback(session, download_callback, status_text);
+                if (!http_session_download_file(session, icon_url, icon_path)) {
                     ESP_LOGE(TAG, "Failed to download icon %s", icon_keys[i]);
                 }
             }
         }
     }
+
+    http_session_end(session);
 
     // Remove stale appfs cache if present (new version on filesystem should take precedence)
     // Plugins don't use AppFS

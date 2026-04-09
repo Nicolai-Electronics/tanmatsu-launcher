@@ -12,9 +12,6 @@
 
 static const char* TAG = "HTTP download";
 
-const char*                global_callback_text = NULL;
-static download_callback_t global_callback      = NULL;
-
 typedef struct {
     FILE*     fd;      // For downloading directly to file on filesystem
     uint8_t** buffer;  // Dynamically allocated buffer for downloading to RAM (malloced in event handler, used if fd is
@@ -27,6 +24,8 @@ typedef struct {
     bool      disconnected;   // Indication that the HTTP client has disconnected from the server (set in event handler)
     bool      out_of_memory;  // Indication that malloc failed
     bool out_of_allocated;    // Indication that the server sent more data than indicated with the content-length header
+    download_callback_t callback;
+    const char*         callback_text;
 } http_download_info_t;
 
 static esp_err_t _event_handler(esp_http_client_event_t* evt) {
@@ -62,8 +61,8 @@ static esp_err_t _event_handler(esp_http_client_event_t* evt) {
             break;
         }
         case HTTP_EVENT_ON_DATA:
-            if (global_callback != NULL) {
-                global_callback(info->received + evt->data_len, info->size, global_callback_text);
+            if (info->callback != NULL) {
+                info->callback(info->received + evt->data_len, info->size, info->callback_text);
             }
             if (info->fd != NULL) {  // Write directly to file on filesystem
                 fwrite(evt->data, 1, evt->data_len, info->fd);
@@ -99,90 +98,6 @@ static bool download_success(esp_err_t err, http_download_info_t* info) {
            (info->received == info->size);
 }
 
-static bool _download_file(const char* url, const char* path) {
-    FILE* fd = fastopen(path, "w");
-    if (fd == NULL) {
-        ESP_LOGE(TAG, "Failed to open file");
-        return false;
-    }
-
-    http_download_info_t info = {0};
-    info.fd                   = fd;
-
-    char user_agent[128] = {0};
-    device_settings_get_http_user_agent(user_agent, sizeof(user_agent));
-
-    esp_http_client_config_t config = {.url                 = url,
-                                       .use_global_ca_store = true,
-                                       .keep_alive_enable   = true,
-                                       .timeout_ms          = 10000,
-                                       .user_data           = (void*)&info,
-                                       .event_handler       = _event_handler,
-                                       .user_agent          = user_agent};
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    esp_err_t                err    = esp_http_client_perform(client);
-    fastclose(fd);
-    int status_code = esp_http_client_get_status_code(client);
-    esp_http_client_cleanup(client);
-    return download_success(err, &info) && (status_code == 200);
-}
-
-bool download_file(const char* url, const char* path, download_callback_t callback, const char* callback_text) {
-    global_callback      = callback;
-    global_callback_text = callback_text;
-    int retry            = 3;
-    while (retry--) {
-        if (_download_file(url, path)) return true;
-        ESP_LOGI(TAG, "Download file waiting to retry (attempts left: %d) ...", retry);
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-    return false;
-}
-
-static bool _download_ram(const char* url, uint8_t** ptr, size_t* size) {
-    http_download_info_t info = {0};
-    info.buffer               = ptr;
-
-    char user_agent[128] = {0};
-    device_settings_get_http_user_agent(user_agent, sizeof(user_agent));
-
-    esp_http_client_config_t config  = {.url                 = url,
-                                        .use_global_ca_store = true,
-                                        .keep_alive_enable   = true,
-                                        .timeout_ms          = 10000,
-                                        .buffer_size         = 4096,
-                                        .user_data           = (void*)&info,
-                                        .event_handler       = _event_handler,
-                                        .user_agent          = user_agent};
-    esp_http_client_handle_t client  = esp_http_client_init(&config);
-    esp_err_t                err     = esp_http_client_perform(client);
-    bool                     success = download_success(err, &info);
-    if (success && (size != NULL)) *size = info.size;
-    ESP_LOGI(TAG, "Buffer: %p -> %p", ptr, *ptr);
-    esp_http_client_cleanup(client);
-    return success;
-}
-
-bool download_ram(const char* url, uint8_t** ptr, size_t* size, download_callback_t callback,
-                  const char* callback_text) {
-    global_callback      = callback;
-    global_callback_text = callback_text;
-    int retry            = 3;
-    while (retry--) {
-        if (_download_ram(url, ptr, size)) return true;
-        // Free partially allocated buffer before retrying to prevent memory leaks
-        if (*ptr != NULL) {
-            free(*ptr);
-            *ptr = NULL;
-        }
-        ESP_LOGI(TAG, "Download RAM waiting to retry (attempts left: %d) ...", retry);
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-    return false;
-}
-
-// Session-based downloads: reuse a single TCP/TLS connection for multiple requests.
-
 struct http_session {
     esp_http_client_handle_t client;
     http_download_info_t     info;
@@ -211,12 +126,22 @@ http_session_t http_session_begin(const char* initial_url) {
     return (http_session_t)session;
 }
 
+void http_session_set_callback(http_session_t session, download_callback_t callback, const char* text) {
+    if (session == NULL) return;
+    session->info.callback      = callback;
+    session->info.callback_text = text;
+}
+
 bool http_session_download_ram(http_session_t session, const char* url, uint8_t** ptr, size_t* size) {
     if (session == NULL || ptr == NULL) return false;
     *ptr = NULL;
 
+    download_callback_t saved_callback      = session->info.callback;
+    const char*         saved_callback_text = session->info.callback_text;
     memset(&session->info, 0, sizeof(http_download_info_t));
-    session->info.buffer = ptr;
+    session->info.buffer        = ptr;
+    session->info.callback      = saved_callback;
+    session->info.callback_text = saved_callback_text;
 
     esp_http_client_set_url(session->client, url);
     esp_err_t err         = esp_http_client_perform(session->client);
@@ -233,6 +158,29 @@ bool http_session_download_ram(http_session_t session, const char* url, uint8_t*
     }
 
     return success;
+}
+
+bool http_session_download_file(http_session_t session, const char* url, const char* path) {
+    if (session == NULL || path == NULL) return false;
+
+    FILE* fd = fastopen(path, "w");
+    if (fd == NULL) {
+        ESP_LOGE(TAG, "Failed to open file");
+        return false;
+    }
+
+    download_callback_t saved_callback      = session->info.callback;
+    const char*         saved_callback_text = session->info.callback_text;
+    memset(&session->info, 0, sizeof(http_download_info_t));
+    session->info.fd            = fd;
+    session->info.callback      = saved_callback;
+    session->info.callback_text = saved_callback_text;
+
+    esp_http_client_set_url(session->client, url);
+    esp_err_t err         = esp_http_client_perform(session->client);
+    int       status_code = esp_http_client_get_status_code(session->client);
+    fastclose(fd);
+    return download_success(err, &session->info) && (status_code == 200);
 }
 
 void http_session_end(http_session_t session) {
