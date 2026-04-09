@@ -279,6 +279,12 @@ esp_err_t download_icons(bool delete_old_files) {
         }
     }
 
+    http_session_t session = http_session_begin("https://ota.tanmatsu.cloud/icons/");
+    if (session == NULL) {
+        message_dialog(icon, title, "Failed to create HTTP session", "Quit");
+        return ESP_FAIL;
+    }
+
     for (int i = 0; i < ICON_LAST; i++) {
         if (icon_paths[i] == NULL || icon_paths[i][0] == '/') {
             // Absolute path, skip
@@ -299,7 +305,8 @@ esp_err_t download_icons(bool delete_old_files) {
 
         char status[512] = {0};
         snprintf(status, sizeof(status), "Downloading icon '%s'...", icon_paths[i]);
-        bool success = download_file(url, path, download_callback, status);
+        http_session_set_callback(session, download_callback, status);
+        bool success = http_session_download_file(session, url, path);
 
         if (!success) {
             snprintf(status, sizeof(status), "Failed to download icon '%s'", icon_paths[i]);
@@ -307,6 +314,8 @@ esp_err_t download_icons(bool delete_old_files) {
             busy_dialog(icon, title, status, true);
         }
     }
+
+    http_session_end(session);
 
     busy_dialog(NULL, "Icon download successful",
                 "The icons have been downloaded successfully.\r\nDevice will restart now.", true);
