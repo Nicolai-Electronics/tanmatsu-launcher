@@ -137,3 +137,4 @@ endif()
 
 idf_build_set_property(COMPILE_OPTIONS "-Wno-error=unused-variable" APPEND)
 idf_build_set_property(COMPILE_OPTIONS "-Wno-error=unused-const-variable" APPEND)
+idf_build_set_property(COMPILE_OPTIONS "-DDISABLE_SYNTHWAVE" APPEND)

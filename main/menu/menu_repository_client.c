@@ -21,6 +21,7 @@
 #include "menu/message_dialog.h"
 #include "menu_repository_client_project.h"
 #include "pax_codecs.h"
+#include "pax_gfx.h"
 #include "pax_text.h"
 #include "pax_types.h"
 #include "repository_client.h"
@@ -215,16 +216,15 @@ static pax_buf_t* decode_base64_icon(const char* base64_data) {
     return icon;
 }
 
-// Free all icons attached to menu items
-static void free_menu_icons(menu_t* menu) {
-    for (size_t i = 0; i < menu_get_length(menu); i++) {
-        pax_buf_t* icon = menu_get_icon(menu, i);
-        if (icon != NULL) {
-            pax_buf_destroy(icon);
-            free(icon);
-        }
-    }
+// Create a transparent 32x32 placeholder icon for alignment
+static pax_buf_t* create_placeholder_icon(void) {
+    pax_buf_t* icon = calloc(1, sizeof(pax_buf_t));
+    if (icon == NULL) return NULL;
+    pax_buf_init(icon, NULL, ICON_WIDTH, ICON_HEIGHT, ICON_COLOR_FORMAT);
+    pax_background(icon, 0x00000000);
+    return icon;
 }
+
 
 // Parallel array of install status, indexed by menu position (after sorting).
 // Allocated in populate_project_list, freed by caller.
@@ -253,6 +253,119 @@ static int compare_projects_by_name(const void* a, const void* b) {
     const project_sort_entry_t* ea = (const project_sort_entry_t*)a;
     const project_sort_entry_t* eb = (const project_sort_entry_t*)b;
     return strcasecmp(ea->name, eb->name);
+}
+
+// Icon cache: one pax_buf_t* per JSON array entry, populated once after loading projects.
+static pax_buf_t** icon_cache      = NULL;
+static int         icon_cache_size = 0;
+
+static void free_icon_cache(void) {
+    if (icon_cache == NULL) return;
+    for (int j = 0; j < icon_cache_size; j++) {
+        if (icon_cache[j] != NULL) {
+            pax_buf_destroy(icon_cache[j]);
+            free(icon_cache[j]);
+        }
+    }
+    free(icon_cache);
+    icon_cache      = NULL;
+    icon_cache_size = 0;
+}
+
+// Decode base64 icons and download missing ones into the icon cache.
+// Called once after loading the project list.
+static void load_all_icons(cJSON* json_projects) {
+    int total = cJSON_GetArraySize(json_projects);
+    if (total <= 0) return;
+
+    icon_cache      = calloc(total, sizeof(pax_buf_t*));
+    icon_cache_size = total;
+    if (icon_cache == NULL) return;
+
+    // First pass: decode base64 icons from the JSON
+    int    missing_count = 0;
+    int    idx           = 0;
+    cJSON* entry_obj;
+    cJSON_ArrayForEach(entry_obj, json_projects) {
+        cJSON* icon_str = cJSON_GetObjectItem(entry_obj, "icon");
+        if (icon_str != NULL && cJSON_IsString(icon_str)) {
+            icon_cache[idx] = decode_base64_icon(icon_str->valuestring);
+        }
+        if (icon_cache[idx] == NULL) {
+            // Check if this entry has an icon filename we can download
+            cJSON* project_obj = cJSON_GetObjectItem(entry_obj, "project");
+            cJSON* icon_obj    = project_obj ? cJSON_GetObjectItem(project_obj, "icon") : NULL;
+            cJSON* icon_32     = icon_obj ? cJSON_GetObjectItem(icon_obj, "32x32") : NULL;
+            if (icon_32 != NULL && cJSON_IsString(icon_32)) missing_count++;
+        }
+        idx++;
+    }
+
+    // Second pass: download missing icons using a single keepalive connection
+    if (missing_count > 0) {
+        char server[128] = {0};
+        device_settings_get_repo_server(server, sizeof(server));
+
+        repository_json_data_t info = {0};
+        char data_path[128]         = {0};
+        bool have_data_path         = false;
+        if (load_information(server, &info)) {
+            cJSON* dp = cJSON_GetObjectItem(info.json, "data_path");
+            if (dp != NULL && cJSON_IsString(dp)) {
+                snprintf(data_path, sizeof(data_path), "%s", dp->valuestring);
+                have_data_path = true;
+            }
+            free_repository_data_json(&info);
+        }
+
+        if (have_data_path) {
+            char url[384];
+            snprintf(url, sizeof(url), "%s%s", server, data_path);
+            http_session_t session = http_session_begin(url);
+            if (session != NULL) {
+                int download_num = 0;
+                idx              = 0;
+                cJSON_ArrayForEach(entry_obj, json_projects) {
+                    if (icon_cache[idx] != NULL) { idx++; continue; }
+
+                    cJSON* slug_obj    = cJSON_GetObjectItem(entry_obj, "slug");
+                    cJSON* project_obj = cJSON_GetObjectItem(entry_obj, "project");
+                    cJSON* icon_obj    = project_obj ? cJSON_GetObjectItem(project_obj, "icon") : NULL;
+                    cJSON* icon_32     = icon_obj ? cJSON_GetObjectItem(icon_obj, "32x32") : NULL;
+                    if (slug_obj == NULL || icon_32 == NULL || !cJSON_IsString(icon_32)) { idx++; continue; }
+
+                    download_num++;
+                    char busy_msg[64];
+                    snprintf(busy_msg, sizeof(busy_msg), "Downloading icons (%d/%d)...",
+                             download_num, missing_count);
+                    busy_dialog(get_icon(ICON_STOREFRONT), "Repository", busy_msg, true);
+
+                    snprintf(url, sizeof(url), "%s%s/%s/%s", server, data_path,
+                             slug_obj->valuestring, icon_32->valuestring);
+                    uint8_t* png_data = NULL;
+                    size_t   png_size = 0;
+                    if (http_session_download_ram(session, url, &png_data, &png_size) && png_data != NULL) {
+                        pax_buf_t* icon = calloc(1, sizeof(pax_buf_t));
+                        if (icon != NULL && pax_decode_png_buf(icon, png_data, png_size, ICON_COLOR_FORMAT, 0)) {
+                            icon_cache[idx] = icon;
+                        } else {
+                            free(icon);
+                        }
+                        free(png_data);
+                    }
+                    idx++;
+                }
+                http_session_end(session);
+            }
+        }
+    }
+
+    // Fill remaining NULLs with placeholder icons
+    for (int j = 0; j < total; j++) {
+        if (icon_cache[j] == NULL) {
+            icon_cache[j] = create_placeholder_icon();
+        }
+    }
 }
 
 static void populate_project_list(menu_t* menu, cJSON* json_projects) {
@@ -322,11 +435,8 @@ static void populate_project_list(menu_t* menu, cJSON* json_projects) {
         sorted[i].status = check_install_status(slug_obj->valuestring, repo_version,
                                                  &sorted[i].install_location, want_plugins);
 
-        // Decode optional base64 icon
-        cJSON* icon_obj = cJSON_GetObjectItem(entry_obj, "icon");
-        if (icon_obj != NULL && cJSON_IsString(icon_obj)) {
-            sorted[i].icon = decode_base64_icon(icon_obj->valuestring);
-        }
+        // Look up icon from the pre-populated cache (indexed by JSON array position)
+        sorted[i].icon = (idx < icon_cache_size) ? icon_cache[idx] : NULL;
 
         i++;
         idx++;
@@ -487,6 +597,8 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
         return;
     }
 
+    load_all_icons(projects.json);
+
     busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Rendering list of projects...", true);
 
     QueueHandle_t input_event_queue = NULL;
@@ -508,7 +620,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 free_project_info();
-                                free_menu_icons(&menu);
+                                free_icon_cache();
                                 menu_free(&menu);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
@@ -542,7 +654,6 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                                          project_locations[pos], download_callback);
                                     }
                                     // Rebuild menu to refresh status markers
-                                    free_menu_icons(&menu);
                                     menu_free(&menu);
                                     menu_initialize(&menu);
                                     size_t saved_pos = pos;
@@ -562,7 +673,6 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                     menu_repository_client_project(buffer, theme, wrapper,
                                                                     current_view_mode == VIEW_MODE_PLUGINS);
                                     // Rebuild menu to refresh status markers (app may have been installed)
-                                    free_menu_icons(&menu);
                                     menu_free(&menu);
                                     menu_initialize(&menu);
                                     populate_project_list(&menu, projects.json);
@@ -578,7 +688,6 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                 // Toggle between Apps and Plugins view
                                 current_view_mode = (current_view_mode == VIEW_MODE_APPS)
                                     ? VIEW_MODE_PLUGINS : VIEW_MODE_APPS;
-                                free_menu_icons(&menu);
                                 menu_free(&menu);
                                 menu_initialize(&menu);
                                 populate_project_list(&menu, projects.json);
@@ -612,7 +721,6 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                     }
 
                                     // Rebuild menu to refresh status markers
-                                    free_menu_icons(&menu);
                                     menu_free(&menu);
                                     menu_initialize(&menu);
                                     populate_project_list(&menu, projects.json);
@@ -659,7 +767,6 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                     }
                                     // Rebuild menu to refresh status markers
                                     size_t saved_pos = menu_get_position(&menu);
-                                    free_menu_icons(&menu);
                                     menu_free(&menu);
                                     menu_initialize(&menu);
                                     populate_project_list(&menu, projects.json);
