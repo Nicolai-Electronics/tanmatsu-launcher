@@ -467,6 +467,13 @@ void app_main(void) {
     startup_dialog("Checking bootloader...");
     bootloader_update();
 
+    // Force the radio coprocessor off before bringing it up, in case it was
+    // left in APPLICATION mode by a previously running app with a transfer
+    // still in flight. Without this clean power-cycle the radio can come up
+    // in an inconsistent state and cause crashes shortly after launch.
+    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+    vTaskDelay(pdMS_TO_TICKS(200));
+
     startup_dialog("Initializing radio...");
     ESP_ERROR_CHECK(lora_init(16));
 
