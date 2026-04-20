@@ -10,6 +10,7 @@
 #include "gui_element_footer.h"
 #include "gui_element_header.h"
 #include "gui_element_icontext.h"
+#include "gui_element_progressbar.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "pax_gfx.h"
@@ -205,8 +206,8 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
     // Render plugin status widgets in the header area
     if (header) {
         int widget_x_right = 380;
-        int widget_y = theme->header.vertical_margin;
-        int widget_height = theme->header.height;
+        int widget_y       = theme->header.vertical_margin;
+        int widget_height  = theme->header.height;
         plugin_api_render_status_widgets(buffer, widget_x_right, widget_y, widget_height);
     }
 #endif
@@ -369,6 +370,29 @@ void busy_dialog(pax_buf_t* icon, const char* title, const char* message, bool h
 
     pax_center_text(buffer, theme->palette.color_foreground, theme->menu.text_font, 24,
                     pax_buf_get_width(buffer) / 2.0f, (pax_buf_get_height(buffer) - 24) / 2.0f, message);
+
+    display_blit_buffer(buffer);
+}
+
+void progress_dialog(pax_buf_t* icon, const char* title, const char* message, uint8_t progress, bool header) {
+    printf("PROGRESS: [%s] %s (%u%%)\n", title ? title : "(null)", message ? message : "(null)", progress);
+    if (!display_is_initialized()) {
+        return;
+    }
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
+
+    render_base_screen_statusbar(buffer, theme, true, header, true, ((gui_element_icontext_t[]){{icon, (char*)title}}),
+                                 1, NULL, 0, NULL, 0);
+
+    pax_center_text(buffer, theme->palette.color_foreground, theme->menu.text_font, 24,
+                    pax_buf_get_width(buffer) / 2.0f, (pax_buf_get_height(buffer) - 24) / 2.0f, message);
+
+    gui_progressbar_draw(buffer, theme, 20,
+                         pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin -
+                             theme->footer.vertical_padding - theme->progressbar.vertical_margin -
+                             theme->progressbar.height,
+                         pax_buf_get_width(buffer) - 40, theme->progressbar.height, progress / 100.0f);
 
     display_blit_buffer(buffer);
 }

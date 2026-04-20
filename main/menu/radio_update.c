@@ -20,6 +20,7 @@
 #include "gui_element_header.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "menu/message_dialog.h"
 #include "pax_gfx.h"
 #include "pax_types.h"
 
@@ -32,21 +33,18 @@ static const char* TAG = "radio_update";
 #define BSP_UART_TX_C6 53  // UART TX going to ESP32-C6
 #define BSP_UART_RX_C6 54  // UART RX coming from ESP32-C6
 
-static void radio_update_callback(const char* status_text) {
+static void radio_update_callback(const char* status_text, uint8_t progress) {
     printf("Radio update status changed: %s\r\n", status_text);
-    pax_buf_t* fb = display_get_buffer();
-    pax_draw_rect(fb, 0xFFEEEAEE, 0, 65, pax_buf_get_width(fb), 32);
-    pax_draw_text(fb, 0xFF340132, &chakrapetchmedium, 16, 20, 70, status_text);
-    display_blit_buffer(fb);
+    progress_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", status_text, progress, true);
 }
 
 static bool radio_prepare(void) {
 #ifdef CONFIG_IDF_TARGET_ESP32P4
-    radio_update_callback("Stopping WiFi...");
+    radio_update_callback("Stopping WiFi...", 0);
 
     esp_wifi_stop();
 
-    radio_update_callback("Starting updater...");
+    radio_update_callback("Starting updater...", 0);
 
     printf("Install UART driver...\r\n");
     uart_driver_install(UART_NUM_0, 256, 256, 0, NULL, 0);
@@ -63,43 +61,43 @@ static bool radio_prepare(void) {
     esp_log_level_set("et2", ESP_LOG_DEBUG);
     ESP_ERROR_CHECK(et2_setif_uart(UART_NUM_0));
 
-    radio_update_callback("Synchronizing with radio...");
+    radio_update_callback("Synchronizing with radio...", 0);
     printf("Synchronizing with radio...\r\n");
 
     esp_err_t res = et2_sync();
     if (res != ESP_OK) {
         printf("Failed to sync with radio: %s\r\n", esp_err_to_name(res));
-        radio_update_callback("Failed to sync with radio");
+        radio_update_callback("Failed to sync with radio", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         return false;
     }
 
-    radio_update_callback("Detecting radio...");
+    radio_update_callback("Detecting radio...", 0);
     printf("Detecting radio...\r\n");
 
     uint32_t chip_id;
     res = et2_detect(&chip_id);
     if (res != ESP_OK) {
         printf("Failed to detect radio chip: %s\r\n", esp_err_to_name(res));
-        radio_update_callback("Failed to detect radio chip");
+        radio_update_callback("Failed to detect radio chip", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         return false;
     }
-    radio_update_callback("Detected radio chip, starting stub...");
+    radio_update_callback("Detected radio chip, starting stub...", 0);
     printf("Detected chip id: 0x%08" PRIx32 "\r\n", chip_id);
 
     res = et2_run_stub();
 
     if (res != ESP_OK) {
         printf("Failed to run flashing stub: %s\r\n", esp_err_to_name(res));
-        radio_update_callback("Failed to run flashing stub");
+        radio_update_callback("Failed to run flashing stub", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         return false;
     }
 
     return true;
 #else
-    radio_update_callback("Radio update not supported on this platform");
+    radio_update_callback("Radio update not supported on this platform", 0);
     vTaskDelay(pdMS_TO_TICKS(2000));
     return false;
 #endif
@@ -107,12 +105,12 @@ static bool radio_prepare(void) {
 
 static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_size, size_t offset) {
 #ifdef CONFIG_IDF_TARGET_ESP32P4
-    radio_update_callback("Opening update file...");
+    radio_update_callback("Opening update file...", 0);
 
     FILE* fd = fastopen(path, "rb");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open file: %s", strerror(errno));
-        radio_update_callback("Failed to open firmware file");
+        radio_update_callback("Failed to open firmware file", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         return ESP_FAIL;
     }
@@ -124,7 +122,7 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
     uint8_t* data = malloc(4096);
     if (data == NULL) {
         ESP_LOGE(TAG, "Failed to allocate memory for firmware data");
-        radio_update_callback("Failed to allocate memory");
+        radio_update_callback("Failed to allocate memory", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         fastclose(fd);
         return ESP_FAIL;
@@ -132,14 +130,15 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
 
     esp_err_t res = et2_cmd_deflate_begin(uncompressed_size, compressed_size, offset);
     if (res != ESP_OK) {
-        radio_update_callback("Failed to start transfer");
+        radio_update_callback("Failed to start transfer", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         free(data);
         fastclose(fd);
         return res;
     }
-    size_t   position = 0;
-    uint32_t seq      = 0;
+    size_t   position     = 0;
+    uint32_t seq          = 0;
+    uint32_t total_blocks = compressed_size / 4096;
     while (position < compressed_size) {
         size_t block_length = compressed_size - position;
         if (block_length > 4096) {
@@ -149,20 +148,21 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
         size_t read_bytes = fread(data, 1, block_length, fd);
         if (read_bytes != block_length) {
             ESP_LOGE(TAG, "Failed to read firmware data: %s", strerror(errno));
-            radio_update_callback("Failed to read firmware data");
+            radio_update_callback("Failed to read firmware data", 0);
             vTaskDelay(pdMS_TO_TICKS(2000));
             free(data);
             fastclose(fd);
             return ESP_FAIL;
         }
         char buffer[128] = {0};
-        snprintf(buffer, sizeof(buffer), "Writing %zu bytes to radio (block %" PRIu32 ")...\r\n", block_length, seq);
+        snprintf(buffer, sizeof(buffer), "Writing %zu bytes to radio (block %" PRIu32 " of %" PRIu32 ")...\r\n",
+                 block_length, seq, total_blocks);
         fputs(buffer, stdout);
-        radio_update_callback(buffer);
+        radio_update_callback(buffer, (seq * 100) / total_blocks);
         esp_err_t res = et2_cmd_deflate_data(data, block_length, seq);
         if (res != ESP_OK) {
             ESP_LOGE(TAG, "Failed to write data to radio: %s", esp_err_to_name(res));
-            radio_update_callback("Failed to write data to radio");
+            radio_update_callback("Failed to write data to radio", 0);
             vTaskDelay(pdMS_TO_TICKS(2000));
             free(data);
             fastclose(fd);
@@ -178,7 +178,7 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
 
     return res;
 #else
-    radio_update_callback("Radio update not supported on this platform");
+    radio_update_callback("Radio update not supported on this platform", 0);
     vTaskDelay(pdMS_TO_TICKS(2000));
     return ESP_FAIL;
 #endif
@@ -186,13 +186,13 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
 
 static esp_err_t radio_install_raw(const char* path, size_t offset) {
 #ifdef CONFIG_IDF_TARGET_ESP32P4
-    radio_update_callback("Opening update file...");
+    radio_update_callback("Opening update file...", 0);
     printf("Opening update file...\r\n");
 
     FILE* fd = fastopen(path, "rb");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open file: %s", strerror(errno));
-        radio_update_callback("Failed to open firmware file");
+        radio_update_callback("Failed to open firmware file", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         return ESP_FAIL;
     }
@@ -204,7 +204,7 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
     uint8_t* data = malloc(4096);
     if (data == NULL) {
         ESP_LOGE(TAG, "Failed to allocate memory for firmware data");
-        radio_update_callback("Failed to allocate memory");
+        radio_update_callback("Failed to allocate memory", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         fastclose(fd);
         return ESP_FAIL;
@@ -212,15 +212,16 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
 
     esp_err_t res = et2_cmd_flash_begin(file_size, offset);
     if (res != ESP_OK) {
-        radio_update_callback("Failed to start transfer");
+        radio_update_callback("Failed to start transfer", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         free(data);
         fastclose(fd);
         return res;
     }
 
-    size_t   position = 0;
-    uint32_t seq      = 0;
+    size_t   position     = 0;
+    uint32_t seq          = 0;
+    uint32_t total_blocks = file_size / 4096;
     while (position < file_size) {
         size_t block_length = file_size - position;
         if (block_length > 4096) {
@@ -230,20 +231,21 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
         size_t read_bytes = fread(data, 1, block_length, fd);
         if (read_bytes != block_length) {
             ESP_LOGE(TAG, "Failed to read firmware data: %s", strerror(errno));
-            radio_update_callback("Failed to read firmware data");
+            radio_update_callback("Failed to read firmware data", 0);
             vTaskDelay(pdMS_TO_TICKS(2000));
             free(data);
             fastclose(fd);
             return ESP_FAIL;
         }
         char buffer[128] = {0};
-        snprintf(buffer, sizeof(buffer), "Writing %zu bytes to radio (block %" PRIu32 ")...\r\n", block_length, seq);
+        snprintf(buffer, sizeof(buffer), "Writing %zu bytes to radio (block %" PRIu32 " of %" PRIu32 ")...\r\n",
+                 block_length, seq, total_blocks);
         fputs(buffer, stdout);
-        radio_update_callback(buffer);
+        radio_update_callback(buffer, (seq * 100) / total_blocks);
         esp_err_t res = et2_cmd_flash_data(data, block_length, seq);
         if (res != ESP_OK) {
             ESP_LOGE(TAG, "Failed to write data to radio: %s", esp_err_to_name(res));
-            radio_update_callback("Failed to write data to radio");
+            radio_update_callback("Failed to write data to radio", 0);
             vTaskDelay(pdMS_TO_TICKS(2000));
             free(data);
             fastclose(fd);
@@ -260,7 +262,7 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
 
     return res;
 #else
-    radio_update_callback("Radio update not supported on this platform");
+    radio_update_callback("Radio update not supported on this platform", 0);
     vTaskDelay(pdMS_TO_TICKS(2000));
     return ESP_FAIL;
 #endif
@@ -283,23 +285,23 @@ void radio_update(char* path, bool compressed, uint32_t uncompressed_size) {
     esp_err_t res;
 
     if (compressed) {
-        radio_update_callback("Installing compressed firmware...");
+        radio_update_callback("Installing compressed firmware...", 0);
         printf("Installing compressed firmware...\r\n");
         res = radio_install_compressed(path, uncompressed_size, 65536);
     } else {
-        radio_update_callback("Installing raw firmware...");
+        radio_update_callback("Installing raw firmware...", 0);
         printf("Installing raw firmware...\r\n");
         res = radio_install_raw(path, 65536);
     }
 
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to install radio firmware: %s", esp_err_to_name(res));
-        radio_update_callback("Failed to install radio firmware");
+        radio_update_callback("Failed to install radio firmware", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         return;
     }
 
-    radio_update_callback("Radio firmware installed successfully");
+    radio_update_callback("Radio firmware installed successfully", 0);
     printf("Radio firmware installed successfully\r\n");
 
     vTaskDelay(pdMS_TO_TICKS(1000));
@@ -317,18 +319,18 @@ void radio_install(const char* instructions_filename) {
     gui_footer_draw(buffer, theme, NULL, 0, NULL, 0);
     display_blit_buffer(buffer);
 
-    radio_update_callback("Connecting to radio...");
+    radio_update_callback("Connecting to radio...", 0);
     if (!radio_prepare()) {
-        radio_update_callback("Failed to initialize radio");
+        radio_update_callback("Failed to initialize radio", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         return;
     }
 
-    radio_update_callback("Reading instructions...");
+    radio_update_callback("Reading instructions...", 0);
     FILE* fd = fastopen(instructions_filename, "rb");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open file: %s", strerror(errno));
-        radio_update_callback("Failed to open instructions");
+        radio_update_callback("Failed to open instructions", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         return;
     }
@@ -339,7 +341,7 @@ void radio_install(const char* instructions_filename) {
     char* instructions_data = heap_caps_malloc(instructions_size, MALLOC_CAP_SPIRAM);
     if (instructions_data == NULL) {
         ESP_LOGE(TAG, "Failed to allocate memory for instructions");
-        radio_update_callback("Failed to allocate memory");
+        radio_update_callback("Failed to allocate memory", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         fastclose(fd);
         return;
@@ -347,7 +349,7 @@ void radio_install(const char* instructions_filename) {
     size_t read_bytes = fread(instructions_data, 1, instructions_size, fd);
     if (read_bytes != instructions_size) {
         ESP_LOGE(TAG, "Failed to read instructions data: %s", strerror(errno));
-        radio_update_callback("Failed to read instructions data");
+        radio_update_callback("Failed to read instructions data", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         free(instructions_data);
         fastclose(fd);
@@ -360,7 +362,7 @@ void radio_install(const char* instructions_filename) {
     cJSON* information = cJSON_GetObjectItem(instructions_json, "information");
     if (information == NULL || !cJSON_IsObject(information)) {
         ESP_LOGE(TAG, "No information found in instructions");
-        radio_update_callback("No information found in instructions");
+        radio_update_callback("No information found in instructions", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         cJSON_Delete(instructions_json);
         free(instructions_data);
@@ -370,25 +372,25 @@ void radio_install(const char* instructions_filename) {
     cJSON* steps = cJSON_GetObjectItem(instructions_json, "steps");
     if (steps == NULL || !cJSON_IsArray(steps)) {
         ESP_LOGE(TAG, "No steps found in instructions");
-        radio_update_callback("No steps found in instructions");
+        radio_update_callback("No steps found in instructions", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         cJSON_Delete(instructions_json);
         free(instructions_data);
         return;
     }
 
-    radio_update_callback("Erasing radio flash...");
+    radio_update_callback("Erasing radio flash...", 0);
     esp_err_t res = et2_cmd_erase_flash();
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to erase flash: %s", esp_err_to_name(res));
-        radio_update_callback("Failed to erase flash");
+        radio_update_callback("Failed to erase flash", 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
         cJSON_Delete(instructions_json);
         free(instructions_data);
         return;
     }
 
-    radio_update_callback("Installing radio firmware...");
+    radio_update_callback("Installing radio firmware...", 0);
     cJSON* step;
     cJSON_ArrayForEach(step, steps) {
         cJSON* file_obj       = cJSON_GetObjectItem(step, "file");
@@ -401,7 +403,7 @@ void radio_install(const char* instructions_filename) {
             hash_obj == NULL || !cJSON_IsString(hash_obj) || size_obj == NULL || !cJSON_IsNumber(size_obj) ||
             compressed_obj == NULL || !cJSON_IsBool(compressed_obj)) {
             ESP_LOGE(TAG, "Invalid step format");
-            radio_update_callback("Invalid step format");
+            radio_update_callback("Invalid step format", 0);
             vTaskDelay(pdMS_TO_TICKS(2000));
             cJSON_Delete(instructions_json);
             free(instructions_data);
@@ -418,7 +420,7 @@ void radio_install(const char* instructions_filename) {
         snprintf(text_buffer, sizeof(text_buffer),
                  "Installing step: %s (offset: %" PRIu32 ", size: %" PRIu32 " compressed: %s)", file_path, offset, size,
                  compressed ? "yes" : "no");
-        radio_update_callback(text_buffer);
+        radio_update_callback(text_buffer, 0);
         printf("%s\r\n", text_buffer);
 
         const char* last_slash = strrchr(instructions_filename, '/');
@@ -433,7 +435,7 @@ void radio_install(const char* instructions_filename) {
 
         if (res != ESP_OK) {
             sprintf(text_buffer, "Failed to install step: %s", esp_err_to_name(res));
-            radio_update_callback(text_buffer);
+            radio_update_callback(text_buffer, 0);
             vTaskDelay(pdMS_TO_TICKS(2000));
             cJSON_Delete(instructions_json);
             free(instructions_data);
@@ -444,7 +446,7 @@ void radio_install(const char* instructions_filename) {
     cJSON_Delete(instructions_json);
     free(instructions_data);
 
-    radio_update_callback("Radio firmware installed successfully");
+    radio_update_callback("Radio firmware installed successfully", 100);
     vTaskDelay(pdMS_TO_TICKS(1000));
 #endif
 }

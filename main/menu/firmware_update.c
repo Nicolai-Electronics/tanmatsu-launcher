@@ -9,6 +9,7 @@
 #include "gui_element_header.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "message_dialog.h"
 #include "pax_gfx.h"
 #include "pax_types.h"
 #include "wifi_ota.h"
@@ -28,11 +29,9 @@
 #endif
 
 static void firmware_update_callback(const char* status_text, uint8_t progress) {
-    printf("OTA status changed: %s\r\n", status_text);
-    pax_buf_t* buffer = display_get_buffer();
-    pax_draw_rect(buffer, 0xFFEEEAEE, 0, 85, buffer->width, 32);
-    pax_draw_text(buffer, 0xFF340132, &chakrapetchmedium, 16, 20, 90, status_text);
-    display_blit_buffer(buffer);
+    printf("OTA status changed: %s (%u%%)\r\n", status_text, progress);
+    progress_dialog(get_icon(ICON_SYSTEM_UPDATE), "Firmware update", status_text ? status_text : "Updating...",
+                    progress, true);
 }
 
 void menu_firmware_update(void) {

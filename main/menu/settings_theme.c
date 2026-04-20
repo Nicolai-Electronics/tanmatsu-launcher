@@ -3,13 +3,13 @@
 #include "common/display.h"
 #include "common/theme.h"
 #include "device_information.h"
-#include "device_settings.h"
 #include "freertos/idf_additions.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
 #include "menu/textedit.h"
+#include "nvs_settings.h"
 #include "owner.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
@@ -43,10 +43,10 @@ static void render(menu_t* menu, bool partial, bool icons) {
 
 void update_menu(menu_t* menu) {
     theme_setting_t theme = THEME_BLACK;
-    device_settings_get_theme(&theme);
+    nvs_settings_get_theme(&theme);
     if ((int)theme > menu_get_length(menu)) {
         theme = THEME_BLACK;
-        device_settings_set_theme(theme);
+        nvs_settings_set_theme(theme);
     }
     for (size_t i = 0; i < menu_get_length(menu); i++) {
         if ((theme_setting_t)menu_get_callback_args(menu, i) == theme) {
@@ -106,7 +106,7 @@ void menu_settings_theme(void) {
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 theme_setting_t theme_setting =
                                     (theme_setting_t)menu_get_callback_args(&menu, menu_get_position(&menu));
-                                device_settings_set_theme(theme_setting);
+                                nvs_settings_set_theme(theme_setting);
                                 update_menu(&menu);
                                 theme_initialize();
                                 unload_icons();

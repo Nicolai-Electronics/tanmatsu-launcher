@@ -40,6 +40,7 @@
 #include "menu/message_dialog.h"
 #include "ntp.h"
 #include "nvs_flash.h"
+#include "nvs_settings.h"
 #include "pax_fonts.h"
 #include "pax_gfx.h"
 #include "pax_text.h"
@@ -497,10 +498,10 @@ void app_main(void) {
     // the home menu will show a button to retry the patch in case of failure
 
     uint8_t patch = 0;
-    device_settings_get_firmware_patch_level(&patch);
+    nvs_settings_get_firmware_patch_level(&patch);
     if (patch < 1) {
         // Patch level 0: attempt updating radio
-        device_settings_set_firmware_patch_level(1);
+        nvs_settings_set_firmware_patch_level(1);
         if (wifi_stack_get_version_mismatch()) {
             radio_ota_update();
             bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
@@ -510,7 +511,7 @@ void app_main(void) {
     }
     if (patch < 2 && !wifi_stack_get_version_mismatch()) {
         // Patch level 1: icons missing, attempt to download icons
-        device_settings_set_firmware_patch_level(2);
+        nvs_settings_set_firmware_patch_level(2);
         if (get_icons_missing()) {
             download_icons(true);
             bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);

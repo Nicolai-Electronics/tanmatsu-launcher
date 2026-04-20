@@ -199,10 +199,10 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
         int percent   = (len_read * 100) / len_total;
 
         if (percent != percent_shown) {
-            ESP_LOGI(TAG, "Downloading %d / %d (%d%%)", len_read, len_total, percent);
+            ESP_LOGI(TAG, "Downloading %d / %d", len_read, len_total);
             percent_shown = percent;
             char buffer[128];
-            snprintf(buffer, sizeof(buffer), "Updating... %d%%", percent);
+            snprintf(buffer, sizeof(buffer), "Updating...");
             status_cb(buffer, percent);
         }
     }

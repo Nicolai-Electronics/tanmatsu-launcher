@@ -1,13 +1,13 @@
 #include "icons.h"
 #include "bsp/power.h"
 #include "common/theme.h"
-#include "device_settings.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "fastopen.h"
 #include "filesystem_utils.h"
 #include "http_download.h"
 #include "menu/message_dialog.h"
+#include "nvs_settings.h"
 #include "pax_codecs.h"
 #include "pax_gfx.h"
 #include "wifi_connection.h"
@@ -135,7 +135,7 @@ void get_icon_path(icon_t icon, char* out_path, size_t max_path_len) {
 
 void load_icons(void) {
     theme_setting_t theme_setting = THEME_BLACK;
-    device_settings_get_theme(&theme_setting);
+    nvs_settings_get_theme(&theme_setting);
 
     for (int i = 0; i < ICON_LAST; i++) {
         char path[512] = {0};
@@ -228,9 +228,8 @@ static void download_callback(size_t download_position, size_t file_size, const 
         return;  // No change, no need to update
     }
     last_percentage = percentage;
-    char text[512];
-    snprintf(text, sizeof(text), "%s (%u%%)", status_text ? status_text : "Downloading", percentage);
-    busy_dialog(get_icon(ICON_DOWNLOADING), "Icon downloader", text, true);
+    progress_dialog(get_icon(ICON_DOWNLOADING), "Icon downloader", status_text ? status_text : "Downloading",
+                    percentage, true);
 };
 
 void print_commands(void) {

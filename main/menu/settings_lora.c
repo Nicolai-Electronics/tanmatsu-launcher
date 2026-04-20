@@ -13,6 +13,7 @@
 #include "lora_settings_handler.h"
 #include "menu/message_dialog.h"
 #include "menu/textedit.h"
+#include "nvs_settings.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
@@ -57,9 +58,9 @@ static void render(menu_t* menu, bool partial, bool icons) {
     uint32_t frequency = 0;
     device_settings_get_lora_frequency(&frequency);
     uint8_t spreading_factor = 0;
-    device_settings_get_lora_spreading_factor(&spreading_factor);
+    nvs_settings_get_lora_spreading_factor(&spreading_factor);
     uint16_t bandwidth = 0;
-    device_settings_get_lora_bandwidth(&bandwidth);
+    nvs_settings_get_lora_bandwidth(&bandwidth);
     float bandwidth_float = bandwidth;
     if (bandwidth == 7) bandwidth_float = 7.8;
     if (bandwidth == 10) bandwidth_float = 10.4;
@@ -69,9 +70,9 @@ static void render(menu_t* menu, bool partial, bool icons) {
     if (bandwidth == 41) bandwidth_float = 41.7;
     if (bandwidth == 62) bandwidth_float = 62.5;
     uint8_t coding_rate = 0;
-    device_settings_get_lora_coding_rate(&coding_rate);
+    nvs_settings_get_lora_coding_rate(&coding_rate);
     uint8_t power = 0;
-    device_settings_get_lora_power(&power);
+    nvs_settings_get_lora_power(&power);
 
     size_t position_index = 0;
     char   value_buffer[16];
@@ -104,7 +105,7 @@ void edit_frequency(menu_t* menu) {
         if (new_frequency < 1) {
             return;
         }
-        device_settings_set_lora_frequency(new_frequency);
+        nvs_settings_set_lora_frequency(new_frequency);
         snprintf(temp, sizeof(temp), "%" PRIu32, new_frequency);
         menu_set_value(menu, 0, temp);
     }
@@ -128,16 +129,16 @@ static void edit_updown(menu_t* menu, bool up) {
             break;
         case SETTING_SPREADING_FACTOR: {
             uint8_t spreading_factor = 0;
-            device_settings_get_lora_spreading_factor(&spreading_factor);
+            nvs_settings_get_lora_spreading_factor(&spreading_factor);
             spreading_factor += up ? 1 : -1;
             if (spreading_factor < 7) spreading_factor = 7;
             if (spreading_factor > 12) spreading_factor = 12;
-            device_settings_set_lora_spreading_factor(spreading_factor);
+            nvs_settings_set_lora_spreading_factor(spreading_factor);
             break;
         }
         case SETTING_BANDWIDTH: {
             uint16_t bandwidth = 0;
-            device_settings_get_lora_bandwidth(&bandwidth);
+            nvs_settings_get_lora_bandwidth(&bandwidth);
             switch (bandwidth) {
                 case 7:
                     bandwidth = up ? 10 : 7;
@@ -172,27 +173,27 @@ static void edit_updown(menu_t* menu, bool up) {
                 default:
                     bandwidth = 125;
             }
-            device_settings_set_lora_bandwidth(bandwidth);
+            nvs_settings_set_lora_bandwidth(bandwidth);
             break;
         }
         case SETTING_CODING_RATE: {
             uint8_t coding_rate = 0;
-            device_settings_get_lora_coding_rate(&coding_rate);
+            nvs_settings_get_lora_coding_rate(&coding_rate);
             coding_rate += up ? 1 : -1;
             if (coding_rate < 5) coding_rate = 5;
             if (coding_rate > 8) coding_rate = 8;
-            device_settings_set_lora_coding_rate(coding_rate);
+            nvs_settings_set_lora_coding_rate(coding_rate);
             break;
         }
         case SETTING_POWER: {
             uint8_t power = 0;
-            device_settings_get_lora_power(&power);
+            nvs_settings_get_lora_power(&power);
             if (power > 0 && !up) power -= 1;
             if (up) {
                 power++;
                 if (power > 22) power = 22;
             }
-            device_settings_set_lora_power(power);
+            nvs_settings_set_lora_power(power);
             break;
         }
         default:

@@ -43,8 +43,8 @@ static void download_callback(size_t download_position, size_t file_size, const 
     }
     last_percentage = percentage;
     char text[64];
-    snprintf(text, sizeof(text), "%s (%u%%)", status_text ? status_text : "Downloading", percentage);
-    busy_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", text, true);
+    snprintf(text, sizeof(text), "%s", status_text ? status_text : "Downloading");
+    progress_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", text, percentage, true);
 };
 
 static bool radio_prepare(void) {
@@ -206,8 +206,9 @@ esp_err_t radio_ota_update(void) {
             return res;
         }*/
 
-        size_t   position = 0;
-        uint32_t seq      = 0;
+        size_t   position     = 0;
+        uint32_t seq          = 0;
+        uint32_t total_blocks = steps[i].compressed_size / 4096;
         while (position < steps[i].compressed_size) {
             size_t block_length = steps[i].compressed_size - position;
             if (block_length > 4096) {
@@ -215,10 +216,11 @@ esp_err_t radio_ota_update(void) {
             }
 
             char buffer[128] = {0};
-            snprintf(buffer, sizeof(buffer), "Part %d of %d:\nWriting %zu bytes to radio (block %" PRIu32 ")...\r\n",
-                     i + 1, step_count, block_length, seq);
+            snprintf(buffer, sizeof(buffer),
+                     "Part %d of %d:\nWriting %zu bytes to radio (block %" PRIu32 " of %" PRIu32 ")...\r\n", i + 1,
+                     step_count, block_length, seq, total_blocks);
             fputs(buffer, stdout);
-            busy_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", buffer, false);
+            progress_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", buffer, (seq * 100) / total_blocks, false);
             while (et2_cmd_deflate_data(steps[i].compressed_data + position, block_length, seq) != ESP_OK) {
                 vTaskDelay(pdMS_TO_TICKS(100));
             }

@@ -10,6 +10,7 @@
 #include "icons.h"
 #include "menu/textedit.h"
 #include "message_dialog.h"
+#include "nvs_settings.h"
 #include "pax_gfx.h"
 #include "pax_types.h"
 
@@ -46,9 +47,12 @@ static void menu_populate(menu_t* menu) {
     char base_uri[REPO_BASE_URI_MAX_LEN]     = {0};
     char user_agent[HTTP_USER_AGENT_MAX_LEN] = {0};
 
-    device_settings_get_repo_server(server, sizeof(server));
-    device_settings_get_repo_base_uri(base_uri, sizeof(base_uri));
-    device_settings_get_http_user_agent(user_agent, sizeof(user_agent));
+    nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
+    nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
+    nvs_settings_get_http_user_agent(user_agent, sizeof(user_agent), "");
+    if (strlen(user_agent) < 1) {
+        device_settings_get_default_http_user_agent(user_agent, sizeof(user_agent));
+    }
 
     size_t previous_position = menu_get_position(menu);
     while (menu_get_length(menu) > 0) {
@@ -69,10 +73,10 @@ static void edit_server(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu) {
     char server[REPO_SERVER_MAX_LEN] = {0};
     bool accepted                    = false;
 
-    device_settings_get_repo_server(server, sizeof(server));
+    nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
     menu_textedit(buffer, theme, "Server", server, sizeof(server), false, &accepted);
     if (accepted) {
-        device_settings_set_repo_server(server);
+        nvs_settings_set_repo_server(server);
         menu_set_value(menu, 0, server);
     }
 }
@@ -81,10 +85,10 @@ static void edit_base_uri(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu) {
     char base_uri[REPO_BASE_URI_MAX_LEN] = {0};
     bool accepted                        = false;
 
-    device_settings_get_repo_base_uri(base_uri, sizeof(base_uri));
+    nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
     menu_textedit(buffer, theme, "Base URI", base_uri, sizeof(base_uri), false, &accepted);
     if (accepted) {
-        device_settings_set_repo_base_uri(base_uri);
+        nvs_settings_set_repo_base_uri(base_uri);
         menu_set_value(menu, 1, base_uri);
     }
 }
@@ -93,10 +97,13 @@ static void edit_user_agent(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu)
     char user_agent[HTTP_USER_AGENT_MAX_LEN] = {0};
     bool accepted                            = false;
 
-    device_settings_get_http_user_agent(user_agent, sizeof(user_agent));
+    nvs_settings_get_http_user_agent(user_agent, sizeof(user_agent), "");
+    if (strlen(user_agent) < 1) {
+        device_settings_get_default_http_user_agent(user_agent, sizeof(user_agent));
+    }
     menu_textedit(buffer, theme, "User Agent", user_agent, sizeof(user_agent), false, &accepted);
     if (accepted) {
-        device_settings_set_http_user_agent(user_agent);
+        nvs_settings_set_http_user_agent(user_agent);
         menu_set_value(menu, 2, user_agent);
     }
 }
@@ -105,9 +112,9 @@ static void reset_defaults(menu_t* menu) {
     char default_ua[HTTP_USER_AGENT_MAX_LEN] = {0};
     device_settings_get_default_http_user_agent(default_ua, sizeof(default_ua));
 
-    device_settings_set_repo_server(DEFAULT_REPO_SERVER);
-    device_settings_set_repo_base_uri(DEFAULT_REPO_BASE_URI);
-    device_settings_set_http_user_agent(default_ua);
+    nvs_settings_set_repo_server(DEFAULT_REPO_SERVER);
+    nvs_settings_set_repo_base_uri(DEFAULT_REPO_BASE_URI);
+    nvs_settings_set_http_user_agent(default_ua);
     menu_set_value(menu, 0, DEFAULT_REPO_SERVER);
     menu_set_value(menu, 1, DEFAULT_REPO_BASE_URI);
     menu_set_value(menu, 2, default_ua);

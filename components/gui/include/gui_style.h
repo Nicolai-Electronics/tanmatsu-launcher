@@ -49,6 +49,9 @@ typedef struct {
     int vertical_padding;
     int horizontal_padding;
 
+    // Height
+    int height;
+
     // Colors
     gui_palette_t palette;
 } gui_progressbar_style_t;

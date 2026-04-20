@@ -12,6 +12,7 @@
 #include "gui_style.h"
 #include "icons.h"
 #include "menu/message_dialog.h"
+#include "nvs_settings.h"
 #include "pax_fonts.h"
 #include "pax_text.h"
 #include "pax_types.h"
@@ -110,7 +111,7 @@ static void download_callback(size_t download_position, size_t file_size, const 
 static void execute_action(pax_buf_t* buffer, menu_repository_client_project_action_t action, gui_theme_t* theme,
                            cJSON* wrapper) {
     char server[128] = {0};
-    device_settings_get_repo_server(server, sizeof(server));
+    nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
 
     cJSON* slug_obj = cJSON_GetObjectItem(wrapper, "slug");
     switch (action) {

@@ -29,7 +29,7 @@ void gui_progressbar_draw(pax_buf_t* pax_buffer, gui_theme_t* theme, float x, fl
     y      += style->vertical_padding / 2.0f;
 
     pax_draw_rect(pax_buffer, style->palette.color_active_background, x, y, width, height);
-    pax_draw_rect(pax_buffer, style->palette.color_active_foreground, x, y, width * progress, height);
+    pax_draw_rect(pax_buffer, style->palette.color_highlight_primary, x, y, width * progress, height);
 }
 
 void gui_progressbar_vertical_draw(pax_buf_t* pax_buffer, gui_theme_t* theme, float x, float y, float width,
