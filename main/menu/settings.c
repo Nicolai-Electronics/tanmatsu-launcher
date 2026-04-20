@@ -72,7 +72,7 @@ static void execute_action(menu_home_action_t action) {
             menu_settings_lora();
             break;
         case ACTION_FIRMWARE_UPDATE:
-            menu_firmware_update();
+            ota_update_stable();
             break;
         case ACTION_TOOLS:
             menu_tools();
@@ -123,6 +123,8 @@ void menu_settings(void) {
     }
     menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_SETTINGS));
     menu_insert_item_icon(&menu, "Info", NULL, (void*)ACTION_INFO, -1, get_icon(ICON_INFO));
+    menu_insert_item_icon(&menu, "Update firmware", NULL, (void*)ACTION_FIRMWARE_UPDATE, -1,
+                          get_icon(ICON_SYSTEM_UPDATE));
 
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();

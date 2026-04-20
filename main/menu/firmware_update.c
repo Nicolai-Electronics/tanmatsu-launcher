@@ -34,31 +34,14 @@ static void firmware_update_callback(const char* status_text, uint8_t progress) 
                     progress, true);
 }
 
-void menu_firmware_update(void) {
-    pax_buf_t*   buffer = display_get_buffer();
-    gui_theme_t* theme  = get_theme();
-    pax_background(buffer, theme->palette.color_background);
-    gui_header_draw(buffer, theme, ((gui_element_icontext_t[]){{get_icon(ICON_SYSTEM_UPDATE), "Firmware update"}}), 1,
-                    NULL, 0);
-    gui_footer_draw(buffer, theme, NULL, 0, NULL, 0);
+void ota_update_experimental(void) {
+    ota_update(OTA_BASE_URL "experimental.bin", firmware_update_callback);
+}
 
-    bool staging = false;
-    bsp_input_read_navigation_key(BSP_INPUT_NAVIGATION_KEY_F2, &staging);
+void ota_update_staging(void) {
+    ota_update(OTA_BASE_URL "staging.bin", firmware_update_callback);
+}
 
-    bool experimental = false;
-    bsp_input_read_navigation_key(BSP_INPUT_NAVIGATION_KEY_F3, &experimental);
-
-    if (experimental) {
-        pax_draw_text(buffer, 0xFF340132, &chakrapetchmedium, 16, 20, 70, "Update target: experimental");
-        display_blit_buffer(buffer);
-        ota_update(OTA_BASE_URL "experimental.bin", firmware_update_callback);
-    } else if (staging) {
-        pax_draw_text(buffer, 0xFF340132, &chakrapetchmedium, 16, 20, 70, "Update target: staging");
-        display_blit_buffer(buffer);
-        ota_update(OTA_BASE_URL "staging.bin", firmware_update_callback);
-    } else {
-        pax_draw_text(buffer, 0xFF340132, &chakrapetchmedium, 16, 20, 70, "Update target: stable");
-        display_blit_buffer(buffer);
-        ota_update(OTA_BASE_URL "stable.bin", firmware_update_callback);
-    }
+void ota_update_stable(void) {
+    ota_update(OTA_BASE_URL "stable.bin", firmware_update_callback);
 }
