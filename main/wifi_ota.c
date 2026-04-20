@@ -202,7 +202,7 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
             ESP_LOGI(TAG, "Downloading %d / %d", len_read, len_total);
             percent_shown = percent;
             char buffer[128];
-            snprintf(buffer, sizeof(buffer), "Updating...");
+            snprintf(buffer, sizeof(buffer), "Updating (%d%%)...", percent);
             status_cb(buffer, percent);
         }
     }
@@ -217,7 +217,7 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
         ota_finish_err = esp_https_ota_finish(https_ota_handle);
         if ((err == ESP_OK) && (ota_finish_err == ESP_OK)) {
             ESP_LOGI(TAG, "ESP_HTTPS_OTA upgrade successful. Rebooting ...");
-            status_cb("Update installed", 0);
+            status_cb("Update installed, restarting...", 100);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
             esp_restart();
         } else {
