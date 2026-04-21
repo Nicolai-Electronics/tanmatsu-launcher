@@ -7,7 +7,6 @@ dependencies:
   badgeteam/custom-certificates: "^1.1.0"
   nicolaielectronics/wifi-manager: "^0.3.0"
   nicolaielectronics/tanmatsu-wifi: "^1.2.0"
-  nicolaielectronics/pocketpy: "^2.0.0"
   badgeteam/terminal-emulator: "^0.0.4"
   badgeteam/badgelink: "^0.1.0"
   nicolaielectronics/tanmatsu-lora: "^0.1.1"

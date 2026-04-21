@@ -45,7 +45,6 @@
 #include "pax_gfx.h"
 #include "pax_text.h"
 #include "portmacro.h"
-#include "python.h"
 #include "radio_ota.h"
 #include "sdcard.h"
 #include "sdkconfig.h"
@@ -55,6 +54,7 @@
 #include "wifi_remote.h"
 #ifdef CONFIG_IDF_TARGET_ESP32P4
 #include "plugin_manager.h"
+#include "hid_keyboard.h"
 #endif
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
@@ -525,10 +525,10 @@ void app_main(void) {
     bsp_power_set_usb_host_boost_enabled(true);
 
 #if CONFIG_IDF_TARGET_ESP32P4
-// Only integrate Python into the launcher on ESP32-P4 targets
-#if 0
-    python_initialize();
-#endif
+    res = hid_kbd_init();
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize USB HID keyboard support");
+    }
 #endif
 
 #ifdef CONFIG_IDF_TARGET_ESP32P4

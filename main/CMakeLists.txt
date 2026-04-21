@@ -9,6 +9,7 @@ list(APPEND extra_requires
 	esp-hosted-tanmatsu
 	badge-elf
 	plugin-api
+	usb-host
 )
 list(APPEND extra_sources
 	# Plugin system
@@ -82,7 +83,6 @@ idf_component_register(
 		"esp_efuse_custom_table.c"
 		"sdcard.c"
 		"app_metadata_parser.c"
-		"python.c"
 		"http_download.c"
 		"repository_client.c"
 		"device_information.c"
