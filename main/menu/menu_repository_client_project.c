@@ -178,7 +178,7 @@ static void prompt_install_interpreter(pax_buf_t* buffer, gui_theme_t* theme, co
 
     // Fetch interpreter project metadata from repo
     char server[128] = {0};
-    device_settings_get_repo_server(server, sizeof(server));
+    nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
 
     busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Loading interpreter info...", true);
     repository_json_data_t interp_data = {0};
