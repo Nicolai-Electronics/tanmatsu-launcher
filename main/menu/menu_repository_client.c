@@ -305,7 +305,7 @@ static void load_all_icons(cJSON* json_projects) {
     // Second pass: download missing icons using a single keepalive connection
     if (missing_count > 0) {
         char server[128] = {0};
-        device_settings_get_repo_server(server, sizeof(server));
+        nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
 
         repository_json_data_t info = {0};
         char data_path[128]         = {0};
