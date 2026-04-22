@@ -231,9 +231,10 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
         return ESP_ERR_INVALID_RESPONSE;
     }
 
-    // Download and store executable binary to the install directory
-    // For appfs apps: binary will be loaded into AppFS on-demand when launched
-    // For plugins: binary is loaded directly from the install directory
+    // Download and store executable binary.
+    // - type=appfs installed to /int: binary streams directly into AppFS (skips /int/apps/{slug}/).
+    // - type=appfs installed to /sd: binary is stored on /sd/apps/{slug}/ and cached to AppFS on first launch.
+    // - type=plugin: binary stays on the install filesystem and is loaded directly from there.
     cJSON* type = cJSON_GetObjectItem(application, "type");
     if (type != NULL && cJSON_IsString(type) &&
         (strcmp(type->valuestring, "appfs") == 0 || strcmp(type->valuestring, "plugin") == 0)) {
@@ -243,23 +244,77 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             executable = executable_obj->valuestring;
         }
 
+        bool install_to_appfs = (location == APP_MGMT_LOCATION_INTERNAL) && (strcmp(type->valuestring, "appfs") == 0);
+
         if (executable != NULL && strlen(executable) > 0) {
             char file_url[256] = {0};
             snprintf(file_url, sizeof(file_url), "%s/%s/%s/%s", repository_url, repository_data_url, slug, executable);
 
-            char target_path[512] = {0};
-            snprintf(target_path, sizeof(target_path), "%s/%s", app_path, executable);
-
             char status_text[64] = {0};
             snprintf(status_text, sizeof(status_text), "Downloading executable '%s'...", executable);
             http_session_set_callback(session, download_callback, status_text);
-            if (!http_session_download_file(session, file_url, target_path)) {
-                ESP_LOGE(TAG, "Failed to download executable: %s", executable);
-                http_session_end(session);
-                free_repository_data_json(&metadata);
-                free_repository_data_json(&information);
-                app_mgmt_uninstall(slug, location);
-                return ESP_FAIL;
+
+            if (install_to_appfs) {
+                // Clear any stale AppFS entry so a failed download doesn't leave a half-populated one behind.
+                if (appfsExists(slug)) {
+                    appfsDeleteFile(slug);
+                }
+
+                const char* app_name = (cJSON_GetObjectItem(metadata.json, "name") &&
+                                        cJSON_IsString(cJSON_GetObjectItem(metadata.json, "name")))
+                                           ? cJSON_GetObjectItem(metadata.json, "name")->valuestring
+                                           : slug;
+                uint32_t    app_revision = 0;
+                cJSON*      revision_obj = cJSON_GetObjectItem(application, "revision");
+                if (revision_obj != NULL && cJSON_IsNumber(revision_obj)) {
+                    app_revision = (uint32_t)revision_obj->valueint;
+                }
+
+                uint8_t* buf       = NULL;
+                size_t   buf_size  = 0;
+                if (!http_session_download_ram(session, file_url, &buf, &buf_size)) {
+                    ESP_LOGE(TAG, "Failed to download executable: %s", executable);
+                    http_session_end(session);
+                    free_repository_data_json(&metadata);
+                    free_repository_data_json(&information);
+                    app_mgmt_uninstall(slug, location);
+                    return ESP_FAIL;
+                }
+
+                esp_err_t appfs_res = app_mgmt_install_from_buffer(slug, app_name, app_revision, buf, buf_size);
+                if (appfs_res == ESP_ERR_NO_MEM) {
+                    uint8_t auto_cleanup = 0;
+                    appfs_settings_get_auto_cleanup(&auto_cleanup);
+                    if (auto_cleanup) {
+                        size_t rounded_size =
+                            (buf_size + (SPI_FLASH_MMU_PAGE_SIZE - 1)) & (~(SPI_FLASH_MMU_PAGE_SIZE - 1));
+                        app_mgmt_appfs_evict_lru(rounded_size);
+                        appfs_res = app_mgmt_install_from_buffer(slug, app_name, app_revision, buf, buf_size);
+                    }
+                }
+                free(buf);
+
+                if (appfs_res != ESP_OK) {
+                    ESP_LOGE(TAG, "Failed to write executable to AppFS: %s (%s)", executable,
+                             esp_err_to_name(appfs_res));
+                    http_session_end(session);
+                    free_repository_data_json(&metadata);
+                    free_repository_data_json(&information);
+                    app_mgmt_uninstall(slug, location);
+                    return appfs_res;
+                }
+            } else {
+                char target_path[512] = {0};
+                snprintf(target_path, sizeof(target_path), "%s/%s", app_path, executable);
+
+                if (!http_session_download_file(session, file_url, target_path)) {
+                    ESP_LOGE(TAG, "Failed to download executable: %s", executable);
+                    http_session_end(session);
+                    free_repository_data_json(&metadata);
+                    free_repository_data_json(&information);
+                    app_mgmt_uninstall(slug, location);
+                    return ESP_FAIL;
+                }
             }
         }
     }
@@ -287,9 +342,10 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
 
     http_session_end(session);
 
-    // Remove stale appfs cache if present (new version on filesystem should take precedence)
-    // Plugins don't use AppFS
-    if (!app_mgmt_location_is_plugin(location) && appfsExists(slug)) {
+    // Remove stale AppFS cache if present so the newly-installed /sd copy becomes the source of truth
+    // on next launch. The int/appfs path writes directly to AppFS and is handled before the download;
+    // plugins and int/elf/int/script installs don't use AppFS.
+    if (location == APP_MGMT_LOCATION_SD && appfsExists(slug)) {
         ESP_LOGI(TAG, "Removing stale AppFS cache for %s", slug);
         appfsDeleteFile(slug);
     }
@@ -350,6 +406,39 @@ esp_err_t app_mgmt_uninstall(const char* slug, app_mgmt_location_t location) {
     return res;
 }
 
+esp_err_t app_mgmt_install_from_buffer(const char* slug, const char* name, uint32_t revision, uint8_t* data,
+                                       size_t size) {
+    if (slug == NULL || name == NULL || data == NULL || size == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    size_t rounded_size = (size + (SPI_FLASH_MMU_PAGE_SIZE - 1)) & (~(SPI_FLASH_MMU_PAGE_SIZE - 1));
+    if (appfsGetFreeMem() < rounded_size) {
+        ESP_LOGW(TAG, "Not enough space in AppFS for %s (need %u, have %u)", slug, rounded_size, appfsGetFreeMem());
+        return ESP_ERR_NO_MEM;
+    }
+
+    appfs_handle_t appfs_file = APPFS_INVALID_FD;
+    if (appfsCreateFileExt(slug, name, revision, size, &appfs_file) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to create appfs file: %s", slug);
+        return ESP_FAIL;
+    }
+
+    if (appfsErase(appfs_file, 0, rounded_size) != ESP_OK) {
+        appfsDeleteFile(slug);
+        ESP_LOGE(TAG, "Failed to erase appfs file: %s", slug);
+        return ESP_FAIL;
+    }
+
+    if (appfsWrite(appfs_file, 0, data, size) != ESP_OK) {
+        appfsDeleteFile(slug);
+        ESP_LOGE(TAG, "Failed to install executable to AppFS: %s", slug);
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
 esp_err_t app_mgmt_install_from_file(const char* slug, const char* name, uint32_t revision, char* firmware_path) {
     if (slug == NULL || name == NULL || firmware_path == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -370,29 +459,9 @@ esp_err_t app_mgmt_install_from_file(const char* slug, const char* name, uint32_
         return ESP_FAIL;
     }
 
-    appfs_handle_t appfs_file = APPFS_INVALID_FD;
-    if (appfsCreateFileExt(slug, name, revision, file_size, &appfs_file) != ESP_OK) {
-        free(file_data);
-        ESP_LOGE(TAG, "Failed to create appfs file: %s", slug);
-        return ESP_FAIL;
-    }
-
-    int rounded_size = (file_size + (SPI_FLASH_MMU_PAGE_SIZE - 1)) & (~(SPI_FLASH_MMU_PAGE_SIZE - 1));
-    if (appfsErase(appfs_file, 0, rounded_size) != ESP_OK) {
-        free(file_data);
-        ESP_LOGE(TAG, "Failed to erase appfs file: %s", slug);
-        return ESP_FAIL;
-    }
-
-    if (appfsWrite(appfs_file, 0, file_data, file_size) != ESP_OK) {
-        free(file_data);
-        ESP_LOGE(TAG, "Failed to install executable to AppFS: %s", slug);
-        return ESP_FAIL;
-    }
-
+    esp_err_t res = app_mgmt_install_from_buffer(slug, name, revision, file_data, file_size);
     free(file_data);
-
-    return ESP_OK;
+    return res;
 }
 
 // --- AppFS cache management ---
@@ -495,19 +564,22 @@ esp_err_t app_mgmt_copy_appfs_to_install_dir(const char* slug) {
     return ESP_OK;
 }
 
-bool app_mgmt_can_uncache(const char* slug) {
-    // Check if the app has an install directory with metadata.
-    // Apps without one (dev/legacy, manually copied to appfs) cannot be
-    // uncached since removing from appfs would permanently lose the binary.
-    char        path[256];
-    const char* base_paths[] = {"/int/apps", "/sd/apps"};
-    for (int i = 0; i < 2; i++) {
-        snprintf(path, sizeof(path), "%s/%s/metadata.json", base_paths[i], slug);
-        if (fs_utils_exists(path)) {
-            return true;
-        }
+bool app_mgmt_is_int_only(const char* slug) {
+    // True for apps installed to /int under the new scheme: metadata present on /int,
+    // no executable on any filesystem (the binary only lives in AppFS).
+    char path[256];
+    snprintf(path, sizeof(path), "/int/apps/%s/metadata.json", slug);
+    if (!fs_utils_exists(path)) {
+        return false;
     }
-    return false;
+    return !app_mgmt_has_binary_in_install_dir(slug);
+}
+
+bool app_mgmt_can_uncache(const char* slug) {
+    // An app can only be uncached if its executable exists on the install filesystem,
+    // so the AppFS entry can be rebuilt later. Apps whose binary lives only in AppFS
+    // (dev/legacy apps, and int-installed apps under the new scheme) cannot be uncached.
+    return app_mgmt_has_binary_in_install_dir(slug);
 }
 
 esp_err_t app_mgmt_remove_from_appfs(const char* slug) {

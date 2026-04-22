@@ -56,20 +56,25 @@ static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
                 prefix = "[S]";
             } else if (apps[i]->executable_type == EXECUTABLE_TYPE_APPFS &&
                        apps[i]->executable_appfs_fd != APPFS_INVALID_FD) {
-                bool mismatch = false;
-                if (apps[i]->executable_on_fs_available) {
-                    // Check revision mismatch
-                    if (apps[i]->executable_on_fs_revision != apps[i]->executable_revision) {
-                        mismatch = true;
+                if (!apps[i]->executable_on_fs_available && app_mgmt_is_int_only(apps[i]->slug)) {
+                    // Int-installed: binary only in AppFS, cannot be uncached.
+                    prefix = "[I]";
+                } else {
+                    bool mismatch = false;
+                    if (apps[i]->executable_on_fs_available) {
+                        // Check revision mismatch
+                        if (apps[i]->executable_on_fs_revision != apps[i]->executable_revision) {
+                            mismatch = true;
+                        }
+                        // Check filesize mismatch
+                        int appfs_size = 0;
+                        appfsEntryInfoExt(apps[i]->executable_appfs_fd, NULL, NULL, NULL, &appfs_size);
+                        if (appfs_size != apps[i]->executable_on_fs_filesize) {
+                            mismatch = true;
+                        }
                     }
-                    // Check filesize mismatch
-                    int appfs_size = 0;
-                    appfsEntryInfoExt(apps[i]->executable_appfs_fd, NULL, NULL, NULL, &appfs_size);
-                    if (appfs_size != apps[i]->executable_on_fs_filesize) {
-                        mismatch = true;
-                    }
+                    prefix = mismatch ? "[M]" : "[C]";
                 }
-                prefix = mismatch ? "[M]" : "[C]";
             }
             snprintf(label, sizeof(label), "%s %s", prefix, apps[i]->name);
             menu_insert_item_icon(menu, label, NULL, (void*)apps[i], -1, apps[i]->icon);

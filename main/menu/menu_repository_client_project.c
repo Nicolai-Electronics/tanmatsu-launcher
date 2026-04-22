@@ -221,7 +221,11 @@ static bool execute_action(pax_buf_t* buffer, menu_repository_client_project_act
 
     esp_err_t res = app_mgmt_install(server, slug_obj->valuestring, location, download_callback);
     if (res != ESP_OK) {
-        message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK");
+        const char* err_msg = "Installation failed";
+        if (res == ESP_ERR_NO_MEM) {
+            err_msg = "Installation failed: AppFS full";
+        }
+        message_dialog(get_icon(ICON_ERROR), "Repository", err_msg, "OK");
         return false;
     }
 
