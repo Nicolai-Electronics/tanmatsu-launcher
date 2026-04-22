@@ -1,5 +1,6 @@
 #include "settings_repository.h"
 #include <string.h>
+#include "appfs_settings.h"
 #include "bsp/input.h"
 #include "common/display.h"
 #include "common/theme.h"
@@ -26,6 +27,8 @@ typedef enum {
     ACTION_SERVER,
     ACTION_BASE_URI,
     ACTION_USER_AGENT,
+    ACTION_AUTO_CLEANUP,
+    ACTION_MISMATCH_REINSTALL,
 } menu_repo_settings_action_t;
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
@@ -59,9 +62,16 @@ static void menu_populate(menu_t* menu) {
         menu_remove_item(menu, 0);
     }
 
+    uint8_t auto_cleanup = 0;
+    appfs_settings_get_auto_cleanup(&auto_cleanup);
+    uint8_t mismatch_reinstall = 0;
+    appfs_settings_get_mismatch_reinstall(&mismatch_reinstall);
+
     menu_insert_item_value(menu, "Server", server, NULL, (void*)ACTION_SERVER, -1);
     menu_insert_item_value(menu, "Base URI", base_uri, NULL, (void*)ACTION_BASE_URI, -1);
     menu_insert_item_value(menu, "User Agent", user_agent, NULL, (void*)ACTION_USER_AGENT, -1);
+    menu_insert_item_value(menu, "Auto-cleanup AppFS", auto_cleanup ? "Enabled" : "Disabled", NULL, (void*)ACTION_AUTO_CLEANUP, -1);
+    menu_insert_item_value(menu, "On AppFS mismatch auto-reinstall", mismatch_reinstall ? "Enabled" : "Disabled", NULL, (void*)ACTION_MISMATCH_REINSTALL, -1);
 
     if (previous_position >= menu_get_length(menu)) {
         previous_position = menu_get_length(menu) - 1;
@@ -77,7 +87,7 @@ static void edit_server(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu) {
     menu_textedit(buffer, theme, "Server", server, sizeof(server), false, &accepted);
     if (accepted) {
         nvs_settings_set_repo_server(server);
-        menu_set_value(menu, 0, server);
+        menu_populate(menu);
     }
 }
 
@@ -89,7 +99,7 @@ static void edit_base_uri(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu) {
     menu_textedit(buffer, theme, "Base URI", base_uri, sizeof(base_uri), false, &accepted);
     if (accepted) {
         nvs_settings_set_repo_base_uri(base_uri);
-        menu_set_value(menu, 1, base_uri);
+        menu_populate(menu);
     }
 }
 
@@ -104,7 +114,7 @@ static void edit_user_agent(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu)
     menu_textedit(buffer, theme, "User Agent", user_agent, sizeof(user_agent), false, &accepted);
     if (accepted) {
         nvs_settings_set_http_user_agent(user_agent);
-        menu_set_value(menu, 2, user_agent);
+        menu_populate(menu);
     }
 }
 
@@ -115,9 +125,9 @@ static void reset_defaults(menu_t* menu) {
     nvs_settings_set_repo_server(DEFAULT_REPO_SERVER);
     nvs_settings_set_repo_base_uri(DEFAULT_REPO_BASE_URI);
     nvs_settings_set_http_user_agent(default_ua);
-    menu_set_value(menu, 0, DEFAULT_REPO_SERVER);
-    menu_set_value(menu, 1, DEFAULT_REPO_BASE_URI);
-    menu_set_value(menu, 2, default_ua);
+    appfs_settings_set_auto_cleanup(DEFAULT_APPFS_AUTO_CLEANUP);
+    appfs_settings_set_mismatch_reinstall(DEFAULT_APPFS_MISMATCH_REINSTALL);
+    menu_populate(menu);
 }
 
 void menu_settings_repository(void) {
@@ -162,7 +172,13 @@ void menu_settings_repository(void) {
                                 render(buffer, theme, &menu, position, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F4:
-                                reset_defaults(&menu);
+                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_CTRL) {
+                                    nvs_settings_set_repo_server("https://cavac.at/tanmatsu");
+                                    nvs_settings_set_repo_base_uri("/v1");
+                                    menu_populate(&menu);
+                                } else {
+                                    reset_defaults(&menu);
+                                }
                                 render(buffer, theme, &menu, position, false, true);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
@@ -181,6 +197,22 @@ void menu_settings_repository(void) {
                                     case ACTION_USER_AGENT:
                                         edit_user_agent(buffer, theme, &menu);
                                         break;
+                                    case ACTION_AUTO_CLEANUP: {
+                                        uint8_t current = 0;
+                                        appfs_settings_get_auto_cleanup(&current);
+                                        current = current ? 0 : 1;
+                                        appfs_settings_set_auto_cleanup(current);
+                                        menu_populate(&menu);
+                                        break;
+                                    }
+                                    case ACTION_MISMATCH_REINSTALL: {
+                                        uint8_t current = 0;
+                                        appfs_settings_get_mismatch_reinstall(&current);
+                                        current = current ? 0 : 1;
+                                        appfs_settings_set_mismatch_reinstall(current);
+                                        menu_populate(&menu);
+                                        break;
+                                    }
                                     default:
                                         break;
                                 }
