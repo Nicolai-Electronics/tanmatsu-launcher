@@ -1,7 +1,4 @@
 #include "synthwave.h"
-
-#ifndef DISABLE_SYNTHWAVE
-
 #include <stdio.h>
 #include "bsp/display.h"
 #include "esp_log.h"
@@ -368,5 +365,3 @@ void synthwave_step(pax_buf_t* fb) {
         j = 0;
     }
 }
-
-#endif // DISABLE_SYNTHWAVE
