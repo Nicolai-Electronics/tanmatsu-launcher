@@ -1,5 +1,5 @@
 #include "app_management.h"
-#include <ctype.h>
+#include <strings.h>
 #include <stdlib.h>
 #include <string.h>
 #include "app_metadata_parser.h"
@@ -82,9 +82,7 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
     // Find name of the device
     char device_name[32] = {0};
     bsp_device_get_name(device_name, sizeof(device_name));
-    for (int i = 0; device_name[i]; i++) {
-        device_name[i] = tolower(device_name[i]);
-    }
+    size_t device_name_len = strlen(device_name);
 
     // Find application for current platform
     cJSON* applications = cJSON_GetObjectItem(metadata.json, "application");
@@ -108,7 +106,8 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             if (target == NULL || !cJSON_IsString(target)) {
                 continue;
             }
-            if (strcmp(target->valuestring, device_name) == 0 && strlen(target->valuestring) == strlen(device_name)) {
+            if (strlen(target->valuestring) == device_name_len &&
+                strncasecmp(target->valuestring, device_name, device_name_len) == 0) {
                 // Found application for current platform
                 application_found = true;
                 break;

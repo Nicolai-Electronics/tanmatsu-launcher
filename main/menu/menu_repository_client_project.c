@@ -1,7 +1,7 @@
 #include "menu_repository_client_project.h"
-#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/_intsup.h>
 #include "app_management.h"
 #include "app_metadata_parser.h"
@@ -124,9 +124,7 @@ static const char* find_interpreter_slug(cJSON* project) {
 
     char device_name[32] = {0};
     bsp_device_get_name(device_name, sizeof(device_name));
-    for (int i = 0; device_name[i]; i++) {
-        device_name[i] = tolower(device_name[i]);
-    }
+    size_t device_name_len = strlen(device_name);
 
     cJSON* application = NULL;
     cJSON_ArrayForEach(application, applications) {
@@ -138,8 +136,8 @@ static const char* find_interpreter_slug(cJSON* project) {
         bool   matched = false;
         cJSON_ArrayForEach(target, targets) {
             if (target != NULL && cJSON_IsString(target) &&
-                strcmp(target->valuestring, device_name) == 0 &&
-                strlen(target->valuestring) == strlen(device_name)) {
+                strlen(target->valuestring) == device_name_len &&
+                strncasecmp(target->valuestring, device_name, device_name_len) == 0) {
                 matched = true;
                 break;
             }

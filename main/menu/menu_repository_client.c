@@ -1,5 +1,4 @@
 #include "menu_repository_client.h"
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,7 +85,7 @@ static bool is_project_plugin(cJSON* project_obj) {
 
     char device_name[32] = {0};
     bsp_device_get_name(device_name, sizeof(device_name));
-    for (int i = 0; device_name[i]; i++) device_name[i] = tolower(device_name[i]);
+    size_t device_name_len = strlen(device_name);
 
     cJSON* app = NULL;
     cJSON_ArrayForEach(app, applications) {
@@ -94,7 +93,9 @@ static bool is_project_plugin(cJSON* project_obj) {
         if (!targets) continue;
         cJSON* t = NULL;
         cJSON_ArrayForEach(t, targets) {
-            if (cJSON_IsString(t) && strcmp(t->valuestring, device_name) == 0) {
+            if (cJSON_IsString(t) &&
+                strlen(t->valuestring) == device_name_len &&
+                strncasecmp(t->valuestring, device_name, device_name_len) == 0) {
                 cJSON* type = cJSON_GetObjectItem(app, "type");
                 return (type && cJSON_IsString(type) && strcmp(type->valuestring, "plugin") == 0);
             }
