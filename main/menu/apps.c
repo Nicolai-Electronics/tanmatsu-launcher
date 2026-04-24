@@ -17,6 +17,7 @@
 #include "badge_elf.h"
 #endif
 #include "bsp/input.h"
+#include "bsp/power.h"
 #include "common/display.h"
 #include "filesystem_utils.h"
 #include "freertos/idf_additions.h"
@@ -112,6 +113,13 @@ static appfs_handle_t ensure_interpreter_in_appfs(const char* interpreter_slug) 
     return APPFS_INVALID_FD;
 }
 
+// Put the device into a known state before handing control to an app:
+// switch USB to flash/monitor (debug) mode and power the radio off.
+static void prepare_device_for_app_launch(void) {
+    usb_mode_set(USB_DEBUG);
+    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+}
+
 void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app_t* app) {
 
     if (app == NULL) {
@@ -140,13 +148,13 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
             {
                 char app_path[256];
                 snprintf(app_path, sizeof(app_path), "%s/%s", app->path, app->slug);
+                prepare_device_for_app_launch();
                 appfsBootSelect(app->executable_appfs_fd, app_path);
             }
             while (wifi_stack_get_task_done() == false) {
                 printf("Waiting for wifi stack task to finish...\n");
                 vTaskDelay(pdMS_TO_TICKS(100));
             }
-            usb_mode_set(USB_DEBUG);
             esp_restart();
             break;
         case EXECUTABLE_TYPE_ELF: {
@@ -163,8 +171,11 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                 snprintf(path, req + 1, "%s/%s/%s", app->path, app->slug, app->executable_filename);
                 if (!fs_utils_exists(path)) {
                     message_dialog(get_icon(ICON_ERROR), "Error", "Applet not found", "OK");
-                } else if (!badge_elf_start(path)) {
-                    message_dialog(get_icon(ICON_ERROR), "Error", "Failed to start app", "OK");
+                } else {
+                    prepare_device_for_app_launch();
+                    if (!badge_elf_start(path)) {
+                        message_dialog(get_icon(ICON_ERROR), "Error", "Failed to start app", "OK");
+                    }
                 }
                 free(path);
             }
@@ -212,12 +223,12 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
             }
 
             ESP_LOGI(TAG, "Launching script: interpreter=%s path=%s", app->executable_interpreter_slug, path);
+            prepare_device_for_app_launch();
             appfsBootSelect(interpreter_fd, path);
             while (wifi_stack_get_task_done() == false) {
                 printf("Waiting for wifi stack task to finish...\n");
                 vTaskDelay(pdMS_TO_TICKS(100));
             }
-            usb_mode_set(USB_DEBUG);
             esp_restart();
             free(path);  // Not reached
             break;
