@@ -50,6 +50,7 @@
 #include "sdcard.h"
 #include "sdkconfig.h"
 #include "timezone.h"
+#include "usb_debug_listener.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
 #include "wifi_remote.h"
@@ -495,6 +496,7 @@ void app_main(void) {
     badgelink_init();
     usb_initialize();
     badgelink_start(usb_send_data);
+    usb_debug_listener_initialize();
 
     startup_dialog("Detecting Add-On boards...");
     addon_initialize();

@@ -80,6 +80,7 @@ idf_component_register(
 		"wifi_ota.c"
 		"icons.c"
 		"usb_device.c"
+		"usb_debug_listener.c"
 		"esp_efuse_custom_table.c"
 		"sdcard.c"
 		"app_metadata_parser.c"
