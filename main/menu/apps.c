@@ -115,7 +115,7 @@ static appfs_handle_t ensure_interpreter_in_appfs(const char* interpreter_slug) 
 
 // Put the device into a known state before handing control to an app:
 // switch USB to flash/monitor (debug) mode and power the radio off.
-static void prepare_device_for_app_launch(void) {
+void prepare_device_for_app_launch(void) {
     usb_mode_set(USB_DEBUG);
     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
 }
