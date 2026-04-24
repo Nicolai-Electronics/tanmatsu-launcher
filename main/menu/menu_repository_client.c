@@ -21,6 +21,7 @@
 #include "menu/message_dialog.h"
 #include "menu_repository_client_project.h"
 #include "nvs_settings.h"
+#include "nvs_settings_helpers.h"
 #include "pax_codecs.h"
 #include "pax_gfx.h"
 #include "pax_text.h"
@@ -308,7 +309,9 @@ static void load_all_icons(cJSON* json_projects) {
     }
 
     // Second pass: download missing icons using a single keepalive connection
-    if (missing_count > 0) {
+    uint8_t download_icons = DEFAULT_REPO_DOWNLOAD_ICONS;
+    nvs_settings_get_u8(NVS_KEY_REPO_DOWNLOAD_ICONS, DEFAULT_REPO_DOWNLOAD_ICONS, &download_icons);
+    if (missing_count > 0 && download_icons) {
         char server[128] = {0};
         nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
 

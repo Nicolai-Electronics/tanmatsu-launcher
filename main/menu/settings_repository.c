@@ -13,6 +13,7 @@
 #include "menu/textedit.h"
 #include "message_dialog.h"
 #include "nvs_settings.h"
+#include "nvs_settings_helpers.h"
 #include "pax_gfx.h"
 #include "pax_types.h"
 
@@ -30,6 +31,7 @@ typedef enum {
     ACTION_USER_AGENT,
     ACTION_AUTO_CLEANUP,
     ACTION_MISMATCH_REINSTALL,
+    ACTION_DOWNLOAD_ICONS,
 } menu_repo_settings_action_t;
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
@@ -67,10 +69,14 @@ static void menu_populate(menu_t* menu) {
     appfs_settings_get_auto_cleanup(&auto_cleanup);
     uint8_t mismatch_reinstall = 0;
     appfs_settings_get_mismatch_reinstall(&mismatch_reinstall);
+    uint8_t download_icons = DEFAULT_REPO_DOWNLOAD_ICONS;
+    nvs_settings_get_u8(NVS_KEY_REPO_DOWNLOAD_ICONS, DEFAULT_REPO_DOWNLOAD_ICONS, &download_icons);
 
     menu_insert_item_value(menu, "Server", server, NULL, (void*)ACTION_SERVER, -1);
     menu_insert_item_value(menu, "Base URI", base_uri, NULL, (void*)ACTION_BASE_URI, -1);
     menu_insert_item_value(menu, "User Agent", user_agent, NULL, (void*)ACTION_USER_AGENT, -1);
+    menu_insert_item_value(menu, "Download icons", download_icons ? "Enabled" : "Disabled", NULL,
+                           (void*)ACTION_DOWNLOAD_ICONS, -1);
     menu_insert_item_value(menu, "Auto-cleanup AppFS", auto_cleanup ? "Enabled" : "Disabled", NULL,
                            (void*)ACTION_AUTO_CLEANUP, -1);
     menu_insert_item_value(menu, "On AppFS mismatch auto-reinstall", mismatch_reinstall ? "Enabled" : "Disabled", NULL,
@@ -130,6 +136,7 @@ static void reset_defaults(menu_t* menu) {
     nvs_settings_set_http_user_agent(default_ua);
     appfs_settings_set_auto_cleanup(DEFAULT_APPFS_AUTO_CLEANUP);
     appfs_settings_set_mismatch_reinstall(DEFAULT_APPFS_MISMATCH_REINSTALL);
+    nvs_settings_set_u8(NVS_KEY_REPO_DOWNLOAD_ICONS, DEFAULT_REPO_DOWNLOAD_ICONS);
     menu_populate(menu);
 }
 
@@ -205,6 +212,14 @@ void menu_settings_repository(void) {
                                         appfs_settings_get_mismatch_reinstall(&current);
                                         current = current ? 0 : 1;
                                         appfs_settings_set_mismatch_reinstall(current);
+                                        menu_populate(&menu);
+                                        break;
+                                    }
+                                    case ACTION_DOWNLOAD_ICONS: {
+                                        uint8_t current = DEFAULT_REPO_DOWNLOAD_ICONS;
+                                        nvs_settings_get_u8(NVS_KEY_REPO_DOWNLOAD_ICONS, DEFAULT_REPO_DOWNLOAD_ICONS, &current);
+                                        current = current ? 0 : 1;
+                                        nvs_settings_set_u8(NVS_KEY_REPO_DOWNLOAD_ICONS, current);
                                         menu_populate(&menu);
                                         break;
                                     }
