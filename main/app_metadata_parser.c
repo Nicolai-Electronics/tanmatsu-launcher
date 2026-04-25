@@ -1,8 +1,8 @@
 #include "app_metadata_parser.h"
-#include <ctype.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
 #include "bsp/device.h"
 #include "cJSON.h"
@@ -71,9 +71,7 @@ bool get_executable_revision(const char* path, const char* slug, uint32_t* out_r
 
     char device_name[32] = {0};
     bsp_device_get_name(device_name, sizeof(device_name));
-    for (int i = 0; device_name[i]; i++) {
-        device_name[i] = tolower(device_name[i]);
-    }
+    size_t device_name_len = strlen(device_name);
 
     cJSON* matched_executable = NULL;
     cJSON* executable_obj     = cJSON_GetObjectItem(root, "application");
@@ -85,8 +83,8 @@ bool get_executable_revision(const char* path, const char* slug, uint32_t* out_r
                 cJSON* target_obj = NULL;
                 cJSON_ArrayForEach(target_obj, targets_obj) {
                     if (target_obj && (target_obj->valuestring != NULL) &&
-                        (strcmp(target_obj->valuestring, device_name) == 0) &&
-                        strlen(target_obj->valuestring) == strlen(device_name)) {
+                        strlen(target_obj->valuestring) == device_name_len &&
+                        strncasecmp(target_obj->valuestring, device_name, device_name_len) == 0) {
                         matched_executable = executable_entry_obj;
                         break;
                     }
@@ -242,9 +240,7 @@ app_t* create_app(const char* path, const char* slug) {
 
     char device_name[32] = {0};
     bsp_device_get_name(device_name, sizeof(device_name));
-    for (int i = 0; device_name[i]; i++) {
-        device_name[i] = tolower(device_name[i]);
-    }
+    size_t device_name_len = strlen(device_name);
 
     cJSON* matched_executable = NULL;
     cJSON* executable_obj     = cJSON_GetObjectItem(root, "application");
@@ -256,8 +252,8 @@ app_t* create_app(const char* path, const char* slug) {
                 cJSON* target_obj = NULL;
                 cJSON_ArrayForEach(target_obj, targets_obj) {
                     if (target_obj && (target_obj->valuestring != NULL) &&
-                        (strcmp(target_obj->valuestring, device_name) == 0) &&
-                        strlen(target_obj->valuestring) == strlen(device_name)) {
+                        strlen(target_obj->valuestring) == device_name_len &&
+                        strncasecmp(target_obj->valuestring, device_name, device_name_len) == 0) {
                         matched_executable = executable_entry_obj;
                         break;
                     }

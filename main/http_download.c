@@ -187,3 +187,68 @@ bool download_ram(const char* url, uint8_t** ptr, size_t* size, download_callbac
     }
     return false;
 }
+
+// Session-based downloads: reuse a single TCP/TLS connection for multiple requests.
+
+struct http_session {
+    esp_http_client_handle_t client;
+    http_download_info_t     info;
+};
+
+http_session_t http_session_begin(const char* initial_url) {
+    struct http_session* session = calloc(1, sizeof(struct http_session));
+    if (session == NULL) return NULL;
+
+    char user_agent[128] = {0};
+    nvs_settings_get_http_user_agent(user_agent, sizeof(user_agent), "");
+    if (strlen(user_agent) < 1) {
+        device_settings_get_default_http_user_agent(user_agent, sizeof(user_agent));
+    }
+
+    esp_http_client_config_t config = {.url                 = initial_url,
+                                       .use_global_ca_store = true,
+                                       .keep_alive_enable   = true,
+                                       .timeout_ms          = 10000,
+                                       .buffer_size         = 4096,
+                                       .user_data           = &session->info,
+                                       .event_handler       = _event_handler,
+                                       .user_agent          = user_agent};
+    session->client                 = esp_http_client_init(&config);
+    if (session->client == NULL) {
+        free(session);
+        return NULL;
+    }
+    return (http_session_t)session;
+}
+
+bool http_session_download_ram(http_session_t session, const char* url, uint8_t** ptr, size_t* size) {
+    if (session == NULL || ptr == NULL) return false;
+    *ptr = NULL;
+
+    memset(&session->info, 0, sizeof(http_download_info_t));
+    session->info.buffer = ptr;
+
+    esp_http_client_set_url(session->client, url);
+    esp_err_t err         = esp_http_client_perform(session->client);
+    int       status_code = esp_http_client_get_status_code(session->client);
+    bool      success     = download_success(err, &session->info) && (status_code == 200);
+
+    if (success && size != NULL) {
+        *size = session->info.size;
+    }
+
+    if (!success && *ptr != NULL) {
+        free(*ptr);
+        *ptr = NULL;
+    }
+
+    return success;
+}
+
+void http_session_end(http_session_t session) {
+    if (session == NULL) return;
+    if (session->client != NULL) {
+        esp_http_client_cleanup(session->client);
+    }
+    free(session);
+}

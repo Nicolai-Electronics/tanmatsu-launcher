@@ -1,5 +1,5 @@
 #include "app_management.h"
-#include <ctype.h>
+#include <strings.h>
 #include <stdlib.h>
 #include <string.h>
 #include "app_metadata_parser.h"
@@ -14,19 +14,24 @@
 #include "fastopen.h"
 #include "filesystem_utils.h"
 #include "http_download.h"
+#include "plugin_manager.h"
 #include "repository_client.h"
 
 static const char* TAG = "App management";
 
 static const char* app_mgmt_location_to_path(app_mgmt_location_t location) {
     switch (location) {
-        case APP_MGMT_LOCATION_INTERNAL:
-            return "/int/apps";
-        case APP_MGMT_LOCATION_SD:
-            return "/sd/apps";
-        default:
-            return NULL;
+        case APP_MGMT_LOCATION_INTERNAL:         return "/int/apps";
+        case APP_MGMT_LOCATION_SD:               return "/sd/apps";
+        case APP_MGMT_LOCATION_INTERNAL_PLUGINS: return "/int/plugins";
+        case APP_MGMT_LOCATION_SD_PLUGINS:       return "/sd/plugins";
+        default: return NULL;
     }
+}
+
+static bool app_mgmt_location_is_plugin(app_mgmt_location_t location) {
+    return location == APP_MGMT_LOCATION_INTERNAL_PLUGINS ||
+           location == APP_MGMT_LOCATION_SD_PLUGINS;
 }
 
 esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgmt_location_t location,
@@ -77,9 +82,7 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
     // Find name of the device
     char device_name[32] = {0};
     bsp_device_get_name(device_name, sizeof(device_name));
-    for (int i = 0; device_name[i]; i++) {
-        device_name[i] = tolower(device_name[i]);
-    }
+    size_t device_name_len = strlen(device_name);
 
     // Find application for current platform
     cJSON* applications = cJSON_GetObjectItem(metadata.json, "application");
@@ -103,7 +106,8 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             if (target == NULL || !cJSON_IsString(target)) {
                 continue;
             }
-            if (strcmp(target->valuestring, device_name) == 0 && strlen(target->valuestring) == strlen(device_name)) {
+            if (strlen(target->valuestring) == device_name_len &&
+                strncasecmp(target->valuestring, device_name, device_name_len) == 0) {
                 // Found application for current platform
                 application_found = true;
                 break;
@@ -205,11 +209,12 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
         return ESP_ERR_INVALID_RESPONSE;
     }
 
-    // Download and store executable binary to the install directory (not to AppFS)
-    // The binary will be loaded into AppFS on-demand when the app is launched
+    // Download and store executable binary to the install directory
+    // For appfs apps: binary will be loaded into AppFS on-demand when launched
+    // For plugins: binary is loaded directly from the install directory
     cJSON* type = cJSON_GetObjectItem(application, "type");
-    if (type != NULL && cJSON_IsString(type) && strcmp(type->valuestring, "appfs") == 0 &&
-        strlen(type->valuestring) == strlen("appfs")) {
+    if (type != NULL && cJSON_IsString(type) &&
+        (strcmp(type->valuestring, "appfs") == 0 || strcmp(type->valuestring, "plugin") == 0)) {
         char*  executable     = NULL;
         cJSON* executable_obj = cJSON_GetObjectItem(application, "executable");
         if (executable_obj != NULL && cJSON_IsString(executable_obj)) {
@@ -237,24 +242,27 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
 
     cJSON* icon_obj = cJSON_GetObjectItem(metadata.json, "icon");
     if (icon_obj != NULL && cJSON_IsObject(icon_obj)) {
-        cJSON* icon32_obj = cJSON_GetObjectItem(icon_obj, "32x32");
-        if (icon32_obj != NULL && cJSON_IsString(icon32_obj)) {
-            // Download icon if it exists
-            char icon_url[256];
-            snprintf(icon_url, sizeof(icon_url), "%s/%s/%s/%s", repository_url, repository_data_url, slug,
-                     icon32_obj->valuestring);
-            char icon_path[512];
-            snprintf(icon_path, sizeof(icon_path), "%s/%s", app_path, icon32_obj->valuestring);
-            char status_text[64] = {0};
-            snprintf(status_text, sizeof(status_text), "Downloading icon '%s'...", icon32_obj->valuestring);
-            if (!download_file(icon_url, icon_path, download_callback, status_text)) {
-                ESP_LOGE(TAG, "Failed to download icon");
+        const char* icon_keys[] = {"16x16", "32x32", "64x64"};
+        for (int i = 0; i < 3; i++) {
+            cJSON* icon_entry = cJSON_GetObjectItem(icon_obj, icon_keys[i]);
+            if (icon_entry != NULL && cJSON_IsString(icon_entry)) {
+                char icon_url[256];
+                snprintf(icon_url, sizeof(icon_url), "%s/%s/%s/%s", repository_url, repository_data_url, slug,
+                         icon_entry->valuestring);
+                char icon_path[512];
+                snprintf(icon_path, sizeof(icon_path), "%s/%s", app_path, icon_entry->valuestring);
+                char status_text[64] = {0};
+                snprintf(status_text, sizeof(status_text), "Downloading icon '%s'...", icon_entry->valuestring);
+                if (!download_file(icon_url, icon_path, download_callback, status_text)) {
+                    ESP_LOGE(TAG, "Failed to download icon %s", icon_keys[i]);
+                }
             }
         }
     }
 
     // Remove stale appfs cache if present (new version on filesystem should take precedence)
-    if (appfsExists(slug)) {
+    // Plugins don't use AppFS
+    if (!app_mgmt_location_is_plugin(location) && appfsExists(slug)) {
         ESP_LOGI(TAG, "Removing stale AppFS cache for %s", slug);
         appfsDeleteFile(slug);
     }
@@ -271,6 +279,17 @@ esp_err_t app_mgmt_uninstall(const char* slug, app_mgmt_location_t location) {
         return ESP_ERR_INVALID_ARG;
     }
 
+    bool is_plugin = app_mgmt_location_is_plugin(location);
+
+    // For plugins: stop and unload before deleting files
+    if (is_plugin) {
+        plugin_context_t* ctx = plugin_manager_get_by_slug(slug);
+        if (ctx != NULL) {
+            plugin_manager_stop_service(ctx);
+            plugin_manager_unload(ctx);
+        }
+    }
+
     esp_err_t res = ESP_OK;
 
     char app_path[256] = {0};
@@ -280,20 +299,21 @@ esp_err_t app_mgmt_uninstall(const char* slug, app_mgmt_location_t location) {
         res = fs_utils_remove(app_path);
     }
 
-    // If app is installed on SD, check if the app is also installed to the internal storage
-    // if it is, do not remove the binary from appfs
-    if (location == APP_MGMT_LOCATION_SD) {
-        snprintf(app_path, sizeof(app_path), "%s/%s", app_mgmt_location_to_path(APP_MGMT_LOCATION_INTERNAL), slug);
-        if (fs_utils_exists(app_path)) {
-            return res;
+    if (!is_plugin) {
+        // If app is installed on SD, check if the app is also installed to the internal storage
+        // if it is, do not remove the binary from appfs
+        if (location == APP_MGMT_LOCATION_SD) {
+            snprintf(app_path, sizeof(app_path), "%s/%s", app_mgmt_location_to_path(APP_MGMT_LOCATION_INTERNAL), slug);
+            if (fs_utils_exists(app_path)) {
+                return res;
+            }
         }
-    }
 
-    if (appfsExists(slug)) {
-        esp_err_t appfs_res = ESP_OK;
-        appfs_res           = appfsDeleteFile(slug);
-        if (appfs_res != ESP_OK) {
-            res = appfs_res;
+        if (appfsExists(slug)) {
+            esp_err_t appfs_res = appfsDeleteFile(slug);
+            if (appfs_res != ESP_OK) {
+                res = appfs_res;
+            }
         }
     }
 

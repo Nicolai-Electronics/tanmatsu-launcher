@@ -98,60 +98,56 @@ void plugin_manager_shutdown(void) {
 // Plugin Metadata Parsing
 // ============================================
 
-static bool parse_plugin_metadata(const char* path, plugin_discovery_info_t* info) {
-    char metadata_path[256];
-    snprintf(metadata_path, sizeof(metadata_path), "%s/plugin.json", path);
-
-    FILE* fd = fastopen(metadata_path, "r");
-    if (fd == NULL) {
-        return false;
-    }
+// Read and parse a JSON file. Returns cJSON root or NULL. Caller must cJSON_Delete().
+static cJSON* read_json_file(const char* filepath) {
+    FILE* fd = fastopen(filepath, "r");
+    if (fd == NULL) return NULL;
 
     fseek(fd, 0, SEEK_END);
     size_t size = ftell(fd);
     fseek(fd, 0, SEEK_SET);
 
     if (size == 0 || size > 8192) {
-        fastclose(fd);  // Must use fastclose to free DMA buffer
-        return false;
+        fastclose(fd);
+        return NULL;
     }
 
     char* json_data = malloc(size + 1);
     if (json_data == NULL) {
-        fastclose(fd);  // Must use fastclose to free DMA buffer
-        return false;
+        fastclose(fd);
+        return NULL;
     }
 
     size_t read = fread(json_data, 1, size, fd);
     json_data[read] = '\0';
-    fastclose(fd);  // Must use fastclose to free DMA buffer
+    fastclose(fd);
 
     cJSON* root = cJSON_Parse(json_data);
     free(json_data);
+    return root;
+}
 
-    if (root == NULL) {
-        ESP_LOGW(TAG, "Failed to parse plugin.json at %s", metadata_path);
-        return false;
-    }
+static bool parse_plugin_metadata(const char* path, plugin_discovery_info_t* info) {
+    // Derive slug from directory name (last path component)
+    const char* slug = strrchr(path, '/');
+    if (slug == NULL) return false;
+    slug++;  // Skip the '/'
+    if (*slug == '\0') return false;
 
-    // Extract metadata
-    cJSON* name = cJSON_GetObjectItem(root, "name");
-    cJSON* slug = cJSON_GetObjectItem(root, "slug");
-    cJSON* version = cJSON_GetObjectItem(root, "version");
-    cJSON* type = cJSON_GetObjectItem(root, "type");
-
-    if (!cJSON_IsString(name) || !cJSON_IsString(slug)) {
-        cJSON_Delete(root);
+    // Read plugin.json for runtime fields (type, api_version, autostart, permissions)
+    char filepath[256];
+    snprintf(filepath, sizeof(filepath), "%s/plugin.json", path);
+    cJSON* plugin_root = read_json_file(filepath);
+    if (plugin_root == NULL) {
+        ESP_LOGW(TAG, "Failed to parse plugin.json at %s", filepath);
         return false;
     }
 
     info->path = strdup(path);
-    info->slug = strdup(slug->valuestring);
-    info->name = strdup(name->valuestring);
-    info->version = version && cJSON_IsString(version) ? strdup(version->valuestring) : strdup("1.0.0");
+    info->slug = strdup(slug);
     info->type = PLUGIN_TYPE_MENU;  // Default
 
-    // Parse type
+    cJSON* type = cJSON_GetObjectItem(plugin_root, "type");
     if (type && cJSON_IsString(type)) {
         if (strcmp(type->valuestring, "menu") == 0) {
             info->type = PLUGIN_TYPE_MENU;
@@ -162,7 +158,23 @@ static bool parse_plugin_metadata(const char* path, plugin_discovery_info_t* inf
         }
     }
 
-    cJSON_Delete(root);
+    cJSON_Delete(plugin_root);
+
+    // Read metadata.json for display fields (name, version)
+    snprintf(filepath, sizeof(filepath), "%s/metadata.json", path);
+    cJSON* meta_root = read_json_file(filepath);
+    if (meta_root != NULL) {
+        cJSON* name = cJSON_GetObjectItem(meta_root, "name");
+        cJSON* version = cJSON_GetObjectItem(meta_root, "version");
+        info->name = (name && cJSON_IsString(name)) ? strdup(name->valuestring) : strdup(slug);
+        info->version = (version && cJSON_IsString(version)) ? strdup(version->valuestring) : strdup("1.0.0");
+        cJSON_Delete(meta_root);
+    } else {
+        // Fallback: use slug as name if metadata.json is missing
+        info->name = strdup(slug);
+        info->version = strdup("1.0.0");
+    }
+
     return true;
 }
 
@@ -437,13 +449,38 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
             ctx->registration = reg;
             ESP_LOGI(TAG, "Found plugin registration at %p", (void*)reg_addr);
 
-            // Memory debugging (commented out)
-            // if (!heap_caps_check_integrity_all(true)) {
-            //     ESP_LOGE(TAG, "HEAP CORRUPTED before plugin init!");
-            // }
+            // Memory debugging
+            if (!heap_caps_check_integrity_all(true)) {
+                ESP_LOGE(TAG, "HEAP CORRUPTED before plugin init!");
+            }
+
+            // Debug: dump registration struct contents
+            ESP_LOGI(TAG, "Registration: magic=0x%08lx size=%lu",
+                     (unsigned long)reg->magic, (unsigned long)reg->struct_size);
+            ESP_LOGI(TAG, "Entry points: get_info=%p init=%p cleanup=%p",
+                     reg->entry.get_info, reg->entry.init, reg->entry.cleanup);
+            ESP_LOGI(TAG, "Entry points: menu_render=%p menu_select=%p service_run=%p hook_event=%p",
+                     reg->entry.menu_render, reg->entry.menu_select,
+                     reg->entry.service_run, reg->entry.hook_event);
+            ESP_LOGI(TAG, "Context: slug=%s path=%s ctx=%p",
+                     ctx->plugin_slug ? ctx->plugin_slug : "(null)",
+                     ctx->plugin_path ? ctx->plugin_path : "(null)",
+                     (void*)ctx);
+
+            // Debug: dump GOT.PLT entries (first 16 words after plugin_info section)
+            {
+                uint32_t* base = (uint32_t*)reg_addr;
+                ESP_LOGI(TAG, "GOT.PLT dump (from base %p):", (void*)base);
+                for (int i = 0; i < 16; i++) {
+                    uint32_t offset = 0x614 + i * 4;
+                    uint32_t* addr = (uint32_t*)((uint8_t*)base + offset);
+                    ESP_LOGI(TAG, "  [0x%03lx] = 0x%08lx", (unsigned long)offset, (unsigned long)*addr);
+                }
+            }
 
             // Call the plugin's init function if available
             if (reg->entry.init != NULL) {
+                ESP_LOGI(TAG, "Calling init at %p with ctx=%p", reg->entry.init, (void*)ctx);
                 int init_result = reg->entry.init(ctx);
 
                 // Memory debugging (commented out)
