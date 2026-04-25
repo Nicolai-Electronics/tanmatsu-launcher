@@ -385,3 +385,14 @@ void usb_mode_set(usb_mode_t mode) {
 }
 
 #endif
+
+void usb_mode_set_from_badgelink(badgelink_usb_mode_t mode) {
+    switch (mode) {
+        case BADGELINK_USB_MODE_DEBUG:
+            usb_mode_set(USB_DEBUG);
+            break;
+        case BADGELINK_USB_MODE_DEVICE:
+            usb_mode_set(USB_DEVICE);
+            break;
+    }
+}

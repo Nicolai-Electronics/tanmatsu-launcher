@@ -36,6 +36,7 @@
 #include "icons.h"
 #include "lora.h"
 #include "lora_settings_handler.h"
+#include "menu/apps.h"
 #include "menu/home.h"
 #include "menu/message_dialog.h"
 #include "ntp.h"
@@ -494,6 +495,8 @@ void app_main(void) {
 
     startup_dialog("Initializing BadgeLink...");
     badgelink_init();
+    badgelink_set_prepare_device_callback(prepare_device_for_app_launch);
+    badgelink_set_usb_mode_callback(usb_mode_set_from_badgelink);
     usb_initialize();
     badgelink_start(usb_send_data);
     usb_debug_listener_initialize();
