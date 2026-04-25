@@ -8,6 +8,7 @@
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "nvs_settings.h"
 #include "pax_gfx.h"
@@ -25,15 +26,7 @@ static void render(menu_t* menu, bool partial, bool icons) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
 
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-
-    pax_vec2_t position = {
-        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
+    pax_vec2_t position = menu_calc_position(buffer, theme);
 
     if (!partial || icons) {
         render_base_screen_statusbar(
@@ -65,92 +58,40 @@ static void render(menu_t* menu, bool partial, bool icons) {
     display_blit_buffer(buffer);
 }
 
-void increase_setting(menu_setting_t setting) {
+void adjust_setting(menu_setting_t setting, int8_t direction) {
     uint8_t value = 0;
     switch (setting) {
         case SETTING_DISPLAY_BACKLIGHT_BRIGHTNESS:
             nvs_settings_get_display_brightness(&value, DEFAULT_DISPLAY_BRIGHTNESS);
-            if (value < 100) {
-                if (value >= 5) {
-                    value += 5;
-                } else {
-                    value += 1;
-                }
-                if (value > 100) {
-                    value = 100;
-                }
-                nvs_settings_set_display_brightness(value);
-            }
             break;
         case SETTING_KEYBOARD_BACKLIGHT_BRIGHTNESS:
             nvs_settings_get_keyboard_brightness(&value, DEFAULT_KEYBOARD_BRIGHTNESS);
-            if (value < 100) {
-                if (value >= 5) {
-                    value += 5;
-                } else {
-                    value += 1;
-                }
-                if (value > 100) {
-                    value = 100;
-                }
-                nvs_settings_set_keyboard_brightness(value);
-            }
             break;
         case SETTING_LED_BRIGHTNESS:
             nvs_settings_get_led_brightness(&value, DEFAULT_LED_BRIGHTNESS);
-            if (value < 100) {
-                if (value >= 5) {
-                    value += 5;
-                } else {
-                    value += 1;
-                }
-                if (value > 100) {
-                    value = 100;
-                }
-                nvs_settings_set_led_brightness(value);
-            }
             break;
         default:
-            break;
+            return;
     }
-    device_settings_apply();
-}
 
-void decrease_setting(menu_setting_t setting) {
-    uint8_t value = 0;
+    if (direction > 0 && value < 100) {
+        value += (value >= 5) ? 5 : 1;
+        if (value > 100) {
+            value = 100;
+        }
+    } else if (direction < 0 && value > 0) {
+        value -= (value > 5) ? 5 : 1;
+    }
+
     switch (setting) {
         case SETTING_DISPLAY_BACKLIGHT_BRIGHTNESS:
-            nvs_settings_get_display_brightness(&value, DEFAULT_DISPLAY_BRIGHTNESS);
-            if (value > 0) {
-                if (value > 5) {
-                    value -= 5;
-                } else {
-                    value -= 1;
-                }
-                nvs_settings_set_display_brightness(value);
-            }
+            nvs_settings_set_display_brightness(value);
             break;
         case SETTING_KEYBOARD_BACKLIGHT_BRIGHTNESS:
-            nvs_settings_get_keyboard_brightness(&value, DEFAULT_KEYBOARD_BRIGHTNESS);
-            if (value > 0) {
-                if (value > 5) {
-                    value -= 5;
-                } else {
-                    value -= 1;
-                }
-                nvs_settings_set_keyboard_brightness(value);
-            }
+            nvs_settings_set_keyboard_brightness(value);
             break;
         case SETTING_LED_BRIGHTNESS:
-            nvs_settings_get_led_brightness(&value, DEFAULT_LED_BRIGHTNESS);
-            if (value > 0) {
-                if (value > 5) {
-                    value -= 5;
-                } else {
-                    value -= 1;
-                }
-                nvs_settings_set_led_brightness(value);
-            }
+            nvs_settings_set_led_brightness(value);
             break;
         default:
             break;
@@ -200,13 +141,13 @@ void menu_settings_brightness(void) {
                             }
                             case BSP_INPUT_NAVIGATION_KEY_LEFT: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                decrease_setting((menu_setting_t)arg);
+                                adjust_setting((menu_setting_t)arg, -1);
                                 render(&menu, false, true);
                                 break;
                             }
                             case BSP_INPUT_NAVIGATION_KEY_RIGHT: {
                                 void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                increase_setting((menu_setting_t)arg);
+                                adjust_setting((menu_setting_t)arg, 1);
                                 render(&menu, false, true);
                                 break;
                             }

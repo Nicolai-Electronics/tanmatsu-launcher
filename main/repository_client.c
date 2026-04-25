@@ -26,6 +26,21 @@ void free_repository_data_json(repository_json_data_t* data) {
     }
 }
 
+static bool download_and_parse(const char* url, repository_json_data_t* out_data) {
+    http_session_t session = http_session_begin(url);
+    if (session == NULL) return false;
+    bool success = http_session_download_ram(session, url, (uint8_t**)&out_data->data, &out_data->size);
+    http_session_end(session);
+    if (!success) return false;
+    out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
+    if (out_data->json == NULL) {
+        free(out_data->data);
+        out_data->data = NULL;
+        return false;
+    }
+    return true;
+}
+
 // Helper functions for API
 
 bool load_information(const char* base_url, repository_json_data_t* out_data) {
@@ -33,14 +48,7 @@ bool load_information(const char* base_url, repository_json_data_t* out_data) {
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
     char url[256];
     sprintf(url, "%s%s/information", base_url, base_uri);
-    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
-    if (!success) return false;
-    out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
-    if (out_data->json == NULL) {
-        free(out_data->data);
-        return false;
-    }
-    return true;
+    return download_and_parse(url, out_data);
 }
 
 bool load_categories(const char* base_url, repository_json_data_t* out_data) {
@@ -50,14 +58,7 @@ bool load_categories(const char* base_url, repository_json_data_t* out_data) {
     char device_name[64] = {0};
     bsp_device_get_name(device_name, sizeof(device_name));
     sprintf(url, "%s%s/categories?device=%s", base_url, base_uri, device_name);
-    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
-    if (!success) return false;
-    out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
-    if (out_data->json == NULL) {
-        free(out_data->data);
-        return false;
-    }
-    return true;
+    return download_and_parse(url, out_data);
 }
 
 bool load_projects(const char* base_url, repository_json_data_t* out_data, const char* category) {
@@ -69,14 +70,7 @@ bool load_projects(const char* base_url, repository_json_data_t* out_data, const
     } else {
         sprintf(url, "%s%s/projects?device=%s", base_url, base_uri, "tanmatsu");
     }
-    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
-    if (!success) return false;
-    out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
-    if (out_data->json == NULL) {
-        free(out_data->data);
-        return false;
-    }
-    return true;
+    return download_and_parse(url, out_data);
 }
 
 bool load_projects_paginated(const char* base_url, repository_json_data_t* out_data, const char* category,
@@ -91,14 +85,7 @@ bool load_projects_paginated(const char* base_url, repository_json_data_t* out_d
         sprintf(url, "%s%s/projects?device=%s&offset=%" PRIu32 "&amount=%" PRIu32, base_url, base_uri, "tanmatsu",
                 offset, amount);
     }
-    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
-    if (!success) return false;
-    out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
-    if (out_data->json == NULL) {
-        free(out_data->data);
-        return false;
-    }
-    return true;
+    return download_and_parse(url, out_data);
 }
 
 bool load_project(const char* base_url, repository_json_data_t* out_data, const char* project_slug) {
@@ -106,12 +93,5 @@ bool load_project(const char* base_url, repository_json_data_t* out_data, const 
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
     char url[256];
     sprintf(url, "%s%s/projects/%s", base_url, base_uri, project_slug);
-    bool success = download_ram(url, (uint8_t**)&out_data->data, &out_data->size, NULL, NULL);
-    if (!success) return false;
-    out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
-    if (out_data->json == NULL) {
-        free(out_data->data);
-        return false;
-    }
-    return true;
+    return download_and_parse(url, out_data);
 }
