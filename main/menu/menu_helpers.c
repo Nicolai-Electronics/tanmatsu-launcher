@@ -9,9 +9,9 @@
 #include "pax_gfx.h"
 
 pax_vec2_t menu_calc_position(pax_buf_t* buffer, gui_theme_t* theme) {
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-    pax_vec2_t position = {
+    int        header_height = theme->header.height + (theme->header.vertical_margin * 2);
+    int        footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
+    pax_vec2_t position      = {
         .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
         .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
         .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
@@ -28,10 +28,9 @@ typedef enum {
 static void menu_run_internal(menu_t* menu, gui_element_icontext_t* header, size_t header_count,
                               gui_element_icontext_t* footer_left, size_t footer_left_count,
                               gui_element_icontext_t* footer_right, size_t footer_right_count,
-                              menu_action_cb_t action_cb, void* user_ctx, bool home_is_back,
-                              menu_run_mode_t mode) {
-    pax_buf_t*   buffer = display_get_buffer();
-    gui_theme_t* theme  = get_theme();
+                              menu_action_cb_t action_cb, void* user_ctx, bool home_is_back, menu_run_mode_t mode) {
+    pax_buf_t*   buffer   = display_get_buffer();
+    gui_theme_t* theme    = get_theme();
     pax_vec2_t   position = menu_calc_position(buffer, theme);
 
     QueueHandle_t input_event_queue = NULL;
@@ -43,8 +42,8 @@ static void menu_run_internal(menu_t* menu, gui_element_icontext_t* header, size
     while (1) {
         if (do_full_render || do_icons) {
             render_base_screen_statusbar(buffer, theme, do_full_render, do_full_render || do_icons, do_full_render,
-                                         header, header_count, footer_left, footer_left_count,
-                                         footer_right, footer_right_count);
+                                         header, header_count, footer_left, footer_left_count, footer_right,
+                                         footer_right_count);
         }
         if (mode == MENU_RUN_MODE_GRID) {
             menu_render_grid(buffer, menu, position, theme, !do_full_render);
@@ -121,19 +120,15 @@ static void menu_run_internal(menu_t* menu, gui_element_icontext_t* header, size
 }
 
 void menu_run_list(menu_t* menu, gui_element_icontext_t* header, size_t header_count,
-                   gui_element_icontext_t* footer_left, size_t footer_left_count,
-                   gui_element_icontext_t* footer_right, size_t footer_right_count,
-                   menu_action_cb_t action_cb, void* user_ctx, bool home_is_back) {
-    menu_run_internal(menu, header, header_count, footer_left, footer_left_count,
-                      footer_right, footer_right_count, action_cb, user_ctx, home_is_back,
-                      MENU_RUN_MODE_LIST);
+                   gui_element_icontext_t* footer_left, size_t footer_left_count, gui_element_icontext_t* footer_right,
+                   size_t footer_right_count, menu_action_cb_t action_cb, void* user_ctx, bool home_is_back) {
+    menu_run_internal(menu, header, header_count, footer_left, footer_left_count, footer_right, footer_right_count,
+                      action_cb, user_ctx, home_is_back, MENU_RUN_MODE_LIST);
 }
 
 void menu_run_grid(menu_t* menu, gui_element_icontext_t* header, size_t header_count,
-                   gui_element_icontext_t* footer_left, size_t footer_left_count,
-                   gui_element_icontext_t* footer_right, size_t footer_right_count,
-                   menu_action_cb_t action_cb, void* user_ctx, bool home_is_back) {
-    menu_run_internal(menu, header, header_count, footer_left, footer_left_count,
-                      footer_right, footer_right_count, action_cb, user_ctx, home_is_back,
-                      MENU_RUN_MODE_GRID);
+                   gui_element_icontext_t* footer_left, size_t footer_left_count, gui_element_icontext_t* footer_right,
+                   size_t footer_right_count, menu_action_cb_t action_cb, void* user_ctx, bool home_is_back) {
+    menu_run_internal(menu, header, header_count, footer_left, footer_left_count, footer_right, footer_right_count,
+                      action_cb, user_ctx, home_is_back, MENU_RUN_MODE_GRID);
 }

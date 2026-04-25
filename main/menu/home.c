@@ -24,8 +24,8 @@
 #include "information.h"
 #include "lora.h"
 #include "menu/lora_information.h"
-#include "menu/menu_rftest.h"
 #include "menu/menu_helpers.h"
+#include "menu/menu_rftest.h"
 #include "menu/message_dialog.h"
 #include "menu/nametag.h"
 #ifdef CONFIG_IDF_TARGET_ESP32P4

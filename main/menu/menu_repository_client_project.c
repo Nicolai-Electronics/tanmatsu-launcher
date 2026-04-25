@@ -127,11 +127,10 @@ static const char* find_interpreter_slug(cJSON* project) {
         if (targets == NULL || !cJSON_IsArray(targets)) {
             continue;
         }
-        cJSON* target = NULL;
+        cJSON* target  = NULL;
         bool   matched = false;
         cJSON_ArrayForEach(target, targets) {
-            if (target != NULL && cJSON_IsString(target) &&
-                strlen(target->valuestring) == device_name_len &&
+            if (target != NULL && cJSON_IsString(target) && strlen(target->valuestring) == device_name_len &&
                 strncasecmp(target->valuestring, device_name, device_name_len) == 0) {
                 matched = true;
                 break;
@@ -139,8 +138,7 @@ static const char* find_interpreter_slug(cJSON* project) {
         }
         if (matched) {
             cJSON* type_obj = cJSON_GetObjectItem(application, "type");
-            if (type_obj != NULL && cJSON_IsString(type_obj) &&
-                strcmp(type_obj->valuestring, "script") == 0) {
+            if (type_obj != NULL && cJSON_IsString(type_obj) && strcmp(type_obj->valuestring, "script") == 0) {
                 cJSON* interp_obj = cJSON_GetObjectItem(application, "interpreter");
                 if (interp_obj != NULL && cJSON_IsString(interp_obj)) {
                     return interp_obj->valuestring;
@@ -283,9 +281,9 @@ void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
-                                void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                bool  installed =
-                                    execute_action(buffer, (menu_repository_client_project_action_t)arg, theme, wrapper, is_plugin);
+                                void* arg       = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                bool  installed = execute_action(buffer, (menu_repository_client_project_action_t)arg,
+                                                                 theme, wrapper, is_plugin);
                                 if (installed) {
                                     menu_free(&menu);
                                     return;

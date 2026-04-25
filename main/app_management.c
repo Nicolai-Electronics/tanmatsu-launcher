@@ -1,7 +1,7 @@
 #include "app_management.h"
-#include <strings.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include "app_metadata_parser.h"
 #include "app_usage.h"
 #include "appfs.h"
@@ -21,17 +21,21 @@ static const char* TAG = "App management";
 
 static const char* app_mgmt_location_to_path(app_mgmt_location_t location) {
     switch (location) {
-        case APP_MGMT_LOCATION_INTERNAL:         return "/int/apps";
-        case APP_MGMT_LOCATION_SD:               return "/sd/apps";
-        case APP_MGMT_LOCATION_INTERNAL_PLUGINS: return "/int/plugins";
-        case APP_MGMT_LOCATION_SD_PLUGINS:       return "/sd/plugins";
-        default: return NULL;
+        case APP_MGMT_LOCATION_INTERNAL:
+            return "/int/apps";
+        case APP_MGMT_LOCATION_SD:
+            return "/sd/apps";
+        case APP_MGMT_LOCATION_INTERNAL_PLUGINS:
+            return "/int/plugins";
+        case APP_MGMT_LOCATION_SD_PLUGINS:
+            return "/sd/plugins";
+        default:
+            return NULL;
     }
 }
 
 static bool app_mgmt_location_is_plugin(app_mgmt_location_t location) {
-    return location == APP_MGMT_LOCATION_INTERNAL_PLUGINS ||
-           location == APP_MGMT_LOCATION_SD_PLUGINS;
+    return location == APP_MGMT_LOCATION_INTERNAL_PLUGINS || location == APP_MGMT_LOCATION_SD_PLUGINS;
 }
 
 esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgmt_location_t location,
@@ -396,8 +400,8 @@ esp_err_t app_mgmt_install_from_file(const char* slug, const char* name, uint32_
 bool app_mgmt_has_binary_in_install_dir(const char* slug) {
     const char* base_paths[] = {"/int/apps", "/sd/apps"};
     for (int i = 0; i < 2; i++) {
-        uint32_t revision    = 0;
-        char*    exec_path   = NULL;
+        uint32_t revision  = 0;
+        char*    exec_path = NULL;
         if (get_executable_revision(base_paths[i], slug, &revision, &exec_path)) {
             if (exec_path != NULL) {
                 bool exists = fs_utils_exists(exec_path);
@@ -495,7 +499,7 @@ bool app_mgmt_can_uncache(const char* slug) {
     // Check if the app has an install directory with metadata.
     // Apps without one (dev/legacy, manually copied to appfs) cannot be
     // uncached since removing from appfs would permanently lose the binary.
-    char path[256];
+    char        path[256];
     const char* base_paths[] = {"/int/apps", "/sd/apps"};
     for (int i = 0; i < 2; i++) {
         snprintf(path, sizeof(path), "%s/%s/metadata.json", base_paths[i], slug);
@@ -573,7 +577,7 @@ esp_err_t app_mgmt_cache_to_appfs(const char* slug, const char* name, uint32_t r
         if (auto_cleanup) {
             FILE* fd = fastopen(firmware_path, "rb");
             if (fd != NULL) {
-                size_t file_size    = fs_utils_get_file_size(fd);
+                size_t file_size = fs_utils_get_file_size(fd);
                 fastclose(fd);
                 size_t rounded_size = (file_size + (SPI_FLASH_MMU_PAGE_SIZE - 1)) & (~(SPI_FLASH_MMU_PAGE_SIZE - 1));
                 app_mgmt_appfs_evict_lru(rounded_size);
@@ -610,7 +614,7 @@ esp_err_t app_mgmt_appfs_evict_lru(size_t needed_bytes) {
     }
 
     // Collect evictable entries
-    size_t         count   = 0;
+    size_t         count    = 0;
     appfs_handle_t appfs_fd = appfsNextEntry(APPFS_INVALID_FD);
     while (appfs_fd != APPFS_INVALID_FD && count < MAX_NUM_APPS) {
         const char* slug = NULL;

@@ -155,8 +155,8 @@ esp_err_t fs_utils_copy_recursive(const char* src, const char* dst) {
             continue;
         }
 
-        size_t src_len = strlen(src) + strlen(entry->d_name) + 2;
-        size_t dst_len = strlen(dst) + strlen(entry->d_name) + 2;
+        size_t src_len  = strlen(src) + strlen(entry->d_name) + 2;
+        size_t dst_len  = strlen(dst) + strlen(entry->d_name) + 2;
         char*  src_path = malloc(src_len);
         char*  dst_path = malloc(dst_len);
         if (src_path == NULL || dst_path == NULL) {

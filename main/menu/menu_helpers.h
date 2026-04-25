@@ -1,9 +1,9 @@
 #pragma once
 
+#include "gui_element_icontext.h"
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "pax_types.h"
-#include "gui_element_icontext.h"
 
 // Common footer macros used by most menu screens
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
@@ -32,12 +32,10 @@ typedef bool (*menu_action_cb_t)(void* action_arg, void* user_ctx);
 // Calls action_cb when an item is selected.
 // Also handles HOME key as back if home_is_back is true.
 void menu_run_list(menu_t* menu, gui_element_icontext_t* header, size_t header_count,
-                   gui_element_icontext_t* footer_left, size_t footer_left_count,
-                   gui_element_icontext_t* footer_right, size_t footer_right_count,
-                   menu_action_cb_t action_cb, void* user_ctx, bool home_is_back);
+                   gui_element_icontext_t* footer_left, size_t footer_left_count, gui_element_icontext_t* footer_right,
+                   size_t footer_right_count, menu_action_cb_t action_cb, void* user_ctx, bool home_is_back);
 
 // Run a standard grid menu event loop (uses menu_render_grid instead of menu_render).
 void menu_run_grid(menu_t* menu, gui_element_icontext_t* header, size_t header_count,
-                   gui_element_icontext_t* footer_left, size_t footer_left_count,
-                   gui_element_icontext_t* footer_right, size_t footer_right_count,
-                   menu_action_cb_t action_cb, void* user_ctx, bool home_is_back);
+                   gui_element_icontext_t* footer_left, size_t footer_left_count, gui_element_icontext_t* footer_right,
+                   size_t footer_right_count, menu_action_cb_t action_cb, void* user_ctx, bool home_is_back);

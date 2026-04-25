@@ -55,7 +55,7 @@ static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
             if (apps[i]->executable_type == EXECUTABLE_TYPE_SCRIPT) {
                 prefix = "[S]";
             } else if (apps[i]->executable_type == EXECUTABLE_TYPE_APPFS &&
-                apps[i]->executable_appfs_fd != APPFS_INVALID_FD) {
+                       apps[i]->executable_appfs_fd != APPFS_INVALID_FD) {
                 bool mismatch = false;
                 if (apps[i]->executable_on_fs_available) {
                     // Check revision mismatch
@@ -224,50 +224,45 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
 }
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-#define FOOTER_LEFT_CACHE                                          \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},         \
-                                {get_icon(ICON_F1), "Back"},       \
-                                {get_icon(ICON_F2), "Details"},    \
-                                {get_icon(ICON_F4), "Cache"},      \
-                                {get_icon(ICON_F5), "Remove"}}),   \
+#define FOOTER_LEFT_CACHE                                        \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},       \
+                                {get_icon(ICON_F1), "Back"},     \
+                                {get_icon(ICON_F2), "Details"},  \
+                                {get_icon(ICON_F4), "Cache"},    \
+                                {get_icon(ICON_F5), "Remove"}}), \
         5
-#define FOOTER_LEFT_UNCACHE                                        \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},         \
-                                {get_icon(ICON_F1), "Back"},       \
-                                {get_icon(ICON_F2), "Details"},    \
-                                {get_icon(ICON_F4), "Uncache"},    \
-                                {get_icon(ICON_F5), "Remove"}}),   \
+#define FOOTER_LEFT_UNCACHE                                      \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},       \
+                                {get_icon(ICON_F1), "Back"},     \
+                                {get_icon(ICON_F2), "Details"},  \
+                                {get_icon(ICON_F4), "Uncache"},  \
+                                {get_icon(ICON_F5), "Remove"}}), \
         5
-#define FOOTER_LEFT_PLAIN                                          \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},         \
-                                {get_icon(ICON_F1), "Back"},       \
-                                {get_icon(ICON_F2), "Details"},    \
-                                {get_icon(ICON_F5), "Remove"}}),   \
+#define FOOTER_LEFT_PLAIN                                        \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},       \
+                                {get_icon(ICON_F1), "Back"},     \
+                                {get_icon(ICON_F2), "Details"},  \
+                                {get_icon(ICON_F5), "Remove"}}), \
         4
 #elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT_CACHE          NULL, 0
-#define FOOTER_LEFT_UNCACHE        NULL, 0
-#define FOOTER_LEFT_PLAIN          NULL, 0
+#define FOOTER_LEFT_CACHE   NULL, 0
+#define FOOTER_LEFT_UNCACHE NULL, 0
+#define FOOTER_LEFT_PLAIN   NULL, 0
 #else
-#define FOOTER_LEFT_CACHE                                          \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},         \
-                                {NULL, "F1 Back"},                 \
-                                {NULL, "F2 Details"},              \
-                                {NULL, "F4 Cache"},                \
-                                {NULL, "F5 Remove"}}),             \
+#define FOOTER_LEFT_CACHE                                                                                              \
+    ((gui_element_icontext_t[]){                                                                                       \
+        {get_icon(ICON_ESC), "/"}, {NULL, "F1 Back"}, {NULL, "F2 Details"}, {NULL, "F4 Cache"}, {NULL, "F5 Remove"}}), \
         5
-#define FOOTER_LEFT_UNCACHE                                        \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},         \
-                                {NULL, "F1 Back"},                 \
-                                {NULL, "F2 Details"},              \
-                                {NULL, "F4 Uncache"},              \
-                                {NULL, "F5 Remove"}}),             \
+#define FOOTER_LEFT_UNCACHE                                \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, \
+                                {NULL, "F1 Back"},         \
+                                {NULL, "F2 Details"},      \
+                                {NULL, "F4 Uncache"},      \
+                                {NULL, "F5 Remove"}}),     \
         5
-#define FOOTER_LEFT_PLAIN                                          \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},         \
-                                {NULL, "F1 Back"},                 \
-                                {NULL, "F2 Details"},              \
-                                {NULL, "F5 Remove"}}),             \
+#define FOOTER_LEFT_PLAIN                                                                          \
+    ((gui_element_icontext_t[]){                                                                   \
+        {get_icon(ICON_ESC), "/"}, {NULL, "F1 Back"}, {NULL, "F2 Details"}, {NULL, "F5 Remove"}}), \
         4
 #endif
 
@@ -330,7 +325,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
 
     if (!partial || icons) {
         // Build dynamic footer right with AppFS free space
-        char footer_right_text[80];
+        char   footer_right_text[80];
         size_t free_kb  = appfsGetFreeMem() / 1024;
         size_t total_kb = appfsGetTotalMem() / 1024;
 
@@ -441,8 +436,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                         app->executable_appfs_fd == APPFS_INVALID_FD) {
                                         char* firmware_path = app_mgmt_find_firmware_path(app->slug);
                                         if (firmware_path == NULL) {
-                                            message_dialog(get_icon(ICON_ERROR), "Error",
-                                                           "App binary not found", "OK");
+                                            message_dialog(get_icon(ICON_ERROR), "Error", "App binary not found", "OK");
                                             render(buffer, theme, &menu, position, false, false);
                                             break;
                                         }
@@ -462,11 +456,12 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                         if (mismatch_reinstall) {
                                             int appfs_size = 0;
                                             appfsEntryInfoExt(app->executable_appfs_fd, NULL, NULL, NULL, &appfs_size);
-                                            bool mismatch = (app->executable_on_fs_revision != app->executable_revision) ||
-                                                            (appfs_size != app->executable_on_fs_filesize);
+                                            bool mismatch =
+                                                (app->executable_on_fs_revision != app->executable_revision) ||
+                                                (appfs_size != app->executable_on_fs_filesize);
                                             if (mismatch) {
-                                                busy_dialog(get_icon(ICON_APPS), "Loading",
-                                                            "Reinstalling to AppFS...", true);
+                                                busy_dialog(get_icon(ICON_APPS), "Loading", "Reinstalling to AppFS...",
+                                                            true);
                                                 appfsDeleteFile(app->slug);
                                                 char* firmware_path = app_mgmt_find_firmware_path(app->slug);
                                                 if (firmware_path != NULL) {
@@ -490,12 +485,12 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     if (app->executable_appfs_fd != APPFS_INVALID_FD &&
                                         app_mgmt_can_uncache(app->slug)) {
                                         // Cached → uncache
-                                        message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
-                                            get_icon(ICON_HELP), "Remove from cache",
-                                            "Remove app binary from AppFS cache?");
+                                        message_dialog_return_type_t msg_ret =
+                                            adv_dialog_yes_no(get_icon(ICON_HELP), "Remove from cache",
+                                                              "Remove app binary from AppFS cache?");
                                         if (msg_ret == MSG_DIALOG_RETURN_OK) {
-                                            busy_dialog(get_icon(ICON_APPS), "Removing",
-                                                        "Removing from AppFS...", true);
+                                            busy_dialog(get_icon(ICON_APPS), "Removing", "Removing from AppFS...",
+                                                        true);
                                             esp_err_t res = app_mgmt_remove_from_appfs(app->slug);
                                             if (res != ESP_OK) {
                                                 message_dialog(get_icon(ICON_ERROR), "Failed",
@@ -510,8 +505,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                         // Not cached → cache (pre-cache without launching)
                                         char* firmware_path = app_mgmt_find_firmware_path(app->slug);
                                         if (firmware_path == NULL) {
-                                            message_dialog(get_icon(ICON_ERROR), "Error",
-                                                           "App binary not found", "OK");
+                                            message_dialog(get_icon(ICON_ERROR), "Error", "App binary not found", "OK");
                                         } else {
                                             load_app_to_appfs(app, firmware_path, "Caching");
                                             free(firmware_path);

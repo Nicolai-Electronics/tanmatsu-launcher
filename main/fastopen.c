@@ -3,7 +3,8 @@
 #include "sdkconfig.h"
 
 /*
- * fastopen() uses fast IO buffers for buffered STDIO. In tests, this seems to sometimes increase read/write speeds up to 10x
+ * fastopen() uses fast IO buffers for buffered STDIO. In tests, this seems to sometimes increase read/write speeds up
+ * to 10x
  */
 
 #ifdef CONFIG_FATFS_USE_FASTOPEN

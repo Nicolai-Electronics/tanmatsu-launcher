@@ -41,9 +41,9 @@ typedef struct {
 } app_t;
 
 appfs_handle_t find_appfs_handle_for_slug(const char* search_slug);
-bool           get_executable_revision(const char* path, const char* slug, uint32_t* out_revision, char** out_executable);
-app_t*         create_app(const char* path, const char* slug);
-void           free_app(app_t* app);
+bool   get_executable_revision(const char* path, const char* slug, uint32_t* out_revision, char** out_executable);
+app_t* create_app(const char* path, const char* slug);
+void   free_app(app_t* app);
 
 size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, const char* path, app_t** full_list,
                                           size_t full_list_size);

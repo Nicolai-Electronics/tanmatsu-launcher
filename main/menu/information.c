@@ -44,8 +44,6 @@ void menu_information(void) {
                           get_icon(ICON_BATTERY_UNKNOWN));
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
 
-    menu_run_list(&menu,
-                  ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "Information"}}), 1,
-                  MENU_FOOTER_BACK, MENU_FOOTER_NAV_SELECT,
-                  on_action, NULL, true);
+    menu_run_list(&menu, ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "Information"}}), 1, MENU_FOOTER_BACK,
+                  MENU_FOOTER_NAV_SELECT, on_action, NULL, true);
 }

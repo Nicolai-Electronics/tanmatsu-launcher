@@ -1,13 +1,13 @@
 #include "tools.h"
 #include "bsp/display.h"
 #include "common/display.h"
+#include "firmware_update.h"
 #include "gui_menu.h"
 #include "icons.h"
 #include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "menu_filebrowser.h"
 #include "menu_hardware_test.h"
-#include "firmware_update.h"
 #include "pax_types.h"
 #include "radio_ota.h"
 #include "radio_update.h"
@@ -79,8 +79,6 @@ void menu_tools(void) {
     menu_insert_item_icon(&menu, "Force icon update", NULL, (void*)ACTION_DOWNLOAD_ICONS, -1, get_icon(ICON_COLORS));
     menu_insert_item_icon(&menu, "Force radio update", NULL, (void*)ACTION_RADIO_OTA, -1, get_icon(ICON_SYSTEM_UPDATE));
 
-    menu_run_list(&menu,
-                  ((gui_element_icontext_t[]){{get_icon(ICON_EXTENSION), "Tools"}}), 1,
-                  MENU_FOOTER_BACK, MENU_FOOTER_NAV_SELECT,
-                  on_action, NULL, true);
+    menu_run_list(&menu, ((gui_element_icontext_t[]){{get_icon(ICON_EXTENSION), "Tools"}}), 1, MENU_FOOTER_BACK,
+                  MENU_FOOTER_NAV_SELECT, on_action, NULL, true);
 }

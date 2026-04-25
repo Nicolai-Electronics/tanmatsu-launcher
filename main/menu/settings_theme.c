@@ -59,10 +59,8 @@ void menu_settings_theme(void) {
     update_menu(&menu);
     g_theme_menu = &menu;
 
-    menu_run_list(&menu,
-                  ((gui_element_icontext_t[]){{get_icon(ICON_COLORS), "Theme"}}), 1,
-                  MENU_FOOTER_BACK, MENU_FOOTER_NAV_SELECT,
-                  on_action, NULL, false);
+    menu_run_list(&menu, ((gui_element_icontext_t[]){{get_icon(ICON_COLORS), "Theme"}}), 1, MENU_FOOTER_BACK,
+                  MENU_FOOTER_NAV_SELECT, on_action, NULL, false);
 
     g_theme_menu = NULL;
 }

@@ -18,60 +18,60 @@
 #include "pax_types.h"
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-#define FOOTER_LEFT_CACHE_MOVE                                           \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},               \
-                                {get_icon(ICON_F1), "Back"},             \
-                                {get_icon(ICON_F2), "Start"},            \
-                                {get_icon(ICON_F3), "Move"},             \
-                                {get_icon(ICON_F4), "Cache"},            \
-                                {get_icon(ICON_F5), "Delete App"}}),     \
+#define FOOTER_LEFT_CACHE_MOVE                                       \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},           \
+                                {get_icon(ICON_F1), "Back"},         \
+                                {get_icon(ICON_F2), "Start"},        \
+                                {get_icon(ICON_F3), "Move"},         \
+                                {get_icon(ICON_F4), "Cache"},        \
+                                {get_icon(ICON_F5), "Delete App"}}), \
         6
-#define FOOTER_LEFT_UNCACHE_MOVE                                         \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},               \
-                                {get_icon(ICON_F1), "Back"},             \
-                                {get_icon(ICON_F2), "Start"},            \
-                                {get_icon(ICON_F3), "Move"},             \
-                                {get_icon(ICON_F4), "Uncache"},          \
-                                {get_icon(ICON_F5), "Delete App"}}),     \
+#define FOOTER_LEFT_UNCACHE_MOVE                                     \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},           \
+                                {get_icon(ICON_F1), "Back"},         \
+                                {get_icon(ICON_F2), "Start"},        \
+                                {get_icon(ICON_F3), "Move"},         \
+                                {get_icon(ICON_F4), "Uncache"},      \
+                                {get_icon(ICON_F5), "Delete App"}}), \
         6
-#define FOOTER_LEFT_CACHE                                                \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},               \
-                                {get_icon(ICON_F1), "Back"},             \
-                                {get_icon(ICON_F2), "Start"},            \
-                                {get_icon(ICON_F4), "Cache"},            \
-                                {get_icon(ICON_F5), "Delete App"}}),     \
+#define FOOTER_LEFT_CACHE                                            \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},           \
+                                {get_icon(ICON_F1), "Back"},         \
+                                {get_icon(ICON_F2), "Start"},        \
+                                {get_icon(ICON_F4), "Cache"},        \
+                                {get_icon(ICON_F5), "Delete App"}}), \
         5
-#define FOOTER_LEFT_UNCACHE                                              \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},               \
-                                {get_icon(ICON_F1), "Back"},             \
-                                {get_icon(ICON_F2), "Start"},            \
-                                {get_icon(ICON_F4), "Uncache"},          \
-                                {get_icon(ICON_F5), "Delete App"}}),     \
+#define FOOTER_LEFT_UNCACHE                                          \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},           \
+                                {get_icon(ICON_F1), "Back"},         \
+                                {get_icon(ICON_F2), "Start"},        \
+                                {get_icon(ICON_F4), "Uncache"},      \
+                                {get_icon(ICON_F5), "Delete App"}}), \
         5
-#define FOOTER_LEFT_PLAIN                                                \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},               \
-                                {get_icon(ICON_F1), "Back"},             \
-                                {get_icon(ICON_F2), "Start"},            \
-                                {get_icon(ICON_F5), "Delete App"}}),     \
+#define FOOTER_LEFT_PLAIN                                            \
+    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},           \
+                                {get_icon(ICON_F1), "Back"},         \
+                                {get_icon(ICON_F2), "Start"},        \
+                                {get_icon(ICON_F5), "Delete App"}}), \
         4
-#define TEXT_FONT    pax_font_sky_mono
-#define TEXT_SIZE    18
+#define TEXT_FONT pax_font_sky_mono
+#define TEXT_SIZE 18
 #elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
 #define FOOTER_LEFT_CACHE_MOVE   ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
 #define FOOTER_LEFT_UNCACHE_MOVE ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
 #define FOOTER_LEFT_CACHE        ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
 #define FOOTER_LEFT_UNCACHE      ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
 #define FOOTER_LEFT_PLAIN        ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
-#define TEXT_FONT    pax_font_sky_mono
-#define TEXT_SIZE    9
+#define TEXT_FONT                pax_font_sky_mono
+#define TEXT_SIZE                9
 #else
 #define FOOTER_LEFT_CACHE_MOVE   NULL, 0
 #define FOOTER_LEFT_UNCACHE_MOVE NULL, 0
 #define FOOTER_LEFT_CACHE        NULL, 0
 #define FOOTER_LEFT_UNCACHE      NULL, 0
 #define FOOTER_LEFT_PLAIN        NULL, 0
-#define TEXT_FONT    pax_font_sky_mono
-#define TEXT_SIZE    9
+#define TEXT_FONT                pax_font_sky_mono
+#define TEXT_SIZE                9
 #endif
 #define FOOTER_RIGHT NULL, 0
 
@@ -103,8 +103,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
     int  line = 0;
 
     // Determine which footer to show based on cache state and move capability
-    bool in_appfs    = (app->executable_type == EXECUTABLE_TYPE_APPFS &&
-                        app->executable_appfs_fd != APPFS_INVALID_FD);
+    bool in_appfs    = (app->executable_type == EXECUTABLE_TYPE_APPFS && app->executable_appfs_fd != APPFS_INVALID_FD);
     bool can_uncache = app_mgmt_can_uncache(app->slug);
 
     if (!partial || icons) {
@@ -237,23 +236,18 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                     to_name = "SD Card";
                                 }
                                 char confirm_msg[128];
-                                snprintf(confirm_msg, sizeof(confirm_msg),
-                                         "Move app to %s?", to_name);
-                                message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
-                                    get_icon(ICON_HELP), "Move App", confirm_msg);
+                                snprintf(confirm_msg, sizeof(confirm_msg), "Move app to %s?", to_name);
+                                message_dialog_return_type_t msg_ret =
+                                    adv_dialog_yes_no(get_icon(ICON_HELP), "Move App", confirm_msg);
                                 if (msg_ret == MSG_DIALOG_RETURN_OK) {
-                                    busy_dialog(get_icon(ICON_APPS), "Moving",
-                                                "Moving app...", true);
+                                    busy_dialog(get_icon(ICON_APPS), "Moving", "Moving app...", true);
                                     esp_err_t res = app_mgmt_move(app->slug, from, to);
                                     if (res == ESP_ERR_NO_MEM) {
                                         char err_msg[128];
-                                        snprintf(err_msg, sizeof(err_msg),
-                                                 "Not enough space on %s", to_name);
-                                        message_dialog(get_icon(ICON_ERROR), "No space",
-                                                       err_msg, "OK");
+                                        snprintf(err_msg, sizeof(err_msg), "Not enough space on %s", to_name);
+                                        message_dialog(get_icon(ICON_ERROR), "No space", err_msg, "OK");
                                     } else {
-                                        message_dialog(get_icon(ICON_ERROR), "Failed",
-                                                       "Failed to move app", "OK");
+                                        message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to move app", "OK");
                                     }
                                     return true;  // Trigger app list refresh
                                 }
@@ -262,15 +256,13 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                             }
                             case BSP_INPUT_NAVIGATION_KEY_F4: {
                                 if (app->executable_type != EXECUTABLE_TYPE_APPFS) break;
-                                if (app->executable_appfs_fd != APPFS_INVALID_FD &&
-                                    app_mgmt_can_uncache(app->slug)) {
+                                if (app->executable_appfs_fd != APPFS_INVALID_FD && app_mgmt_can_uncache(app->slug)) {
                                     // Cached → uncache
-                                    message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
-                                        get_icon(ICON_HELP), "Remove from cache",
-                                        "Remove app binary from AppFS cache?");
+                                    message_dialog_return_type_t msg_ret =
+                                        adv_dialog_yes_no(get_icon(ICON_HELP), "Remove from cache",
+                                                          "Remove app binary from AppFS cache?");
                                     if (msg_ret == MSG_DIALOG_RETURN_OK) {
-                                        busy_dialog(get_icon(ICON_APPS), "Removing",
-                                                    "Removing from AppFS...", true);
+                                        busy_dialog(get_icon(ICON_APPS), "Removing", "Removing from AppFS...", true);
                                         esp_err_t res = app_mgmt_remove_from_appfs(app->slug);
                                         if (res != ESP_OK) {
                                             message_dialog(get_icon(ICON_ERROR), "Failed",
@@ -283,21 +275,19 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                     // Not cached → cache
                                     char* firmware_path = app_mgmt_find_firmware_path(app->slug);
                                     if (firmware_path == NULL) {
-                                        message_dialog(get_icon(ICON_ERROR), "Error",
-                                                       "App binary not found", "OK");
+                                        message_dialog(get_icon(ICON_ERROR), "Error", "App binary not found", "OK");
                                     } else {
-                                        busy_dialog(get_icon(ICON_APPS), "Caching",
-                                                    "Copying app to AppFS...", true);
+                                        busy_dialog(get_icon(ICON_APPS), "Caching", "Copying app to AppFS...", true);
                                         esp_err_t res = app_mgmt_cache_to_appfs(
                                             app->slug, app->name, app->executable_revision, firmware_path);
                                         free(firmware_path);
                                         if (res == ESP_ERR_NO_MEM) {
                                             message_dialog(get_icon(ICON_ERROR), "No space",
                                                            "Not enough space in AppFS.\n"
-                                                           "Remove cached apps (F4).", "OK");
+                                                           "Remove cached apps (F4).",
+                                                           "OK");
                                         } else if (res != ESP_OK) {
-                                            message_dialog(get_icon(ICON_ERROR), "Failed",
-                                                           "Failed to cache app", "OK");
+                                            message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to cache app", "OK");
                                         }
                                     }
                                     return true;  // Trigger app list refresh

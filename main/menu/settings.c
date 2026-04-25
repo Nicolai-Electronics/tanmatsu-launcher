@@ -5,8 +5,8 @@
 #include "firmware_update.h"
 #include "gui_menu.h"
 #include "icons.h"
-#include "menu/menu_helpers.h"
 #include "menu/information.h"
+#include "menu/menu_helpers.h"
 #include "menu/owner.h"
 #include "menu/tools.h"
 #include "menu/wifi.h"
@@ -92,8 +92,6 @@ void menu_settings(void) {
     menu_insert_item_icon(&menu, "Update firmware", NULL, (void*)ACTION_FIRMWARE_UPDATE, -1,
                           get_icon(ICON_SYSTEM_UPDATE));
 
-    menu_run_grid(&menu,
-                  ((gui_element_icontext_t[]){{get_icon(ICON_SETTINGS), "Settings"}}), 1,
-                  MENU_FOOTER_BACK, MENU_FOOTER_NAV_SELECT,
-                  on_action, NULL, true);
+    menu_run_grid(&menu, ((gui_element_icontext_t[]){{get_icon(ICON_SETTINGS), "Settings"}}), 1, MENU_FOOTER_BACK,
+                  MENU_FOOTER_NAV_SELECT, on_action, NULL, true);
 }

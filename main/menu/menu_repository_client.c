@@ -64,11 +64,11 @@ typedef enum {
 } install_status_t;
 
 typedef struct {
-    const char*      name;
-    const char*      slug;
-    int              index;
-    pax_buf_t*       icon;
-    install_status_t     status;
+    const char*         name;
+    const char*         slug;
+    int                 index;
+    pax_buf_t*          icon;
+    install_status_t    status;
     app_mgmt_location_t install_location;  // Where the app is installed (if applicable)
 } project_sort_entry_t;
 
@@ -94,8 +94,7 @@ static bool is_project_plugin(cJSON* project_obj) {
         if (!targets) continue;
         cJSON* t = NULL;
         cJSON_ArrayForEach(t, targets) {
-            if (cJSON_IsString(t) &&
-                strlen(t->valuestring) == device_name_len &&
+            if (cJSON_IsString(t) && strlen(t->valuestring) == device_name_len &&
                 strncasecmp(t->valuestring, device_name, device_name_len) == 0) {
                 cJSON* type = cJSON_GetObjectItem(app, "type");
                 return (type && cJSON_IsString(type) && strcmp(type->valuestring, "plugin") == 0);
@@ -130,13 +129,13 @@ static char* get_installed_version(const char* base_path, const char* slug) {
     free(data);
     if (root == NULL) return NULL;
 
-    char* version = NULL;
+    char*  version     = NULL;
     cJSON* version_obj = cJSON_GetObjectItem(root, "version");
     if (version_obj != NULL && cJSON_IsString(version_obj)) {
         version = strdup(version_obj->valuestring);
     } else if (version_obj != NULL && cJSON_IsNumber(version_obj)) {
         size_t len = snprintf(NULL, 0, "%d", version_obj->valueint);
-        version = malloc(len + 1);
+        version    = malloc(len + 1);
         if (version != NULL) {
             snprintf(version, len + 1, "%d", version_obj->valueint);
         }
@@ -149,15 +148,19 @@ static char* get_installed_version(const char* base_path, const char* slug) {
 // Check install status of an app/plugin by slug. Compares version strings.
 // Sets location if installed.
 static install_status_t check_install_status(const char* slug, const char* repo_version,
-                                              app_mgmt_location_t* out_location, bool is_plugin) {
-    const char* base_paths[2];
+                                             app_mgmt_location_t* out_location, bool is_plugin) {
+    const char*         base_paths[2];
     app_mgmt_location_t locs[2];
     if (is_plugin) {
-        base_paths[0] = "/sd/plugins";  base_paths[1] = "/int/plugins";
-        locs[0] = APP_MGMT_LOCATION_SD_PLUGINS;  locs[1] = APP_MGMT_LOCATION_INTERNAL_PLUGINS;
+        base_paths[0] = "/sd/plugins";
+        base_paths[1] = "/int/plugins";
+        locs[0]       = APP_MGMT_LOCATION_SD_PLUGINS;
+        locs[1]       = APP_MGMT_LOCATION_INTERNAL_PLUGINS;
     } else {
-        base_paths[0] = "/sd/apps";  base_paths[1] = "/int/apps";
-        locs[0] = APP_MGMT_LOCATION_SD;  locs[1] = APP_MGMT_LOCATION_INTERNAL;
+        base_paths[0] = "/sd/apps";
+        base_paths[1] = "/int/apps";
+        locs[0]       = APP_MGMT_LOCATION_SD;
+        locs[1]       = APP_MGMT_LOCATION_INTERNAL;
     }
 
     for (int i = 0; i < 2; i++) {
@@ -184,11 +187,12 @@ static install_status_t check_install_status(const char* slug, const char* repo_
 
 // Decode a base64-encoded PNG into a pax_buf_t. Returns NULL on failure.
 static pax_buf_t* decode_base64_icon(const char* base64_data) {
-    size_t b64_len = strlen(base64_data);
+    size_t b64_len     = strlen(base64_data);
     size_t decoded_len = 0;
 
     // Get decoded size
-    if (mbedtls_base64_decode(NULL, 0, &decoded_len, (const unsigned char*)base64_data, b64_len) != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL) {
+    if (mbedtls_base64_decode(NULL, 0, &decoded_len, (const unsigned char*)base64_data, b64_len) !=
+        MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL) {
         return NULL;
     }
 
@@ -228,14 +232,13 @@ static pax_buf_t* create_placeholder_icon(void) {
     return icon;
 }
 
-
 // Parallel array of install status, indexed by menu position (after sorting).
 // Allocated in populate_project_list, freed by caller.
-static install_status_t*    project_statuses   = NULL;
-static app_mgmt_location_t* project_locations  = NULL;
-static int*                 project_indices    = NULL;
-static int                  project_count      = 0;
-static bool                 has_updates        = false;
+static install_status_t*    project_statuses  = NULL;
+static app_mgmt_location_t* project_locations = NULL;
+static int*                 project_indices   = NULL;
+static int                  project_count     = 0;
+static bool                 has_updates       = false;
 
 static cJSON* get_project_by_index(cJSON* json_projects, int index) {
     return cJSON_GetArrayItem(json_projects, index);
@@ -309,9 +312,9 @@ static void load_all_icons(cJSON* json_projects) {
         char server[128] = {0};
         nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
 
-        repository_json_data_t info = {0};
-        char data_path[128]         = {0};
-        bool have_data_path         = false;
+        repository_json_data_t info           = {0};
+        char                   data_path[128] = {0};
+        bool                   have_data_path = false;
         if (load_information(server, &info)) {
             cJSON* dp = cJSON_GetObjectItem(info.json, "data_path");
             if (dp != NULL && cJSON_IsString(dp)) {
@@ -329,22 +332,27 @@ static void load_all_icons(cJSON* json_projects) {
                 int download_num = 0;
                 idx              = 0;
                 cJSON_ArrayForEach(entry_obj, json_projects) {
-                    if (icon_cache[idx] != NULL) { idx++; continue; }
+                    if (icon_cache[idx] != NULL) {
+                        idx++;
+                        continue;
+                    }
 
                     cJSON* slug_obj    = cJSON_GetObjectItem(entry_obj, "slug");
                     cJSON* project_obj = cJSON_GetObjectItem(entry_obj, "project");
                     cJSON* icon_obj    = project_obj ? cJSON_GetObjectItem(project_obj, "icon") : NULL;
                     cJSON* icon_32     = icon_obj ? cJSON_GetObjectItem(icon_obj, "32x32") : NULL;
-                    if (slug_obj == NULL || icon_32 == NULL || !cJSON_IsString(icon_32)) { idx++; continue; }
+                    if (slug_obj == NULL || icon_32 == NULL || !cJSON_IsString(icon_32)) {
+                        idx++;
+                        continue;
+                    }
 
                     download_num++;
                     char busy_msg[64];
-                    snprintf(busy_msg, sizeof(busy_msg), "Downloading icons (%d/%d)...",
-                             download_num, missing_count);
+                    snprintf(busy_msg, sizeof(busy_msg), "Downloading icons (%d/%d)...", download_num, missing_count);
                     busy_dialog(get_icon(ICON_STOREFRONT), "Repository", busy_msg, true);
 
-                    snprintf(url, sizeof(url), "%s%s/%s/%s", server, data_path,
-                             slug_obj->valuestring, icon_32->valuestring);
+                    snprintf(url, sizeof(url), "%s%s/%s/%s", server, data_path, slug_obj->valuestring,
+                             icon_32->valuestring);
                     uint8_t* png_data = NULL;
                     size_t   png_size = 0;
                     if (http_session_download_ram(session, url, &png_data, &png_size) && png_data != NULL) {
@@ -392,7 +400,7 @@ static void populate_project_list(menu_t* menu, cJSON* json_projects) {
     project_sort_entry_t* sorted = malloc(sizeof(project_sort_entry_t) * total);
     if (sorted == NULL) return;
 
-    int i = 0;
+    int i   = 0;
     int idx = 0;
     cJSON_ArrayForEach(entry_obj, json_projects) {
         cJSON* slug_obj = cJSON_GetObjectItem(entry_obj, "slug");
@@ -424,19 +432,18 @@ static void populate_project_list(menu_t* menu, cJSON* json_projects) {
         sorted[i].icon  = NULL;
 
         // Check install status by comparing version strings
-        sorted[i].install_location = want_plugins ? APP_MGMT_LOCATION_INTERNAL_PLUGINS
-                                                  : APP_MGMT_LOCATION_INTERNAL;
-        cJSON* version_obj = cJSON_GetObjectItem(project_obj, "version");
-        char   repo_version_buf[32] = {0};
-        const char* repo_version    = NULL;
+        sorted[i].install_location = want_plugins ? APP_MGMT_LOCATION_INTERNAL_PLUGINS : APP_MGMT_LOCATION_INTERNAL;
+        cJSON*      version_obj    = cJSON_GetObjectItem(project_obj, "version");
+        char        repo_version_buf[32] = {0};
+        const char* repo_version         = NULL;
         if (version_obj != NULL && cJSON_IsString(version_obj)) {
             repo_version = version_obj->valuestring;
         } else if (version_obj != NULL && cJSON_IsNumber(version_obj)) {
             snprintf(repo_version_buf, sizeof(repo_version_buf), "%d", version_obj->valueint);
             repo_version = repo_version_buf;
         }
-        sorted[i].status = check_install_status(slug_obj->valuestring, repo_version,
-                                                 &sorted[i].install_location, want_plugins);
+        sorted[i].status =
+            check_install_status(slug_obj->valuestring, repo_version, &sorted[i].install_location, want_plugins);
 
         // Look up icon from the pre-populated cache (indexed by JSON array position)
         sorted[i].icon = (idx < icon_cache_size) ? icon_cache[idx] : NULL;
@@ -473,9 +480,9 @@ static void populate_project_list(menu_t* menu, cJSON* json_projects) {
         snprintf(label, sizeof(label), "%s %s", prefix, sorted[j].name);
         menu_insert_item_icon(menu, label, NULL, (void*)sorted[j].index, -1, sorted[j].icon);
 
-        if (project_statuses)  project_statuses[j]  = sorted[j].status;
+        if (project_statuses) project_statuses[j] = sorted[j].status;
         if (project_locations) project_locations[j] = sorted[j].install_location;
-        if (project_indices)   project_indices[j]   = sorted[j].index;
+        if (project_indices) project_indices[j] = sorted[j].index;
     }
 
     free(sorted);
@@ -505,7 +512,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
     }
     if (current_status != previous_render_status) {
         previous_render_status = current_status;
-        partial = false;
+        partial                = false;
     }
 
     if (!partial || icons) {
@@ -533,14 +540,14 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
         {
-            bool is_installed = (current_status == INSTALL_STATUS_INSTALLED ||
-                                 current_status == INSTALL_STATUS_UPDATE_AVAILABLE);
+            bool is_installed =
+                (current_status == INSTALL_STATUS_INSTALLED || current_status == INSTALL_STATUS_UPDATE_AVAILABLE);
             gui_element_icontext_t footer_left[5];
             int                    footer_left_count = 0;
-            footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_ESC), "/"};
-            footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_F1), "Back"};
-            footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_F2),
-                current_view_mode == VIEW_MODE_APPS ? "Plugins" : "Apps"};
+            footer_left[footer_left_count++]         = (gui_element_icontext_t){get_icon(ICON_ESC), "/"};
+            footer_left[footer_left_count++]         = (gui_element_icontext_t){get_icon(ICON_F1), "Back"};
+            footer_left[footer_left_count++] =
+                (gui_element_icontext_t){get_icon(ICON_F2), current_view_mode == VIEW_MODE_APPS ? "Plugins" : "Apps"};
             if (is_installed) {
                 footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_F5), "Remove"};
             }
@@ -633,20 +640,19 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                 if (pos < (size_t)project_count && project_statuses != NULL &&
                                     project_statuses[pos] != INSTALL_STATUS_NOT_INSTALLED) {
                                     // Update or re-install: confirm, use existing location
-                                    const char* action_name =
-                                        (project_statuses[pos] == INSTALL_STATUS_UPDATE_AVAILABLE)
-                                            ? "Update" : "Re-install";
-                                    char confirm_msg[128];
-                                    cJSON* wrapper = get_project_by_index(projects.json, project_indices[pos]);
-                                    cJSON* slug_obj = wrapper ? cJSON_GetObjectItem(wrapper, "slug") : NULL;
+                                    const char* action_name = (project_statuses[pos] == INSTALL_STATUS_UPDATE_AVAILABLE)
+                                                                  ? "Update"
+                                                                  : "Re-install";
+                                    char        confirm_msg[128];
+                                    cJSON*      wrapper  = get_project_by_index(projects.json, project_indices[pos]);
+                                    cJSON*      slug_obj = wrapper ? cJSON_GetObjectItem(wrapper, "slug") : NULL;
                                     snprintf(confirm_msg, sizeof(confirm_msg), "%s this app?", action_name);
-                                    message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
-                                        get_icon(ICON_HELP), action_name, confirm_msg);
+                                    message_dialog_return_type_t msg_ret =
+                                        adv_dialog_yes_no(get_icon(ICON_HELP), action_name, confirm_msg);
                                     if (msg_ret == MSG_DIALOG_RETURN_OK && slug_obj != NULL) {
-                                        busy_dialog(get_icon(ICON_STOREFRONT), "Repository",
-                                                    "Installing...", true);
-                                        app_mgmt_install(server, slug_obj->valuestring,
-                                                         project_locations[pos], download_callback);
+                                        busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Installing...", true);
+                                        app_mgmt_install(server, slug_obj->valuestring, project_locations[pos],
+                                                         download_callback);
                                     }
                                     // Rebuild menu to refresh status markers
                                     menu_free(&menu);
@@ -666,7 +672,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                         break;
                                     }
                                     menu_repository_client_project(buffer, theme, wrapper,
-                                                                    current_view_mode == VIEW_MODE_PLUGINS);
+                                                                   current_view_mode == VIEW_MODE_PLUGINS);
                                     // Rebuild menu to refresh status markers (app may have been installed)
                                     menu_free(&menu);
                                     menu_initialize(&menu);
@@ -681,8 +687,8 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                             }
                             case BSP_INPUT_NAVIGATION_KEY_F2: {
                                 // Toggle between Apps and Plugins view
-                                current_view_mode = (current_view_mode == VIEW_MODE_APPS)
-                                    ? VIEW_MODE_PLUGINS : VIEW_MODE_APPS;
+                                current_view_mode =
+                                    (current_view_mode == VIEW_MODE_APPS) ? VIEW_MODE_PLUGINS : VIEW_MODE_APPS;
                                 menu_free(&menu);
                                 menu_initialize(&menu);
                                 populate_project_list(&menu, projects.json);
@@ -699,13 +705,13 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                 cJSON* slug_obj = wrapper ? cJSON_GetObjectItem(wrapper, "slug") : NULL;
                                 if (slug_obj == NULL) break;
 
-                                const char* delete_title = (current_view_mode == VIEW_MODE_PLUGINS)
-                                    ? "Delete Plugin" : "Delete App";
+                                const char* delete_title =
+                                    (current_view_mode == VIEW_MODE_PLUGINS) ? "Delete Plugin" : "Delete App";
                                 const char* delete_msg = (current_view_mode == VIEW_MODE_PLUGINS)
-                                    ? "Do you really want to delete the plugin?"
-                                    : "Do you really want to delete the app?";
-                                message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
-                                    get_icon(ICON_HELP), delete_title, delete_msg);
+                                                             ? "Do you really want to delete the plugin?"
+                                                             : "Do you really want to delete the app?";
+                                message_dialog_return_type_t msg_ret =
+                                    adv_dialog_yes_no(get_icon(ICON_HELP), delete_title, delete_msg);
                                 if (msg_ret == MSG_DIALOG_RETURN_OK) {
                                     if (current_view_mode == VIEW_MODE_PLUGINS) {
                                         app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL_PLUGINS);
@@ -730,8 +736,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_F6: {
                                 if (!has_updates) break;
                                 message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
-                                    get_icon(ICON_HELP), "Update all",
-                                    "Update all apps with available updates?");
+                                    get_icon(ICON_HELP), "Update all", "Update all apps with available updates?");
                                 if (msg_ret == MSG_DIALOG_RETURN_OK) {
                                     int updated = 0;
                                     int failed  = 0;
@@ -741,13 +746,16 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                         total++;
                                         cJSON* wrapper  = get_project_by_index(projects.json, project_indices[j]);
                                         cJSON* slug_obj = wrapper ? cJSON_GetObjectItem(wrapper, "slug") : NULL;
-                                        if (slug_obj == NULL) { failed++; continue; }
+                                        if (slug_obj == NULL) {
+                                            failed++;
+                                            continue;
+                                        }
                                         char msg[64];
-                                        snprintf(msg, sizeof(msg), "Updating %s (%d/%d)...",
-                                                 slug_obj->valuestring, updated + failed + 1, total);
+                                        snprintf(msg, sizeof(msg), "Updating %s (%d/%d)...", slug_obj->valuestring,
+                                                 updated + failed + 1, total);
                                         busy_dialog(get_icon(ICON_STOREFRONT), "Updating", msg, true);
                                         esp_err_t res = app_mgmt_install(server, slug_obj->valuestring,
-                                                                          project_locations[j], download_callback);
+                                                                         project_locations[j], download_callback);
                                         if (res == ESP_OK) {
                                             updated++;
                                         } else {
@@ -756,8 +764,8 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                     }
                                     if (failed > 0) {
                                         char summary[64];
-                                        snprintf(summary, sizeof(summary),
-                                                 "Updated %d/%d apps. %d failed.", updated, total, failed);
+                                        snprintf(summary, sizeof(summary), "Updated %d/%d apps. %d failed.", updated,
+                                                 total, failed);
                                         message_dialog(get_icon(ICON_ERROR), "Update all", summary, "OK");
                                     }
                                     // Rebuild menu to refresh status markers

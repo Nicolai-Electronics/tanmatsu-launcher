@@ -2,30 +2,28 @@
 // Tanmatsu Plugin API Implementation
 // Provides host functions that plugins can call.
 
-#include "tanmatsu_plugin.h"
-#include "plugin_context.h"
+#include <dirent.h>
+#include <errno.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
 #include <sys/stat.h>
-#include <dirent.h>
-#include <errno.h>
-
+#include "bsp/input.h"
 #include "bsp/led.h"
-#include "esp_log.h"
+#include "chakrapetchmedium.h"
+#include "common/display.h"
 #include "esp_heap_caps.h"
-#include "nvs_flash.h"
-#include "nvs.h"
+#include "esp_log.h"
+#include "fastopen.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "pax_gfx.h"
+#include "nvs.h"
+#include "nvs_flash.h"
 #include "pax_fonts.h"
-#include "chakrapetchmedium.h"
-
-#include "common/display.h"
-#include "bsp/input.h"
-#include "fastopen.h"
+#include "pax_gfx.h"
+#include "plugin_context.h"
+#include "tanmatsu_plugin.h"
 
 static const char* TAG = "plugin_api";
 
@@ -39,10 +37,10 @@ static SemaphoreHandle_t plugin_api_mutex = NULL;
 #define MAX_STATUS_WIDGETS 8
 
 typedef struct {
-    bool active;
+    bool                    active;
     plugin_status_widget_fn callback;
-    void* user_data;
-    plugin_context_t* owner;  // Track which plugin owns this registration
+    void*                   user_data;
+    plugin_context_t*       owner;  // Track which plugin owns this registration
 } status_widget_entry_t;
 
 static status_widget_entry_t status_widgets[MAX_STATUS_WIDGETS] = {0};
@@ -57,12 +55,12 @@ static status_widget_entry_t status_widgets[MAX_STATUS_WIDGETS] = {0};
 // to check claims before setting power/WiFi indicator LEDs.
 
 typedef struct {
-    bool claimed;
+    bool              claimed;
     plugin_context_t* owner;
 } led_claim_t;
 
-static led_claim_t* led_claims = NULL;
-static uint32_t led_claim_count = 0;
+static led_claim_t* led_claims      = NULL;
+static uint32_t     led_claim_count = 0;
 
 bool asp_plugin_led_claim(plugin_context_t* ctx, uint32_t index) {
     if (led_claims == NULL || index >= led_claim_count || ctx == NULL) return false;
@@ -77,9 +75,9 @@ bool asp_plugin_led_claim(plugin_context_t* ctx, uint32_t index) {
     // Can only claim if unclaimed or already owned by this plugin
     if (!led_claims[index].claimed || led_claims[index].owner == ctx) {
         led_claims[index].claimed = true;
-        led_claims[index].owner = ctx;
-        ESP_LOGI(TAG, "Plugin %s claimed LED %lu",
-                 ctx->plugin_slug ? ctx->plugin_slug : "unknown", (unsigned long)index);
+        led_claims[index].owner   = ctx;
+        ESP_LOGI(TAG, "Plugin %s claimed LED %lu", ctx->plugin_slug ? ctx->plugin_slug : "unknown",
+                 (unsigned long)index);
         return true;
     }
     return false;
@@ -89,11 +87,10 @@ void asp_plugin_led_release(plugin_context_t* ctx, uint32_t index) {
     if (led_claims == NULL || index >= led_claim_count) return;
 
     // Can only release if owned by this plugin (or ctx is NULL for force release)
-    if (led_claims[index].claimed &&
-        (ctx == NULL || led_claims[index].owner == ctx)) {
+    if (led_claims[index].claimed && (ctx == NULL || led_claims[index].owner == ctx)) {
         ESP_LOGI(TAG, "Released LED %lu", (unsigned long)index);
         led_claims[index].claimed = false;
-        led_claims[index].owner = NULL;
+        led_claims[index].owner   = NULL;
     }
 }
 
@@ -112,10 +109,10 @@ bool plugin_api_is_led_claimed(uint32_t index) {
 int asp_plugin_status_widget_register(plugin_context_t* ctx, plugin_status_widget_fn callback, void* user_data) {
     for (int i = 0; i < MAX_STATUS_WIDGETS; i++) {
         if (!status_widgets[i].active) {
-            status_widgets[i].active = true;
-            status_widgets[i].callback = callback;
+            status_widgets[i].active    = true;
+            status_widgets[i].callback  = callback;
             status_widgets[i].user_data = user_data;
-            status_widgets[i].owner = ctx;
+            status_widgets[i].owner     = ctx;
             ESP_LOGI(TAG, "Registered status widget %d", i);
             return i;
         }
@@ -126,8 +123,8 @@ int asp_plugin_status_widget_register(plugin_context_t* ctx, plugin_status_widge
 
 void asp_plugin_status_widget_unregister(int widget_id) {
     if (widget_id >= 0 && widget_id < MAX_STATUS_WIDGETS) {
-        status_widgets[widget_id].active = false;
-        status_widgets[widget_id].callback = NULL;
+        status_widgets[widget_id].active    = false;
+        status_widgets[widget_id].callback  = NULL;
         status_widgets[widget_id].user_data = NULL;
         ESP_LOGI(TAG, "Unregistered status widget %d", widget_id);
     }
@@ -144,14 +141,13 @@ void asp_plugin_status_widget_unregister(int widget_id) {
 // Returns total width used by all widgets
 int plugin_api_render_status_widgets(pax_buf_t* buffer, int x_right, int y, int height) {
     int total_width = 0;
-    int current_x = x_right;
+    int current_x   = x_right;
 
     for (int i = 0; i < MAX_STATUS_WIDGETS; i++) {
         if (status_widgets[i].active && status_widgets[i].callback) {
-            int widget_width = status_widgets[i].callback(buffer, current_x, y, height,
-                                                           status_widgets[i].user_data);
+            int widget_width = status_widgets[i].callback(buffer, current_x, y, height, status_widgets[i].user_data);
             if (widget_width > 0) {
-                current_x -= widget_width;
+                current_x   -= widget_width;
                 total_width += widget_width;
             }
         }
@@ -167,11 +163,11 @@ int plugin_api_render_status_widgets(pax_buf_t* buffer, int x_right, int y, int 
 #define MAX_PLUGIN_INPUT_HOOKS 8
 
 typedef struct {
-    int bsp_hook_id;
+    int                  bsp_hook_id;
     plugin_input_hook_fn callback;
-    void* user_data;
-    bool in_use;
-    plugin_context_t* owner;  // Track which plugin owns this registration
+    void*                user_data;
+    bool                 in_use;
+    plugin_context_t*    owner;  // Track which plugin owns this registration
 } plugin_input_hook_entry_t;
 
 static plugin_input_hook_entry_t plugin_input_hooks[MAX_PLUGIN_INPUT_HOOKS] = {0};
@@ -190,22 +186,22 @@ static bool plugin_input_hook_wrapper(bsp_input_event_t* bsp_event, void* user_d
 
     // Convert BSP event to plugin event format
     plugin_input_event_t plugin_event = {0};
-    plugin_event.type = bsp_event->type;
+    plugin_event.type                 = bsp_event->type;
 
     switch (bsp_event->type) {
         case INPUT_EVENT_TYPE_NAVIGATION:
-            plugin_event.key = bsp_event->args_navigation.key;
-            plugin_event.state = bsp_event->args_navigation.state;
+            plugin_event.key       = bsp_event->args_navigation.key;
+            plugin_event.state     = bsp_event->args_navigation.state;
             plugin_event.modifiers = bsp_event->args_navigation.modifiers;
             break;
         case INPUT_EVENT_TYPE_KEYBOARD:
-            plugin_event.key = (uint32_t)bsp_event->args_keyboard.ascii;
-            plugin_event.state = true;
+            plugin_event.key       = (uint32_t)bsp_event->args_keyboard.ascii;
+            plugin_event.state     = true;
             plugin_event.modifiers = bsp_event->args_keyboard.modifiers;
             break;
         case INPUT_EVENT_TYPE_SCANCODE:
-            plugin_event.key = bsp_event->args_scancode.scancode;
-            plugin_event.state = !(bsp_event->args_scancode.scancode & BSP_INPUT_SCANCODE_RELEASE_MODIFIER);
+            plugin_event.key       = bsp_event->args_scancode.scancode;
+            plugin_event.state     = !(bsp_event->args_scancode.scancode & BSP_INPUT_SCANCODE_RELEASE_MODIFIER);
             plugin_event.modifiers = 0;
             break;
         default:
@@ -242,10 +238,10 @@ int asp_plugin_input_hook_register(plugin_context_t* ctx, plugin_input_hook_fn c
     }
 
     plugin_input_hooks[hook_index].bsp_hook_id = bsp_id;
-    plugin_input_hooks[hook_index].callback = callback;
-    plugin_input_hooks[hook_index].user_data = user_data;
-    plugin_input_hooks[hook_index].in_use = true;
-    plugin_input_hooks[hook_index].owner = ctx;
+    plugin_input_hooks[hook_index].callback    = callback;
+    plugin_input_hooks[hook_index].user_data   = user_data;
+    plugin_input_hooks[hook_index].in_use      = true;
+    plugin_input_hooks[hook_index].owner       = ctx;
 
     ESP_LOGI(TAG, "Registered plugin input hook %d (BSP hook %d)", hook_index, bsp_id);
     return hook_index;
@@ -264,9 +260,9 @@ void asp_plugin_input_hook_unregister(int hook_id) {
     bsp_input_hook_unregister(entry->bsp_hook_id);
 
     entry->bsp_hook_id = -1;
-    entry->callback = NULL;
-    entry->user_data = NULL;
-    entry->in_use = false;
+    entry->callback    = NULL;
+    entry->user_data   = NULL;
+    entry->in_use      = false;
 
     ESP_LOGI(TAG, "Unregistered plugin input hook %d", hook_id);
 }
@@ -277,17 +273,17 @@ bool asp_plugin_input_inject(plugin_input_event_t* event) {
     }
 
     bsp_input_event_t bsp_event = {0};
-    bsp_event.type = event->type;
+    bsp_event.type              = event->type;
 
     switch (event->type) {
         case INPUT_EVENT_TYPE_NAVIGATION:
-            bsp_event.args_navigation.key = event->key;
-            bsp_event.args_navigation.state = event->state;
+            bsp_event.args_navigation.key       = event->key;
+            bsp_event.args_navigation.state     = event->state;
             bsp_event.args_navigation.modifiers = event->modifiers;
             break;
         case INPUT_EVENT_TYPE_KEYBOARD:
-            bsp_event.args_keyboard.ascii = (char)event->key;
-            bsp_event.args_keyboard.utf8 = NULL;
+            bsp_event.args_keyboard.ascii     = (char)event->key;
+            bsp_event.args_keyboard.utf8      = NULL;
             bsp_event.args_keyboard.modifiers = event->modifiers;
             break;
         case INPUT_EVENT_TYPE_SCANCODE:
@@ -317,13 +313,13 @@ bool asp_plugin_input_poll(plugin_input_event_t* event, uint32_t timeout_ms) {
     if (xQueueReceive(input_queue, &bsp_event, pdMS_TO_TICKS(timeout_ms)) == pdTRUE) {
         event->type = bsp_event.type;
         if (bsp_event.type == INPUT_EVENT_TYPE_NAVIGATION) {
-            event->key = bsp_event.args_navigation.key;
-            event->state = bsp_event.args_navigation.state;
+            event->key       = bsp_event.args_navigation.key;
+            event->state     = bsp_event.args_navigation.state;
             event->modifiers = 0;
         } else if (bsp_event.type == INPUT_EVENT_TYPE_KEYBOARD) {
             // Keyboard events provide ASCII character, not key code
-            event->key = (uint32_t)bsp_event.args_keyboard.ascii;
-            event->state = true;  // Keyboard events are character inputs
+            event->key       = (uint32_t)bsp_event.args_keyboard.ascii;
+            event->state     = true;  // Keyboard events are character inputs
             event->modifiers = bsp_event.args_keyboard.modifiers;
         }
         return true;
@@ -455,8 +451,7 @@ bool asp_plugin_should_stop(plugin_context_t* ctx) {
 // TODO: Implement menu item registration
 // This requires integration with the GUI menu system
 
-int asp_plugin_menu_add_item(const char* label, pax_buf_t* icon,
-                              plugin_menu_callback_t callback, void* arg) {
+int asp_plugin_menu_add_item(const char* label, pax_buf_t* icon, plugin_menu_callback_t callback, void* arg) {
     ESP_LOGW(TAG, "asp_plugin_menu_add_item not yet implemented");
     return -1;
 }
@@ -472,11 +467,11 @@ void asp_plugin_menu_remove_item(int item_id) {
 #define MAX_EVENT_HANDLERS 16
 
 typedef struct {
-    bool active;
-    uint32_t event_mask;
+    bool                   active;
+    uint32_t               event_mask;
     plugin_event_handler_t handler;
-    void* arg;
-    plugin_context_t* owner;  // Track which plugin owns this registration
+    void*                  arg;
+    plugin_context_t*      owner;  // Track which plugin owns this registration
 } event_handler_entry_t;
 
 static event_handler_entry_t event_handlers[MAX_EVENT_HANDLERS] = {0};
@@ -484,11 +479,11 @@ static event_handler_entry_t event_handlers[MAX_EVENT_HANDLERS] = {0};
 int asp_plugin_event_register(plugin_context_t* ctx, uint32_t event_mask, plugin_event_handler_t handler, void* arg) {
     for (int i = 0; i < MAX_EVENT_HANDLERS; i++) {
         if (!event_handlers[i].active) {
-            event_handlers[i].active = true;
+            event_handlers[i].active     = true;
             event_handlers[i].event_mask = event_mask;
-            event_handlers[i].handler = handler;
-            event_handlers[i].arg = arg;
-            event_handlers[i].owner = ctx;
+            event_handlers[i].handler    = handler;
+            event_handlers[i].arg        = arg;
+            event_handlers[i].owner      = ctx;
             ESP_LOGI(TAG, "Registered event handler %d for mask 0x%lx", i, (unsigned long)event_mask);
             return i;
         }
@@ -499,7 +494,7 @@ int asp_plugin_event_register(plugin_context_t* ctx, uint32_t event_mask, plugin
 
 void asp_plugin_event_unregister(int handler_id) {
     if (handler_id >= 0 && handler_id < MAX_EVENT_HANDLERS) {
-        event_handlers[handler_id].active = false;
+        event_handlers[handler_id].active  = false;
         event_handlers[handler_id].handler = NULL;
         ESP_LOGI(TAG, "Unregistered event handler %d", handler_id);
     }
@@ -509,9 +504,7 @@ void asp_plugin_event_unregister(int handler_id) {
 int plugin_api_dispatch_event(uint32_t event_type, void* event_data) {
     int handled = 0;
     for (int i = 0; i < MAX_EVENT_HANDLERS; i++) {
-        if (event_handlers[i].active &&
-            (event_handlers[i].event_mask & event_type) &&
-            event_handlers[i].handler) {
+        if (event_handlers[i].active && (event_handlers[i].event_mask & event_type) && event_handlers[i].handler) {
             int result = event_handlers[i].handler(event_type, event_data, event_handlers[i].arg);
             if (result > 0) handled++;
         }
@@ -525,14 +518,13 @@ int plugin_api_dispatch_event(uint32_t event_type, void* event_data) {
 // Settings API Implementation
 // ============================================
 
-bool asp_plugin_settings_get_string(plugin_context_t* ctx, const char* key,
-                                     char* value, size_t max_len) {
+bool asp_plugin_settings_get_string(plugin_context_t* ctx, const char* key, char* value, size_t max_len) {
     if (!ctx || !ctx->settings_namespace || !key || !value) {
         return false;
     }
 
     nvs_handle_t handle;
-    esp_err_t err = nvs_open(ctx->settings_namespace, NVS_READONLY, &handle);
+    esp_err_t    err = nvs_open(ctx->settings_namespace, NVS_READONLY, &handle);
     if (err != ESP_OK) {
         return false;
     }
@@ -543,14 +535,13 @@ bool asp_plugin_settings_get_string(plugin_context_t* ctx, const char* key,
     return err == ESP_OK;
 }
 
-bool asp_plugin_settings_set_string(plugin_context_t* ctx, const char* key,
-                                     const char* value) {
+bool asp_plugin_settings_set_string(plugin_context_t* ctx, const char* key, const char* value) {
     if (!ctx || !ctx->settings_namespace || !key || !value) {
         return false;
     }
 
     nvs_handle_t handle;
-    esp_err_t err = nvs_open(ctx->settings_namespace, NVS_READWRITE, &handle);
+    esp_err_t    err = nvs_open(ctx->settings_namespace, NVS_READWRITE, &handle);
     if (err != ESP_OK) {
         return false;
     }
@@ -570,7 +561,7 @@ bool asp_plugin_settings_get_int(plugin_context_t* ctx, const char* key, int32_t
     }
 
     nvs_handle_t handle;
-    esp_err_t err = nvs_open(ctx->settings_namespace, NVS_READONLY, &handle);
+    esp_err_t    err = nvs_open(ctx->settings_namespace, NVS_READONLY, &handle);
     if (err != ESP_OK) {
         return false;
     }
@@ -587,7 +578,7 @@ bool asp_plugin_settings_set_int(plugin_context_t* ctx, const char* key, int32_t
     }
 
     nvs_handle_t handle;
-    esp_err_t err = nvs_open(ctx->settings_namespace, NVS_READWRITE, &handle);
+    esp_err_t    err = nvs_open(ctx->settings_namespace, NVS_READWRITE, &handle);
     if (err != ESP_OK) {
         return false;
     }
@@ -611,20 +602,16 @@ bool asp_plugin_settings_set_int(plugin_context_t* ctx, const char* key, int32_t
 // ============================================
 
 #include "common/theme.h"
-#include "menu/message_dialog.h"
 #include "icons.h"
+#include "menu/message_dialog.h"
 
-plugin_dialog_result_t asp_plugin_show_info_dialog(
-    const char* title,
-    const char* message,
-    uint32_t timeout_ms
-) {
+plugin_dialog_result_t asp_plugin_show_info_dialog(const char* title, const char* message, uint32_t timeout_ms) {
     if (!title || !message) {
         return PLUGIN_DIALOG_RESULT_CANCEL;
     }
 
-    pax_buf_t* buffer = display_get_buffer();
-    gui_theme_t* theme = get_theme();
+    pax_buf_t*    buffer            = display_get_buffer();
+    gui_theme_t*  theme             = get_theme();
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
@@ -632,15 +619,14 @@ plugin_dialog_result_t asp_plugin_show_info_dialog(
 
     // Draw dialog background and header
     render_base_screen_statusbar(buffer, theme, true, true, true,
-        ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1,
-        ADV_DIALOG_FOOTER_OK, NULL, 0);
+                                 ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1,
+                                 ADV_DIALOG_FOOTER_OK, NULL, 0);
 
     // Draw message in content area
     int content_y = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding;
     int content_x = theme->menu.horizontal_margin + theme->menu.horizontal_padding;
 
-    pax_draw_text(buffer, theme->palette.color_foreground,
-                  theme->menu.text_font, 16, content_x, content_y, message);
+    pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, 16, content_x, content_y, message);
 
     display_blit_buffer(buffer);
 
@@ -650,15 +636,14 @@ plugin_dialog_result_t asp_plugin_show_info_dialog(
 
     while (1) {
         bsp_input_event_t event;
-        TickType_t elapsed = xTaskGetTickCount() - start_time;
-        TickType_t remaining = (elapsed < wait_ticks) ? (wait_ticks - elapsed) : 0;
+        TickType_t        elapsed   = xTaskGetTickCount() - start_time;
+        TickType_t        remaining = (elapsed < wait_ticks) ? (wait_ticks - elapsed) : 0;
 
         if (timeout_ms > 0 && remaining == 0) {
             return PLUGIN_DIALOG_RESULT_TIMEOUT;
         }
 
-        TickType_t poll_time = (timeout_ms > 0 && remaining < pdMS_TO_TICKS(1000))
-                               ? remaining : pdMS_TO_TICKS(1000);
+        TickType_t poll_time = (timeout_ms > 0 && remaining < pdMS_TO_TICKS(1000)) ? remaining : pdMS_TO_TICKS(1000);
 
         if (xQueueReceive(input_event_queue, &event, poll_time) == pdTRUE) {
             if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.state) {
@@ -674,25 +659,21 @@ plugin_dialog_result_t asp_plugin_show_info_dialog(
         } else {
             // Refresh status bar on timeout (clock, battery, etc.)
             render_base_screen_statusbar(buffer, theme, false, true, false,
-                ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1,
-                NULL, 0, NULL, 0);
+                                         ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1, NULL,
+                                         0, NULL, 0);
             display_blit_buffer(buffer);
         }
     }
 }
 
-plugin_dialog_result_t asp_plugin_show_text_dialog(
-    const char* title,
-    const char** lines,
-    size_t line_count,
-    uint32_t timeout_ms
-) {
+plugin_dialog_result_t asp_plugin_show_text_dialog(const char* title, const char** lines, size_t line_count,
+                                                   uint32_t timeout_ms) {
     if (!title || !lines || line_count == 0) {
         return PLUGIN_DIALOG_RESULT_CANCEL;
     }
 
-    pax_buf_t* buffer = display_get_buffer();
-    gui_theme_t* theme = get_theme();
+    pax_buf_t*    buffer            = display_get_buffer();
+    gui_theme_t*  theme             = get_theme();
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
@@ -700,12 +681,12 @@ plugin_dialog_result_t asp_plugin_show_text_dialog(
 
     // Draw dialog
     render_base_screen_statusbar(buffer, theme, true, true, true,
-        ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1,
-        ADV_DIALOG_FOOTER_OK, NULL, 0);
+                                 ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1,
+                                 ADV_DIALOG_FOOTER_OK, NULL, 0);
 
     // Draw lines in content area
-    int content_y = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding;
-    int content_x = theme->menu.horizontal_margin + theme->menu.horizontal_padding;
+    int content_y   = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding;
+    int content_x   = theme->menu.horizontal_margin + theme->menu.horizontal_padding;
     int line_height = 20;
 
     // Limit to 10 lines max to avoid overflow
@@ -713,8 +694,7 @@ plugin_dialog_result_t asp_plugin_show_text_dialog(
 
     for (size_t i = 0; i < max_lines; i++) {
         if (lines[i]) {
-            pax_draw_text(buffer, theme->palette.color_foreground,
-                          theme->menu.text_font, 16, content_x,
+            pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, 16, content_x,
                           content_y + (i * line_height), lines[i]);
         }
     }
@@ -727,15 +707,14 @@ plugin_dialog_result_t asp_plugin_show_text_dialog(
 
     while (1) {
         bsp_input_event_t event;
-        TickType_t elapsed = xTaskGetTickCount() - start_time;
-        TickType_t remaining = (elapsed < wait_ticks) ? (wait_ticks - elapsed) : 0;
+        TickType_t        elapsed   = xTaskGetTickCount() - start_time;
+        TickType_t        remaining = (elapsed < wait_ticks) ? (wait_ticks - elapsed) : 0;
 
         if (timeout_ms > 0 && remaining == 0) {
             return PLUGIN_DIALOG_RESULT_TIMEOUT;
         }
 
-        TickType_t poll_time = (timeout_ms > 0 && remaining < pdMS_TO_TICKS(1000))
-                               ? remaining : pdMS_TO_TICKS(1000);
+        TickType_t poll_time = (timeout_ms > 0 && remaining < pdMS_TO_TICKS(1000)) ? remaining : pdMS_TO_TICKS(1000);
 
         if (xQueueReceive(input_event_queue, &event, poll_time) == pdTRUE) {
             if (event.type == INPUT_EVENT_TYPE_NAVIGATION && event.args_navigation.state) {
@@ -751,8 +730,8 @@ plugin_dialog_result_t asp_plugin_show_text_dialog(
         } else {
             // Refresh status bar on timeout
             render_base_screen_statusbar(buffer, theme, false, true, false,
-                ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1,
-                NULL, 0, NULL, 0);
+                                         ((gui_element_icontext_t[]){{get_icon(ICON_SPEAKER), (char*)title}}), 1, NULL,
+                                         0, NULL, 0);
             display_blit_buffer(buffer);
         }
     }
@@ -783,8 +762,7 @@ void plugin_api_init(void) {
 void plugin_api_cleanup_for_plugin(plugin_context_t* ctx) {
     if (ctx == NULL) return;
 
-    ESP_LOGI(TAG, "Cleaning up API registrations for plugin: %s",
-             ctx->plugin_slug ? ctx->plugin_slug : "unknown");
+    ESP_LOGI(TAG, "Cleaning up API registrations for plugin: %s", ctx->plugin_slug ? ctx->plugin_slug : "unknown");
 
     if (plugin_api_mutex) {
         xSemaphoreTake(plugin_api_mutex, portMAX_DELAY);
@@ -794,10 +772,10 @@ void plugin_api_cleanup_for_plugin(plugin_context_t* ctx) {
     for (int i = 0; i < MAX_STATUS_WIDGETS; i++) {
         if (status_widgets[i].active && status_widgets[i].owner == ctx) {
             ESP_LOGI(TAG, "Auto-unregistering status widget %d", i);
-            status_widgets[i].active = false;
-            status_widgets[i].callback = NULL;
+            status_widgets[i].active    = false;
+            status_widgets[i].callback  = NULL;
             status_widgets[i].user_data = NULL;
-            status_widgets[i].owner = NULL;
+            status_widgets[i].owner     = NULL;
         }
     }
 
@@ -807,10 +785,10 @@ void plugin_api_cleanup_for_plugin(plugin_context_t* ctx) {
             ESP_LOGI(TAG, "Auto-unregistering input hook %d", i);
             bsp_input_hook_unregister(plugin_input_hooks[i].bsp_hook_id);
             plugin_input_hooks[i].bsp_hook_id = -1;
-            plugin_input_hooks[i].callback = NULL;
-            plugin_input_hooks[i].user_data = NULL;
-            plugin_input_hooks[i].in_use = false;
-            plugin_input_hooks[i].owner = NULL;
+            plugin_input_hooks[i].callback    = NULL;
+            plugin_input_hooks[i].user_data   = NULL;
+            plugin_input_hooks[i].in_use      = false;
+            plugin_input_hooks[i].owner       = NULL;
         }
     }
 
@@ -818,11 +796,11 @@ void plugin_api_cleanup_for_plugin(plugin_context_t* ctx) {
     for (int i = 0; i < MAX_EVENT_HANDLERS; i++) {
         if (event_handlers[i].active && event_handlers[i].owner == ctx) {
             ESP_LOGI(TAG, "Auto-unregistering event handler %d", i);
-            event_handlers[i].active = false;
+            event_handlers[i].active     = false;
             event_handlers[i].event_mask = 0;
-            event_handlers[i].handler = NULL;
-            event_handlers[i].arg = NULL;
-            event_handlers[i].owner = NULL;
+            event_handlers[i].handler    = NULL;
+            event_handlers[i].arg        = NULL;
+            event_handlers[i].owner      = NULL;
         }
     }
 
@@ -831,7 +809,7 @@ void plugin_api_cleanup_for_plugin(plugin_context_t* ctx) {
         if (led_claims[i].claimed && led_claims[i].owner == ctx) {
             ESP_LOGI(TAG, "Auto-releasing LED claim %d", i);
             led_claims[i].claimed = false;
-            led_claims[i].owner = NULL;
+            led_claims[i].owner   = NULL;
         }
     }
 
