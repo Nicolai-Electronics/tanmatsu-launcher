@@ -19,6 +19,7 @@
 #include "bsp/input.h"
 #include "bsp/power.h"
 #include "common/display.h"
+#include "esp_wifi.h"
 #include "filesystem_utils.h"
 #include "freertos/idf_additions.h"
 #include "gui_element_footer.h"
@@ -117,6 +118,7 @@ static appfs_handle_t ensure_interpreter_in_appfs(const char* interpreter_slug) 
 // switch USB to flash/monitor (debug) mode and power the radio off.
 void prepare_device_for_app_launch(void) {
     usb_mode_set(USB_DEBUG);
+    esp_wifi_stop();
     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
 }
 
