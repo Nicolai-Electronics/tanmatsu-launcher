@@ -75,12 +75,16 @@ typedef struct {
 
 typedef enum {
     VIEW_MODE_APPS = 0,
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
     VIEW_MODE_PLUGINS,
+#endif
 } view_mode_t;
 
 static view_mode_t current_view_mode = VIEW_MODE_APPS;
 
-// Check if a project's application type for the current device is "plugin"
+// Check if a project's application type for the current device is "plugin".
+// Always defined: even when plugins are disabled we use it to filter plugin
+// projects out of the apps view so they aren't shown as installable.
 static bool is_project_plugin(cJSON* project_obj) {
     cJSON* applications = cJSON_GetObjectItem(project_obj, "application");
     if (!applications || !cJSON_IsArray(applications)) return false;
@@ -383,7 +387,12 @@ static void load_all_icons(cJSON* json_projects) {
 }
 
 static void populate_project_list(menu_t* menu, cJSON* json_projects) {
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
     bool want_plugins = (current_view_mode == VIEW_MODE_PLUGINS);
+#else
+    // When plugin support is disabled, never list plugins.
+    bool want_plugins = false;
+#endif
 
     // Count valid entries matching the current view mode
     int    total = 0;
@@ -539,7 +548,11 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
         char server_info[160];
         snprintf(server_info, sizeof(server_info), "Server: %s", server);
 
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
         char* header_title = (current_view_mode == VIEW_MODE_PLUGINS) ? "Repository: Plugins" : "Repository: Apps";
+#else
+        char* header_title = "Repository";
+#endif
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
         {
@@ -549,8 +562,10 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
             int                    footer_left_count = 0;
             footer_left[footer_left_count++]         = (gui_element_icontext_t){get_icon(ICON_ESC), "/"};
             footer_left[footer_left_count++]         = (gui_element_icontext_t){get_icon(ICON_F1), "Back"};
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
             footer_left[footer_left_count++] =
                 (gui_element_icontext_t){get_icon(ICON_F2), current_view_mode == VIEW_MODE_APPS ? "Plugins" : "Apps"};
+#endif
             if (is_installed) {
                 footer_left[footer_left_count++] = (gui_element_icontext_t){get_icon(ICON_F5), "Remove"};
             }
@@ -674,8 +689,12 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                         ESP_LOGE(TAG, "Wrapper object is NULL");
                                         break;
                                     }
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
                                     menu_repository_client_project(buffer, theme, wrapper,
                                                                    current_view_mode == VIEW_MODE_PLUGINS);
+#else
+                                    menu_repository_client_project(buffer, theme, wrapper, false);
+#endif
                                     // Rebuild menu to refresh status markers (app may have been installed)
                                     menu_free(&menu);
                                     menu_initialize(&menu);
@@ -688,6 +707,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                 render(buffer, theme, &menu, server, false, true);
                                 break;
                             }
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
                             case BSP_INPUT_NAVIGATION_KEY_F2: {
                                 // Toggle between Apps and Plugins view
                                 current_view_mode =
@@ -699,6 +719,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                 render(buffer, theme, &menu, server, false, true);
                                 break;
                             }
+#endif
                             case BSP_INPUT_NAVIGATION_KEY_F5: {
                                 size_t pos = menu_get_position(&menu);
                                 if (pos >= (size_t)project_count || project_statuses == NULL) break;
@@ -708,18 +729,26 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                                 cJSON* slug_obj = wrapper ? cJSON_GetObjectItem(wrapper, "slug") : NULL;
                                 if (slug_obj == NULL) break;
 
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
                                 const char* delete_title =
                                     (current_view_mode == VIEW_MODE_PLUGINS) ? "Delete Plugin" : "Delete App";
                                 const char* delete_msg = (current_view_mode == VIEW_MODE_PLUGINS)
                                                              ? "Do you really want to delete the plugin?"
                                                              : "Do you really want to delete the app?";
+#else
+                                const char* delete_title = "Delete App";
+                                const char* delete_msg   = "Do you really want to delete the app?";
+#endif
                                 message_dialog_return_type_t msg_ret =
                                     adv_dialog_yes_no(get_icon(ICON_HELP), delete_title, delete_msg);
                                 if (msg_ret == MSG_DIALOG_RETURN_OK) {
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
                                     if (current_view_mode == VIEW_MODE_PLUGINS) {
                                         app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL_PLUGINS);
                                         app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_SD_PLUGINS);
-                                    } else {
+                                    } else
+#endif
+                                    {
                                         app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_INTERNAL);
                                         app_mgmt_uninstall(slug_obj->valuestring, APP_MGMT_LOCATION_SD);
                                     }

@@ -1,3 +1,17 @@
+menu "Launcher plugins"
+
+    config ENABLE_LAUNCHERPLUGINS
+        bool "Enable launcher plugin support"
+        depends on IDF_TARGET_ESP32P4
+        default n
+        help
+            Enable dynamic loading and running of ELF-based launcher plugins.
+            Pulls in the plugin manager, plugin UI, audio mixer and the
+            badge-elf / badge-elf-api components. Disable on memory-constrained
+            targets that cannot host plugins. Only available on ESP32-P4.
+
+endmenu
+
 menu "Fast FATFS I/O"
 
     config FATFS_USE_FASTOPEN
