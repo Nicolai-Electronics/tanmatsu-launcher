@@ -191,8 +191,8 @@ mode_badgelink:
 BADGELINK_LOCAL_SH  := components/badgeteam__badgelink/tools/badgelink.sh
 BADGELINK_MANAGED_SH := managed_components/badgeteam__badgelink/tools/badgelink.sh
 
-.PHONY: mode_usb
-mode_usb:
+.PHONY: mode_debug
+mode_debug:
 	if [ -x "$(BADGELINK_LOCAL_SH)" ]; then \
 		BL_SH="$(BADGELINK_LOCAL_SH)"; \
 	elif [ -x "$(BADGELINK_MANAGED_SH)" ]; then \
@@ -202,7 +202,7 @@ mode_usb:
 		exit 1; \
 	fi; \
 	echo "Using $$BL_SH"; \
-	"$$BL_SH" $(BADGELINK_CONN) mode usb
+	"$$BL_SH" $(BADGELINK_CONN) mode debug
 
 .PHONY: openocd
 openocd:

@@ -344,10 +344,26 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
 
     // Remove stale AppFS cache if present so the newly-installed /sd copy becomes the source of truth
     // on next launch. The int/appfs path writes directly to AppFS and is handled before the download;
-    // plugins and int/elf/int/script installs don't use AppFS.
+    // plugins and int/elf/int/script installs don't use AppFS. If the cached revision still matches
+    // the metadata revision, the cache is up-to-date and we keep it.
     if (location == APP_MGMT_LOCATION_SD && appfsExists(slug)) {
-        ESP_LOGI(TAG, "Removing stale AppFS cache for %s", slug);
-        appfsDeleteFile(slug);
+        uint32_t       new_revision    = 0;
+        cJSON*         revision_obj    = cJSON_GetObjectItem(application, "revision");
+        if (revision_obj != NULL && cJSON_IsNumber(revision_obj)) {
+            new_revision = (uint32_t)revision_obj->valueint;
+        }
+        appfs_handle_t cached_fd       = appfsOpen(slug);
+        uint16_t       cached_revision = 0;
+        if (cached_fd != APPFS_INVALID_FD) {
+            appfsEntryInfoExt(cached_fd, NULL, NULL, &cached_revision, NULL);
+        }
+        if ((uint16_t)new_revision != cached_revision) {
+            ESP_LOGI(TAG, "Removing stale AppFS cache for %s (cached rev %u, new rev %u)", slug, cached_revision,
+                     new_revision);
+            appfsDeleteFile(slug);
+        } else {
+            ESP_LOGI(TAG, "Keeping AppFS cache for %s (revision %u unchanged)", slug, cached_revision);
+        }
     }
 
     free_repository_data_json(&metadata);
