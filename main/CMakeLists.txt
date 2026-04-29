@@ -15,6 +15,7 @@ list(APPEND extra_sources
 	"plugin_api.c"
 	"plugin_manager.c"
 	"menu/menu_plugins.c"
+	"audio_mixer.c"
 )
 endif()
 
