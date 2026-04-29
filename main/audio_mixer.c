@@ -48,19 +48,28 @@ static void mixer_task_fn(void* arg) {
     while (1) {
         memset(g_accum, 0, sizeof(g_accum));
 
+        // Sum samples from every stream that produced data this chunk and
+        // count how many sources contributed, so we can divide the mix down
+        // to avoid clipping when multiple plugins play simultaneously.
+        int active_count = 0;
         xSemaphoreTake(g_streams_mutex, portMAX_DELAY);
         for (int i = 0; i < AUDIO_MIXER_MAX_STREAMS; i++) {
             if (!g_streams[i].active || g_streams[i].paused || g_streams[i].buf == NULL) continue;
             size_t got = xStreamBufferReceive(g_streams[i].buf, g_in_buf, sizeof(g_in_buf), 0);
-            size_t n   = got / sizeof(int16_t);
+            if (got == 0) continue;
+            active_count++;
+            size_t n = got / sizeof(int16_t);
             for (size_t j = 0; j < n; j++) {
                 g_accum[j] += g_in_buf[j];
             }
         }
         xSemaphoreGive(g_streams_mutex);
 
+        // Per-source volume = total / N. Saturate as a safety net in case
+        // a single source is already at the int16 boundary.
+        int divisor = (active_count > 0) ? active_count : 1;
         for (size_t j = 0; j < MIXER_CHUNK_SAMPLES; j++) {
-            int32_t s = g_accum[j];
+            int32_t s = g_accum[j] / divisor;
             if (s > INT16_MAX) s = INT16_MAX;
             else if (s < INT16_MIN) s = INT16_MIN;
             g_out_buf[j] = (int16_t)s;
@@ -105,62 +114,81 @@ esp_err_t audio_mixer_init(void) {
     return ESP_OK;
 }
 
-bool audio_mixer_register_stream(TaskHandle_t task) {
-    if (!g_initialized || task == NULL) return false;
-
-    xSemaphoreTake(g_streams_mutex, portMAX_DELAY);
-
+// Find an existing slot for `task`. Caller must hold g_streams_mutex.
+// Returns slot index or -1.
+static int find_slot_locked(TaskHandle_t task) {
     for (int i = 0; i < AUDIO_MIXER_MAX_STREAMS; i++) {
-        if (g_streams[i].active && g_streams[i].owner == task) {
-            xSemaphoreGive(g_streams_mutex);
-            return true;
+        if (g_streams[i].active && g_streams[i].owner == task) return i;
+    }
+    return -1;
+}
+
+// Free any slots whose owner task no longer exists. Caller must hold the mutex.
+static void sweep_dead_locked(void) {
+    for (int i = 0; i < AUDIO_MIXER_MAX_STREAMS; i++) {
+        if (!g_streams[i].active) continue;
+        eTaskState s = eTaskGetState(g_streams[i].owner);
+        if (s == eDeleted || s == eInvalid) {
+            vStreamBufferDelete(g_streams[i].buf);
+            g_streams[i].active = false;
+            g_streams[i].owner  = NULL;
+            g_streams[i].buf    = NULL;
+            g_streams[i].paused = false;
         }
     }
+}
 
+// Allocate a fresh slot for `task`. Caller must hold the mutex.
+// Returns slot index or -1 on out-of-slots / out-of-memory.
+static int alloc_slot_locked(TaskHandle_t task) {
     for (int i = 0; i < AUDIO_MIXER_MAX_STREAMS; i++) {
         if (!g_streams[i].active) {
             StreamBufferHandle_t buf = xStreamBufferCreate(MIXER_STREAM_BYTES, MIXER_FRAME_BYTES);
             if (buf == NULL) {
-                xSemaphoreGive(g_streams_mutex);
                 ESP_LOGE(TAG, "Failed to allocate stream buffer for task %p", task);
-                return false;
+                return -1;
             }
             g_streams[i].buf    = buf;
             g_streams[i].owner  = task;
             g_streams[i].paused = false;
             g_streams[i].active = true;
-            xSemaphoreGive(g_streams_mutex);
-            ESP_LOGD(TAG, "Registered audio stream %d for task %p", i, task);
-            return true;
+            ESP_LOGD(TAG, "Auto-registered audio stream %d for task %p", i, task);
+            return i;
         }
     }
-
-    xSemaphoreGive(g_streams_mutex);
-    ESP_LOGW(TAG, "No free stream slot for task %p", task);
-    return false;
+    return -1;
 }
 
-void audio_mixer_unregister_stream(TaskHandle_t task) {
-    if (!g_initialized || task == NULL) return;
+// Find existing slot or allocate one (sweeping dead slots first if full).
+// Caller must hold the mutex.
+static int find_or_alloc_slot_locked(TaskHandle_t task) {
+    int idx = find_slot_locked(task);
+    if (idx >= 0) return idx;
+    idx = alloc_slot_locked(task);
+    if (idx >= 0) return idx;
+    sweep_dead_locked();
+    return alloc_slot_locked(task);
+}
 
-    StreamBufferHandle_t to_delete = NULL;
-
+// Public API: pre-registration is now optional — writes auto-register.
+// Kept for backwards compatibility; returns true if a slot exists or was
+// freshly allocated.
+bool audio_mixer_register_stream(TaskHandle_t task) {
+    if (!g_initialized || task == NULL) return false;
     xSemaphoreTake(g_streams_mutex, portMAX_DELAY);
-    for (int i = 0; i < AUDIO_MIXER_MAX_STREAMS; i++) {
-        if (g_streams[i].active && g_streams[i].owner == task) {
-            to_delete           = g_streams[i].buf;
-            g_streams[i].active = false;
-            g_streams[i].owner  = NULL;
-            g_streams[i].buf    = NULL;
-            break;
-        }
-    }
+    int idx = find_or_alloc_slot_locked(task);
     xSemaphoreGive(g_streams_mutex);
+    return idx >= 0;
+}
 
-    if (to_delete != NULL) {
-        vStreamBufferDelete(to_delete);
-        ESP_LOGD(TAG, "Unregistered audio stream for task %p", task);
-    }
+// Garbage-collect any slots whose owner task has been deleted. The `task`
+// argument is ignored — kept in the signature for source compatibility.
+void audio_mixer_unregister_stream(TaskHandle_t task) {
+    (void)task;
+    if (!g_initialized) return;
+    xSemaphoreTake(g_streams_mutex, portMAX_DELAY);
+    sweep_dead_locked();
+    xSemaphoreGive(g_streams_mutex);
 }
 
 size_t audio_mixer_write(TaskHandle_t task, const void* samples, size_t size_bytes, int64_t timeout_ms) {
@@ -169,11 +197,9 @@ size_t audio_mixer_write(TaskHandle_t task, const void* samples, size_t size_byt
     StreamBufferHandle_t buf = NULL;
 
     xSemaphoreTake(g_streams_mutex, portMAX_DELAY);
-    for (int i = 0; i < AUDIO_MIXER_MAX_STREAMS; i++) {
-        if (g_streams[i].active && g_streams[i].owner == task && !g_streams[i].paused) {
-            buf = g_streams[i].buf;
-            break;
-        }
+    int idx = find_or_alloc_slot_locked(task);
+    if (idx >= 0 && !g_streams[idx].paused) {
+        buf = g_streams[idx].buf;
     }
     xSemaphoreGive(g_streams_mutex);
 
@@ -185,34 +211,26 @@ size_t audio_mixer_write(TaskHandle_t task, const void* samples, size_t size_byt
 
 bool audio_mixer_start(TaskHandle_t task) {
     if (!g_initialized || task == NULL) return false;
-
-    bool found = false;
+    bool ok = false;
     xSemaphoreTake(g_streams_mutex, portMAX_DELAY);
-    for (int i = 0; i < AUDIO_MIXER_MAX_STREAMS; i++) {
-        if (g_streams[i].active && g_streams[i].owner == task) {
-            g_streams[i].paused = false;
-            found               = true;
-            break;
-        }
+    int idx = find_or_alloc_slot_locked(task);
+    if (idx >= 0) {
+        g_streams[idx].paused = false;
+        ok                    = true;
     }
     xSemaphoreGive(g_streams_mutex);
-    return found;
+    return ok;
 }
 
 bool audio_mixer_stop(TaskHandle_t task) {
     if (!g_initialized || task == NULL) return false;
 
-    StreamBufferHandle_t buf   = NULL;
-    bool                 found = false;
-
+    StreamBufferHandle_t buf = NULL;
     xSemaphoreTake(g_streams_mutex, portMAX_DELAY);
-    for (int i = 0; i < AUDIO_MIXER_MAX_STREAMS; i++) {
-        if (g_streams[i].active && g_streams[i].owner == task) {
-            g_streams[i].paused = true;
-            buf                 = g_streams[i].buf;
-            found               = true;
-            break;
-        }
+    int idx = find_slot_locked(task);
+    if (idx >= 0) {
+        g_streams[idx].paused = true;
+        buf                   = g_streams[idx].buf;
     }
     xSemaphoreGive(g_streams_mutex);
 
@@ -221,5 +239,5 @@ bool audio_mixer_stop(TaskHandle_t task) {
     if (buf != NULL) {
         xStreamBufferReset(buf);
     }
-    return found;
+    return true;
 }

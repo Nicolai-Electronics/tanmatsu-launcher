@@ -16,6 +16,11 @@ list(APPEND extra_sources
 	"plugin_api.c"
 	"plugin_manager.c"
 	"menu/menu_plugins.c"
+)
+endif()
+
+if(CONFIG_ENABLE_AUDIOMIXER)
+list(APPEND extra_sources
 	"audio_mixer.c"
 )
 endif()

@@ -6,9 +6,23 @@ menu "Launcher plugins"
         default n
         help
             Enable dynamic loading and running of ELF-based launcher plugins.
-            Pulls in the plugin manager, plugin UI, audio mixer and the
-            badge-elf / badge-elf-api components. Disable on memory-constrained
-            targets that cannot host plugins. Only available on ESP32-P4.
+            Pulls in the plugin manager, plugin UI and the badge-elf /
+            badge-elf-api components. Disable on memory-constrained targets
+            that cannot host plugins. Only available on ESP32-P4.
+
+endmenu
+
+menu "Audio"
+
+    config ENABLE_AUDIOMIXER
+        bool "Enable software audio mixer"
+        default n
+        help
+            Compile in the per-stream software audio mixer that owns the I2S
+            channel and lets multiple sound sources (plugins, mini-apps) play
+            concurrently without trampling each other's DMA buffers. When
+            disabled, plugin audio falls back to writing directly to I2S
+            (only one source can play cleanly at a time).
 
 endmenu
 

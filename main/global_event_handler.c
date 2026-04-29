@@ -4,11 +4,37 @@
 #include "bsp/audio.h"
 #include "bsp/input.h"
 #include "esp_err.h"
+#include "esp_log.h"
+#include "nvs_settings_hardware.h"
 #include "sdcard.h"
 
-static const char TAG[]              = "Event";
-static int        input_hook_id      = -1;
-static bool       power_button_latch = false;
+static const char TAG[]                  = "Event";
+static int        input_hook_id          = -1;
+static bool       power_button_latch     = false;
+static bool       headphones_inserted    = false;
+
+#define VOLUME_DEFAULT_PERCENT 50
+#define VOLUME_STEP_PERCENT     5
+
+static uint8_t get_active_volume(void) {
+    uint8_t v = VOLUME_DEFAULT_PERCENT;
+    if (headphones_inserted) {
+        nvs_settings_get_headphone_volume(&v, VOLUME_DEFAULT_PERCENT);
+    } else {
+        nvs_settings_get_speaker_volume(&v, VOLUME_DEFAULT_PERCENT);
+    }
+    return v;
+}
+
+static void set_active_volume(uint8_t percent) {
+    if (percent > 100) percent = 100;
+    if (headphones_inserted) {
+        nvs_settings_set_headphone_volume(percent);
+    } else {
+        nvs_settings_set_speaker_volume(percent);
+    }
+    bsp_audio_set_volume((float)percent);
+}
 
 static void handle_sdcard(bool inserted) {
     if (inserted) {
@@ -22,22 +48,22 @@ static void handle_sdcard(bool inserted) {
 
 static void handle_audiojack(bool inserted) {
     ESP_LOGI(TAG, "Audio jack %s", inserted ? "inserted" : "removed");
+    headphones_inserted = inserted;
     bsp_audio_set_amplifier(!inserted);
+    // Re-apply the per-output volume since speaker and headphone settings
+    // are stored separately.
+    bsp_audio_set_volume((float)get_active_volume());
 }
 
 static void handle_volume(bool up, bool state) {
     ESP_LOGI(TAG, "Audio volume %s %s", up ? "up" : "down", state ? "pressed" : "released");
-    if (state) {
-        float percentage = 0;
-        bsp_audio_get_volume(&percentage);
-        if (up) {
-            if (percentage >= 1.0f) percentage -= 1.0f;
-        } else {
-            if (percentage <= 99.0f) percentage += 1.0f;
-        }
-        bsp_audio_set_volume(percentage);
-        ESP_LOGI(TAG, "Audio volume set to %.0f%%", percentage);
-    }
+    if (!state) return;
+
+    int next = (int)get_active_volume() + (up ? VOLUME_STEP_PERCENT : -VOLUME_STEP_PERCENT);
+    if (next < 0) next = 0;
+    if (next > 100) next = 100;
+    set_active_volume((uint8_t)next);
+    ESP_LOGI(TAG, "Audio volume set to %d%%", next);
 }
 
 static bool input_hook_callback(bsp_input_event_t* event, void* user_data) {
@@ -92,13 +118,15 @@ esp_err_t global_event_handler_initialize(void) {
         ESP_LOGE(TAG, "Failed to read SD card event (%s)", esp_err_to_name(res));
     }
 
-    // Initialize audio jack
+    // Initialize audio jack (and apply the appropriate persisted volume)
     bool audiojack_inserted = false;
-    bsp_input_read_action(BSP_INPUT_ACTION_TYPE_AUDIO_JACK, &audiojack_inserted);
+    res                     = bsp_input_read_action(BSP_INPUT_ACTION_TYPE_AUDIO_JACK, &audiojack_inserted);
     if (res == ESP_OK) {
         handle_audiojack(audiojack_inserted);
     } else {
         ESP_LOGE(TAG, "Failed to read audio jack event (%s)", esp_err_to_name(res));
+        // Apply default volume anyway so audio isn't silent at boot.
+        handle_audiojack(false);
     }
 
     return ESP_OK;
