@@ -36,6 +36,7 @@
 #include "icons.h"
 #include "lora.h"
 #include "lora_settings_handler.h"
+#include "menu/apps.h"
 #include "menu/home.h"
 #include "menu/message_dialog.h"
 #include "ntp.h"
@@ -50,6 +51,7 @@
 #include "sdcard.h"
 #include "sdkconfig.h"
 #include "timezone.h"
+#include "usb_debug_listener.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
 #include "wifi_remote.h"
@@ -493,8 +495,11 @@ void app_main(void) {
 
     startup_dialog("Initializing BadgeLink...");
     badgelink_init();
+    badgelink_set_prepare_device_callback(prepare_device_for_app_launch);
+    badgelink_set_usb_mode_callback(usb_mode_set_from_badgelink);
     usb_initialize();
     badgelink_start(usb_send_data);
+    usb_debug_listener_initialize();
 
     startup_dialog("Detecting Add-On boards...");
     addon_initialize();

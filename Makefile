@@ -1,4 +1,10 @@
 PORT ?= /dev/ttyACM0
+BADGELINKPORT ?= $(PORT)
+
+# Determine badgelink connection argument: --tcp for host:port, --port otherwise.
+# If the user unsets BADGELINKPORT explicitly, no argument is passed and
+# badgelink.py falls back to its default libusb scan.
+BADGELINK_CONN := $(if $(BADGELINKPORT),$(if $(findstring :,$(BADGELINKPORT)),--tcp $(BADGELINKPORT),--port $(BADGELINKPORT)),)
 
 IDF_PATH ?= $(shell cat .IDF_PATH 2>/dev/null || echo `pwd`/esp-idf)
 IDF_TOOLS_PATH ?= $(shell cat .IDF_TOOLS_PATH 2>/dev/null || echo `pwd`/esp-idf-tools)
@@ -163,6 +169,40 @@ erase:
 .PHONY: monitor
 monitor:
 	source "$(IDF_PATH)/export.sh" && idf.py $(IDF_PARAMS) monitor -p $(PORT)
+
+# Ask the launcher (running in USB_DEBUG / flash-monitor mode) to switch its
+# USB into BadgeLink (USB_DEVICE) mode. The listener in main/usb_debug_listener.c
+# reacts to the token "BADGELINK\n" on the USB-serial/JTAG peripheral.
+#
+# PORT accepts either a local device path (e.g. /dev/ttyACM0) or an
+# rfc2217:// URL pointing to ../tanmatsu-badgefs/rfc2217proxy when the device
+# is being forwarded over the network.
+.PHONY: mode_badgelink
+mode_badgelink:
+	source "$(IDF_PATH)/export.sh" >/dev/null && \
+	python3 -c "import serial, sys; s=serial.serial_for_url('$(PORT)', timeout=1); s.write(b'BADGELINK\n'); s.flush(); sys.stdout.write(s.read(128).decode(errors='replace')); s.close()"
+
+# Ask the launcher (running in USB_DEVICE / BadgeLink mode) to switch its
+# USB back to flash/monitor (USB_DEBUG) mode via the BadgeLink `mode` command.
+# Prefers the locally-cloned badgelink at components/badgeteam__badgelink/
+# (see idf_component.yml override_path); falls back to the managed copy.
+# Uses BADGELINKPORT (defaults to PORT) for the connection: host:port → --tcp,
+# plain path → --port, unset → default libusb scan.
+BADGELINK_LOCAL_SH  := components/badgeteam__badgelink/tools/badgelink.sh
+BADGELINK_MANAGED_SH := managed_components/badgeteam__badgelink/tools/badgelink.sh
+
+.PHONY: mode_debug
+mode_debug:
+	if [ -x "$(BADGELINK_LOCAL_SH)" ]; then \
+		BL_SH="$(BADGELINK_LOCAL_SH)"; \
+	elif [ -x "$(BADGELINK_MANAGED_SH)" ]; then \
+		BL_SH="$(BADGELINK_MANAGED_SH)"; \
+	else \
+		echo "badgelink.sh not found in components/ or managed_components/"; \
+		exit 1; \
+	fi; \
+	echo "Using $$BL_SH"; \
+	"$$BL_SH" $(BADGELINK_CONN) mode debug
 
 .PHONY: openocd
 openocd:

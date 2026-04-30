@@ -17,7 +17,9 @@
 #include "badge_elf.h"
 #endif
 #include "bsp/input.h"
+#include "bsp/power.h"
 #include "common/display.h"
+#include "esp_wifi.h"
 #include "filesystem_utils.h"
 #include "freertos/idf_additions.h"
 #include "gui_element_footer.h"
@@ -56,20 +58,25 @@ static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
                 prefix = "[S]";
             } else if (apps[i]->executable_type == EXECUTABLE_TYPE_APPFS &&
                        apps[i]->executable_appfs_fd != APPFS_INVALID_FD) {
-                bool mismatch = false;
-                if (apps[i]->executable_on_fs_available) {
-                    // Check revision mismatch
-                    if (apps[i]->executable_on_fs_revision != apps[i]->executable_revision) {
-                        mismatch = true;
+                if (!apps[i]->executable_on_fs_available && app_mgmt_is_int_only(apps[i]->slug)) {
+                    // Int-installed: binary only in AppFS, cannot be uncached.
+                    prefix = "[I]";
+                } else {
+                    bool mismatch = false;
+                    if (apps[i]->executable_on_fs_available) {
+                        // Check revision mismatch
+                        if (apps[i]->executable_on_fs_revision != apps[i]->executable_revision) {
+                            mismatch = true;
+                        }
+                        // Check filesize mismatch
+                        int appfs_size = 0;
+                        appfsEntryInfoExt(apps[i]->executable_appfs_fd, NULL, NULL, NULL, &appfs_size);
+                        if (appfs_size != apps[i]->executable_on_fs_filesize) {
+                            mismatch = true;
+                        }
                     }
-                    // Check filesize mismatch
-                    int appfs_size = 0;
-                    appfsEntryInfoExt(apps[i]->executable_appfs_fd, NULL, NULL, NULL, &appfs_size);
-                    if (appfs_size != apps[i]->executable_on_fs_filesize) {
-                        mismatch = true;
-                    }
+                    prefix = mismatch ? "[M]" : "[C]";
                 }
-                prefix = mismatch ? "[M]" : "[C]";
             }
             snprintf(label, sizeof(label), "%s %s", prefix, apps[i]->name);
             menu_insert_item_icon(menu, label, NULL, (void*)apps[i], -1, apps[i]->icon);
@@ -107,6 +114,14 @@ static appfs_handle_t ensure_interpreter_in_appfs(const char* interpreter_slug) 
     return APPFS_INVALID_FD;
 }
 
+// Put the device into a known state before handing control to an app:
+// switch USB to flash/monitor (debug) mode and power the radio off.
+void prepare_device_for_app_launch(void) {
+    usb_mode_set(USB_DEBUG);
+    esp_wifi_stop();
+    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+}
+
 void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app_t* app) {
 
     if (app == NULL) {
@@ -141,7 +156,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                 printf("Waiting for wifi stack task to finish...\n");
                 vTaskDelay(pdMS_TO_TICKS(100));
             }
-            usb_mode_set(USB_DEBUG);
+            prepare_device_for_app_launch();
             esp_restart();
             break;
         case EXECUTABLE_TYPE_ELF: {
@@ -212,7 +227,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                 printf("Waiting for wifi stack task to finish...\n");
                 vTaskDelay(pdMS_TO_TICKS(100));
             }
-            usb_mode_set(USB_DEBUG);
+            prepare_device_for_app_launch();
             esp_restart();
             free(path);  // Not reached
             break;

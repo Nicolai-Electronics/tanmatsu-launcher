@@ -22,6 +22,8 @@
 #include "pax_text.h"
 #include "pax_types.h"
 #include "repository_client.h"
+#include "sdcard.h"
+#include "shapes/pax_lines.h"
 
 static const char* TAG = "Repository client: project";
 
@@ -30,7 +32,60 @@ typedef enum {
     ACTION_INSTALL_SD,
 } menu_repository_client_project_action_t;
 
-static void render_project(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, cJSON* project) {
+typedef struct {
+    bool external_only;
+    bool external_preferred;
+    bool internal_only;
+    bool internal_preferred;
+    bool sd_present;
+    bool internal_disabled;
+    bool sd_disabled;
+    bool default_internal;
+    bool sd_required_warning;
+} install_constraints_t;
+
+static bool get_bool_field(cJSON* obj, const char* name) {
+    cJSON* item = cJSON_GetObjectItem(obj, name);
+    if (item == NULL || !cJSON_IsBool(item)) {
+        return false;
+    }
+    return cJSON_IsTrue(item);
+}
+
+static void resolve_constraints(cJSON* project, install_constraints_t* out) {
+    out->external_only       = get_bool_field(project, "external_only");
+    out->external_preferred  = get_bool_field(project, "external_preferred");
+    out->internal_only       = get_bool_field(project, "internal_only");
+    out->internal_preferred  = get_bool_field(project, "internal_preferred");
+    out->sd_present          = (sd_status() == SD_STATUS_OK);
+
+    // If both *_only flags are set the metadata is contradictory; let internal_only win
+    // because the device always has internal storage but may not have an SD card inserted.
+    out->internal_disabled = out->external_only && !out->internal_only;
+    out->sd_disabled       = out->internal_only || !out->sd_present;
+
+    bool prefer_internal;
+    if (out->internal_preferred && out->external_preferred) {
+        prefer_internal = true;
+    } else if (out->internal_preferred) {
+        prefer_internal = true;
+    } else if (out->external_preferred) {
+        prefer_internal = false;
+    } else {
+        prefer_internal = true;
+    }
+    if (out->internal_disabled) {
+        prefer_internal = false;
+    } else if (out->sd_disabled) {
+        prefer_internal = true;
+    }
+    out->default_internal = prefer_internal;
+
+    out->sd_required_warning = out->external_only && !out->sd_present;
+}
+
+static void render_project(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, cJSON* project,
+                           const install_constraints_t* constraints) {
 
     cJSON* name_obj         = cJSON_GetObjectItem(project, "name");
     cJSON* description_obj  = cJSON_GetObjectItem(project, "description");
@@ -56,9 +111,52 @@ static void render_project(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t pos
     sprintf(text_buffer, "License: %s", license_type_obj ? license_type_obj->valuestring : "Unknown");
     pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 4, text_buffer);
+
+    if (constraints != NULL && constraints->sd_required_warning) {
+        pax_draw_text(buffer, 0xFFFF0000, theme->menu.text_font, font_size, position.x0,
+                      position.y0 + font_size * 5, "SD card is required for installation");
+    }
 }
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool partial, bool icons, cJSON* project) {
+// Draw a red "X" across one cell of the install location grid (slot 0 = SD, slot 1 = Internal).
+// Geometry must mirror menu_render_grid in components/gui/gui_menu_render.c.
+// Uses pax_simple_line (orientation-aware) — pax_draw_thick_line skips the buffer orientation
+// transform, which puts it in the wrong place on rotated displays like the Tanmatsu.
+static void draw_disabled_overlay(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t menu_position, int slot) {
+    int   entry_count_x = 2;
+    int   entry_count_y = 1;
+    float entry_width   = ((menu_position.x1 - menu_position.x0) -
+                         (theme->menu.horizontal_margin * (entry_count_x + 1))) /
+                        entry_count_x;
+    float entry_height = ((menu_position.y1 - menu_position.y0) -
+                          (theme->menu.vertical_margin * (entry_count_y + 1))) /
+                         entry_count_y;
+
+    float x = menu_position.x0 + theme->menu.horizontal_margin +
+              (slot * (entry_width + theme->menu.horizontal_margin));
+    float y = menu_position.y0 + theme->menu.vertical_margin;
+
+    float     inset = 6.0f;
+    pax_col_t color = 0xFFFF0000;  // bright red
+
+    float ax0 = x + inset;
+    float ay0 = y + inset;
+    float ax1 = x + entry_width - inset;
+    float ay1 = y + entry_height - inset;
+    float bx0 = x + entry_width - inset;
+    float by0 = y + inset;
+    float bx1 = x + inset;
+    float by1 = y + entry_height - inset;
+
+    // Fake thick lines with parallel offsets perpendicular to the diagonals.
+    for (int o = -2; o <= 2; o++) {
+        pax_simple_line(buffer, color, ax0 + o, ay0 - o, ax1 + o, ay1 - o);
+        pax_simple_line(buffer, color, bx0 + o, by0 + o, bx1 + o, by1 + o);
+    }
+}
+
+static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool partial, bool icons, cJSON* project,
+                   const install_constraints_t* constraints) {
     int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
 
     if (!partial || icons) {
@@ -72,7 +170,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
     // Description
     pax_vec2_t desc_position = menu_calc_position(buffer, theme);
 
-    render_project(buffer, theme, desc_position, project);
+    render_project(buffer, theme, desc_position, project, constraints);
 
     // Menu
     pax_vec2_t menu_position = {
@@ -87,6 +185,15 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, bool par
     modified_theme.menu.grid_horizontal_count = menu_get_length(menu);
     modified_theme.menu.grid_vertical_count   = 1;
     menu_render_grid(buffer, menu, menu_position, &modified_theme, partial);
+
+    if (constraints != NULL) {
+        if (constraints->sd_disabled) {
+            draw_disabled_overlay(buffer, theme, menu_position, 0);
+        }
+        if (constraints->internal_disabled) {
+            draw_disabled_overlay(buffer, theme, menu_position, 1);
+        }
+    }
 
     // Blit
     display_blit_buffer(buffer);
@@ -191,7 +298,7 @@ static void prompt_install_interpreter(pax_buf_t* buffer, gui_theme_t* theme, co
 }
 
 static bool execute_action(pax_buf_t* buffer, menu_repository_client_project_action_t action, gui_theme_t* theme,
-                           cJSON* wrapper, bool is_plugin) {
+                           cJSON* wrapper, bool is_plugin, const install_constraints_t* constraints) {
     char server[128] = {0};
     nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
 
@@ -202,10 +309,22 @@ static bool execute_action(pax_buf_t* buffer, menu_repository_client_project_act
     const char*         loc_text;
     switch (action) {
         case ACTION_INSTALL:
+            if (constraints != NULL && constraints->internal_disabled) {
+                message_dialog(get_icon(ICON_ERROR), "Repository",
+                               "This app must be installed on the SD card.", "OK");
+                return false;
+            }
             location = is_plugin ? APP_MGMT_LOCATION_INTERNAL_PLUGINS : APP_MGMT_LOCATION_INTERNAL;
             loc_text = "internal memory";
             break;
         case ACTION_INSTALL_SD:
+            if (constraints != NULL && constraints->sd_disabled) {
+                const char* msg = constraints->internal_only
+                                      ? "This app must be installed on internal memory."
+                                      : "Insert an SD card to install here.";
+                message_dialog(get_icon(ICON_ERROR), "Repository", msg, "OK");
+                return false;
+            }
             location = is_plugin ? APP_MGMT_LOCATION_SD_PLUGINS : APP_MGMT_LOCATION_SD;
             loc_text = "SD card";
             break;
@@ -221,7 +340,11 @@ static bool execute_action(pax_buf_t* buffer, menu_repository_client_project_act
 
     esp_err_t res = app_mgmt_install(server, slug_obj->valuestring, location, download_callback);
     if (res != ESP_OK) {
-        message_dialog(get_icon(ICON_ERROR), "Repository", "Installation failed", "OK");
+        const char* err_msg = "Installation failed";
+        if (res == ESP_ERR_NO_MEM) {
+            err_msg = "Installation failed: AppFS full";
+        }
+        message_dialog(get_icon(ICON_ERROR), "Repository", err_msg, "OK");
         return false;
     }
 
@@ -249,6 +372,9 @@ void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON
         return;
     }
 
+    install_constraints_t constraints = {0};
+    resolve_constraints(project, &constraints);
+
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
@@ -256,8 +382,9 @@ void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON
     menu_initialize(&menu);
     menu_insert_item(&menu, "Install on\nSD card", NULL, (void*)ACTION_INSTALL_SD, -1);
     menu_insert_item(&menu, "Install on\nInternal memory", NULL, (void*)ACTION_INSTALL, -1);
+    menu_set_position(&menu, constraints.default_internal ? 1 : 0);
 
-    render(buffer, theme, &menu, false, true, project);
+    render(buffer, theme, &menu, false, true, project, &constraints);
     while (1) {
         bsp_input_event_t event;
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -272,23 +399,23 @@ void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_LEFT:
                                 menu_navigate_previous(&menu);
-                                render(buffer, theme, &menu, true, false, project);
+                                render(buffer, theme, &menu, true, false, project, &constraints);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RIGHT:
                                 menu_navigate_next(&menu);
-                                render(buffer, theme, &menu, true, false, project);
+                                render(buffer, theme, &menu, true, false, project, &constraints);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                 void* arg       = menu_get_callback_args(&menu, menu_get_position(&menu));
                                 bool  installed = execute_action(buffer, (menu_repository_client_project_action_t)arg,
-                                                                 theme, wrapper, is_plugin);
+                                                                 theme, wrapper, is_plugin, &constraints);
                                 if (installed) {
                                     menu_free(&menu);
                                     return;
                                 }
-                                render(buffer, theme, &menu, false, true, project);
+                                render(buffer, theme, &menu, false, true, project, &constraints);
                                 break;
                             }
                             default:
@@ -301,7 +428,7 @@ void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON
                     break;
             }
         } else {
-            render(buffer, theme, &menu, true, true, project);
+            render(buffer, theme, &menu, true, true, project, &constraints);
         }
     }
 }

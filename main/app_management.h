@@ -18,9 +18,12 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
                            download_callback_t download_callback);
 esp_err_t app_mgmt_uninstall(const char* slug, app_mgmt_location_t location);
 esp_err_t app_mgmt_install_from_file(const char* slug, const char* name, uint32_t revision, char* firmware_path);
+esp_err_t app_mgmt_install_from_buffer(const char* slug, const char* name, uint32_t revision, uint8_t* data,
+                                       size_t size);
 
 // AppFS cache management
 bool      app_mgmt_has_binary_in_install_dir(const char* slug);
+bool      app_mgmt_is_int_only(const char* slug);
 bool      app_mgmt_can_uncache(const char* slug);
 esp_err_t app_mgmt_copy_appfs_to_install_dir(const char* slug);
 esp_err_t app_mgmt_remove_from_appfs(const char* slug);
