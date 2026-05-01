@@ -13,7 +13,7 @@
 #include "app_usage.h"
 #include "appfs.h"
 #include "appfs_settings.h"
-#if CONFIG_IDF_TARGET_ESP32P4
+#if CONFIG_ENABLE_LAUNCHERPLUGINS
 #include "badge_elf.h"
 #endif
 #include "bsp/input.h"
@@ -160,7 +160,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
             esp_restart();
             break;
         case EXECUTABLE_TYPE_ELF: {
-#if CONFIG_IDF_TARGET_ESP32P4
+#if CONFIG_ENABLE_LAUNCHERPLUGINS
             size_t req = snprintf(NULL, 0, "%s/%s/%s", app->path, app->slug, app->executable_filename);
             if (req > PATH_MAX) {
                 message_dialog(get_icon(ICON_ERROR), "Error", "Applet path is too long", "OK");

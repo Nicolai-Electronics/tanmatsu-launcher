@@ -7,14 +7,21 @@ idf_build_get_property(idf_target IDF_TARGET)
 if("${idf_target}" STREQUAL "esp32p4")
 list(APPEND extra_requires
 	esp-hosted-tanmatsu
-	badge-elf
-	plugin-api
 )
+endif()
+
+if(CONFIG_ENABLE_LAUNCHERPLUGINS)
 list(APPEND extra_sources
 	# Plugin system
 	"plugin_api.c"
 	"plugin_manager.c"
 	"menu/menu_plugins.c"
+)
+endif()
+
+if(CONFIG_ENABLE_AUDIOMIXER)
+list(APPEND extra_sources
+	"audio_mixer.c"
 )
 endif()
 
@@ -135,6 +142,13 @@ idf_component_register(
 	EMBED_FILES
 		${files}
 )
+
+if(CONFIG_ENABLE_LAUNCHERPLUGINS)
+# idf_component_optional_requires runs after Kconfig is processed, so CONFIG_*
+# values are available here. The early-scan REQUIRES list above can't depend
+# on CONFIG_* values, so plugin-only deps must be added through this hook.
+idf_component_optional_requires(PRIVATE badge-elf badge-elf-api plugin-api)
+endif()
 
 if (FAT STREQUAL "1")
 fatfs_create_spiflash_image(locfd ../fat/${DEVICE} FLASH_IN_PROJECT)

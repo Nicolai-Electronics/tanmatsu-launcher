@@ -20,6 +20,10 @@
 #include "freertos/task.h"
 #include "freertos/timers.h"
 #include "kbelf.h"
+#include "sdkconfig.h"
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+#include "audio_mixer.h"
+#endif
 
 static const char* TAG = "plugin_mgr";
 
@@ -791,6 +795,15 @@ bool plugin_manager_start_service(plugin_context_t* ctx) {
     ctx->task_handle = task;
     ctx->state       = PLUGIN_STATE_RUNNING;
 
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+    // Allocate a per-plugin audio mixer stream so concurrent plugins don't
+    // trample each other's I2S writes. Failure is non-fatal: the plugin can
+    // still run, asp_audio_write will just return ASP_ERR_FAIL.
+    if (!audio_mixer_register_stream(task)) {
+        ESP_LOGW(TAG, "Audio mixer stream not available for plugin: %s", ctx->plugin_slug);
+    }
+#endif
+
     return true;
 }
 
@@ -798,6 +811,12 @@ bool plugin_manager_stop_service(plugin_context_t* ctx) {
     if (ctx == NULL) {
         return false;
     }
+
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+    // Capture the task handle up front; the force-stop path below clears
+    // ctx->task_handle, but we still need it to release the audio mixer slot.
+    TaskHandle_t original_task = (TaskHandle_t)ctx->task_handle;
+#endif
 
     // Check if already stopped (task may have ended on its own)
     if (ctx->state != PLUGIN_STATE_RUNNING && !ctx->task_running) {
@@ -834,6 +853,11 @@ bool plugin_manager_stop_service(plugin_context_t* ctx) {
     }
 
 cleanup_task_memory:
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+    // Release the audio mixer slot now that the task is gone.
+    audio_mixer_unregister_stream(original_task);
+#endif
+
     // Free task stack and TCB that we allocated
     // Since we used xTaskCreateStatic(), FreeRTOS doesn't touch this memory
     // after vTaskDelete() - we own it and can free it immediately

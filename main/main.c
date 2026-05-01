@@ -55,7 +55,10 @@
 #include "usb_device.h"
 #include "wifi_connection.h"
 #include "wifi_remote.h"
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+#include "audio_mixer.h"
+#endif
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
 #include "plugin_manager.h"
 #endif
 
@@ -543,7 +546,15 @@ void app_main(void) {
 #endif
 #endif
 
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+    startup_dialog("Initializing audio mixer...");
+    res = audio_mixer_init();
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize audio mixer: %s", esp_err_to_name(res));
+    }
+#endif
+
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
     startup_dialog("Initializing plugins...");
     plugin_manager_init();
     plugin_manager_load_autostart();

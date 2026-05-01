@@ -14,7 +14,9 @@
 #include "fastopen.h"
 #include "filesystem_utils.h"
 #include "http_download.h"
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
 #include "plugin_manager.h"
+#endif
 #include "repository_client.h"
 
 static const char* TAG = "App management";
@@ -380,6 +382,7 @@ esp_err_t app_mgmt_uninstall(const char* slug, app_mgmt_location_t location) {
 
     bool is_plugin = app_mgmt_location_is_plugin(location);
 
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
     // For plugins: stop and unload before deleting files
     if (is_plugin) {
         plugin_context_t* ctx = plugin_manager_get_by_slug(slug);
@@ -388,6 +391,7 @@ esp_err_t app_mgmt_uninstall(const char* slug, app_mgmt_location_t location) {
             plugin_manager_unload(ctx);
         }
     }
+#endif
 
     esp_err_t res = ESP_OK;
 
