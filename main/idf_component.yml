@@ -1,7 +1,7 @@
 dependencies:
   idf: ">=5.5.1"
-  badgeteam/badge-bsp: "^0.9.1"
-  robotman2412/pax-gfx: "^2.0.7"
+  badgeteam/badge-bsp: "^0.9.5"
+  robotman2412/pax-gfx: "^2.0.8"
   robotman2412/pax-codecs: "^1.0.1"
   badgeteam/appfs: "^1.0.2"
   badgeteam/custom-certificates: "^1.1.0"
@@ -9,7 +9,7 @@ dependencies:
   nicolaielectronics/tanmatsu-wifi: "^1.2.0"
   nicolaielectronics/pocketpy: "^2.0.0"
   badgeteam/terminal-emulator: "^0.0.4"
-  badgeteam/badgelink: "^0.1.0"
+  badgeteam/badgelink: "^0.2.0"
   nicolaielectronics/tanmatsu-lora: "^0.1.1"
   nicolaielectronics/tanmatsu-addon: "^0.0.1"
   nicolaielectronics/tanmatsu-settings: "^1.0.0"
@@ -18,11 +18,11 @@ dependencies:
     rules:
       - if: target == esp32p4
   badgeteam/badge-elf:
-    version: "^0.4.0"
+    version: "^0.6.0"
     rules:
       - if: "target == esp32p4 && $CONFIG{ENABLE_LAUNCHERPLUGINS} == True"
   badgeteam/badge-elf-api:
-    version: "^0.4.0"
+    version: "^0.6.0"
     rules:
       - if: "target == esp32p4 && $CONFIG{ENABLE_LAUNCHERPLUGINS} == True"
   espressif/esp_tinyusb:
