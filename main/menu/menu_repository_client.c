@@ -283,6 +283,14 @@ static void free_icon_cache(void) {
     icon_cache_size = 0;
 }
 
+// Tear down all module-level state owned by menu_repository_client.
+// Safe to call multiple times; leaves everything in a {0} state.
+static void free_repository_menu_state(void) {
+    free_repository_data_json(&projects);
+    free_project_info();
+    free_icon_cache();
+}
+
 // Decode base64 icons and download missing ones into the icon cache.
 // Called once after loading the project list.
 static void load_all_icons(cJSON* json_projects) {
@@ -588,6 +596,9 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
 }
 
 void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
+    // Guard against any state left behind by a previous (early-returning) entry.
+    free_repository_menu_state();
+
     busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Connecting to WiFi...", true);
 
     if (!wifi_stack_get_initialized()) {
@@ -639,8 +650,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
-                                free_project_info();
-                                free_icon_cache();
+                                free_repository_menu_state();
                                 menu_free(&menu);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
@@ -826,6 +836,4 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
             render(buffer, theme, &menu, server, true, true);
         }
     }
-
-    free_repository_data_json(&projects);
 }

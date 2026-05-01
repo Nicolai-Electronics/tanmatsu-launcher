@@ -27,6 +27,9 @@ void free_repository_data_json(repository_json_data_t* data) {
 }
 
 static bool download_and_parse(const char* url, repository_json_data_t* out_data) {
+    // Free any prior contents so callers can safely re-use the same struct
+    // (e.g. the static `projects` global in menu_repository_client) without leaking.
+    free_repository_data_json(out_data);
     http_session_t session = http_session_begin(url);
     if (session == NULL) return false;
     bool success = http_session_download_ram(session, url, (uint8_t**)&out_data->data, &out_data->size);
