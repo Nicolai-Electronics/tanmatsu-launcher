@@ -36,6 +36,7 @@
 #include "icons.h"
 #include "lora.h"
 #include "lora_settings_handler.h"
+#include "menu/apps.h"
 #include "menu/home.h"
 #include "menu/message_dialog.h"
 #include "ntp.h"
@@ -49,10 +50,14 @@
 #include "sdcard.h"
 #include "sdkconfig.h"
 #include "timezone.h"
+#include "usb_debug_listener.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
 #include "wifi_remote.h"
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+#include "audio_mixer.h"
+#endif
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
 #include "plugin_manager.h"
 #include "hid_keyboard.h"
 #endif
@@ -467,6 +472,13 @@ void app_main(void) {
     startup_dialog("Checking bootloader...");
     bootloader_update();
 
+    // Force the radio coprocessor off before bringing it up, in case it was
+    // left in APPLICATION mode by a previously running app with a transfer
+    // still in flight. Without this clean power-cycle the radio can come up
+    // in an inconsistent state and cause crashes shortly after launch.
+    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+    vTaskDelay(pdMS_TO_TICKS(200));
+
     startup_dialog("Initializing radio...");
     ESP_ERROR_CHECK(lora_init(16));
 
@@ -486,8 +498,11 @@ void app_main(void) {
 
     startup_dialog("Initializing BadgeLink...");
     badgelink_init();
+    badgelink_set_prepare_device_callback(prepare_device_for_app_launch);
+    badgelink_set_usb_mode_callback(usb_mode_set_from_badgelink);
     usb_initialize();
     badgelink_start(usb_send_data);
+    usb_debug_listener_initialize();
 
     startup_dialog("Detecting Add-On boards...");
     addon_initialize();
@@ -531,7 +546,15 @@ void app_main(void) {
     }
 #endif
 
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+    startup_dialog("Initializing audio mixer...");
+    res = audio_mixer_init();
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize audio mixer: %s", esp_err_to_name(res));
+    }
+#endif
+
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
     startup_dialog("Initializing plugins...");
     plugin_manager_init();
     plugin_manager_load_autostart();

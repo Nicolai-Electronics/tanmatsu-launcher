@@ -125,11 +125,19 @@ esp_err_t radio_ota_update(void) {
 
     busy_dialog(get_icon(ICON_STOREFRONT), "Radio update", "Starting download...", true);
 
+    http_session_t session = http_session_begin("https://ota.tanmatsu.cloud/radio/");
+    if (session == NULL) {
+        message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Failed to create HTTP session", "Quit");
+        return ESP_FAIL;
+    }
+
     uint8_t* instructions_data = NULL;
     size_t   instructions_size = 0;
-    bool     dl_res            = download_ram("https://ota.tanmatsu.cloud/radio/instructions.json", &instructions_data,
-                                              &instructions_size, download_callback, "Downloading instructions...");
+    http_session_set_callback(session, download_callback, "Downloading instructions...");
+    bool dl_res = http_session_download_ram(session, "https://ota.tanmatsu.cloud/radio/instructions.json",
+                                            &instructions_data, &instructions_size);
     if (!dl_res) {
+        http_session_end(session);
         message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Failed to download instructions", "Quit");
         return ESP_FAIL;
     }
@@ -150,17 +158,21 @@ esp_err_t radio_ota_update(void) {
         char message[256] = {0};
         sprintf(message, "Downloading firmware part %d of %d...", i + 1, step_count);
 
-        dl_res = download_ram(url, &steps[i].compressed_data, &steps[i].compressed_size, download_callback, message);
+        http_session_set_callback(session, download_callback, message);
+        dl_res = http_session_download_ram(session, url, &steps[i].compressed_data, &steps[i].compressed_size);
         if (!dl_res) {
             for (int j = 0; j < i; j++) {
                 free(steps[j].compressed_data);
             }
+            http_session_end(session);
             cJSON_Delete(instructions_json);
             free(instructions_data);
             message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Failed to download radio data", "Quit");
             return ESP_FAIL;
         }
     }
+
+    http_session_end(session);
 
     busy_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Disabling radio stack...", false);
     if (!radio_prepare()) {

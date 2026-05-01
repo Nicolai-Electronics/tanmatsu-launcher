@@ -9,6 +9,7 @@
 #include "gui_style.h"
 #include "icons.h"
 #include "lwipopts.h"
+#include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "pax_fonts.h"
 #include "pax_gfx.h"
@@ -70,15 +71,7 @@ static void render(bool partial, bool icons) {
 
     char message_buffer[128] = {0};
 
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-
-    pax_vec2_t position = {
-        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
+    pax_vec2_t position = menu_calc_position(buffer, theme);
 
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,

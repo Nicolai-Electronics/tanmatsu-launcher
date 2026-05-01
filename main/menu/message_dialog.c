@@ -21,7 +21,7 @@
 #include "sdkconfig.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
 #include "plugin_manager.h"
 #endif
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
@@ -202,7 +202,7 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
                        header_right, header_right_count, footer_left, footer_left_count, footer_right,
                        footer_right_count);
 
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
     // Render plugin status widgets in the header area
     if (header) {
         int widget_x_right = 380;

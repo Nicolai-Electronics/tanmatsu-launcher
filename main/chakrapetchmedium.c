@@ -7219,1321 +7219,1321 @@ const pax_bmpv_t chakrapetchmedium_r100_dims[] = {
 };
 // Combined ranges.
 const pax_font_range_t
-    chakrapetchmedium_ranges[101] =
-        {
-            {
-                // Range 1 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0xd,
-                .end   = 0xd,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r0,
-                        .dims   = chakrapetchmedium_r0_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 2 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x20,
-                .end   = 0x7e,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r1,
-                        .dims   = chakrapetchmedium_r1_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 3 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0xa0,
-                .end   = 0xb4,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r2,
-                        .dims   = chakrapetchmedium_r2_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 4 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0xb6,
-                .end   = 0x17e,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r3,
-                        .dims   = chakrapetchmedium_r3_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 5 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x18f,
-                .end   = 0x18f,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r4,
-                        .dims   = chakrapetchmedium_r4_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 6 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x192,
-                .end   = 0x192,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r5,
-                        .dims   = chakrapetchmedium_r5_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 7 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1a0,
-                .end   = 0x1a1,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r6,
-                        .dims   = chakrapetchmedium_r6_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 8 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1af,
-                .end   = 0x1b0,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r7,
-                        .dims   = chakrapetchmedium_r7_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 9 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1cd,
-                .end   = 0x1dc,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r8,
-                        .dims   = chakrapetchmedium_r8_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 10 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e6,
-                .end   = 0x1e7,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r9,
-                        .dims   = chakrapetchmedium_r9_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 11 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1fa,
-                .end   = 0x1ff,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r10,
-                        .dims   = chakrapetchmedium_r10_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 12 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x218,
-                .end   = 0x21b,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r11,
-                        .dims   = chakrapetchmedium_r11_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 13 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x237,
-                .end   = 0x237,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r12,
-                        .dims   = chakrapetchmedium_r12_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 14 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x251,
-                .end   = 0x251,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r13,
-                        .dims   = chakrapetchmedium_r13_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 15 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x259,
-                .end   = 0x259,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r14,
-                        .dims   = chakrapetchmedium_r14_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 16 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2bb,
-                .end   = 0x2bc,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r15,
-                        .dims   = chakrapetchmedium_r15_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 17 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2be,
-                .end   = 0x2bf,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r16,
-                        .dims   = chakrapetchmedium_r16_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 18 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2c6,
-                .end   = 0x2cc,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r17,
-                        .dims   = chakrapetchmedium_r17_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 19 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2d8,
-                .end   = 0x2dd,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r18,
-                        .dims   = chakrapetchmedium_r18_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 20 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x300,
-                .end   = 0x304,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r19,
-                        .dims   = chakrapetchmedium_r19_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 21 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x306,
-                .end   = 0x30c,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r20,
-                        .dims   = chakrapetchmedium_r20_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 22 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x31b,
-                .end   = 0x31b,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r21,
-                        .dims   = chakrapetchmedium_r21_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 23 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x323,
-                .end   = 0x324,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r22,
-                        .dims   = chakrapetchmedium_r22_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 24 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x326,
-                .end   = 0x328,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r23,
-                        .dims   = chakrapetchmedium_r23_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 25 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x32e,
-                .end   = 0x32e,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r24,
-                        .dims   = chakrapetchmedium_r24_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 26 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x331,
-                .end   = 0x331,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r25,
-                        .dims   = chakrapetchmedium_r25_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 27 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x394,
-                .end   = 0x394,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r26,
-                        .dims   = chakrapetchmedium_r26_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 28 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x3a9,
-                .end   = 0x3a9,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r27,
-                        .dims   = chakrapetchmedium_r27_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 29 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x3bc,
-                .end   = 0x3bc,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r28,
-                        .dims   = chakrapetchmedium_r28_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 30 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x3c0,
-                .end   = 0x3c0,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r29,
-                        .dims   = chakrapetchmedium_r29_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 31 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0xe01,
-                .end   = 0xe3a,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r30,
-                        .dims   = chakrapetchmedium_r30_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 32 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0xe3f,
-                .end   = 0xe5b,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r31,
-                        .dims   = chakrapetchmedium_r31_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 33 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e0c,
-                .end   = 0x1e0f,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r32,
-                        .dims   = chakrapetchmedium_r32_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 34 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e20,
-                .end   = 0x1e21,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r33,
-                        .dims   = chakrapetchmedium_r33_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 35 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e24,
-                .end   = 0x1e25,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r34,
-                        .dims   = chakrapetchmedium_r34_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 36 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e2a,
-                .end   = 0x1e2b,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r35,
-                        .dims   = chakrapetchmedium_r35_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 37 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e36,
-                .end   = 0x1e3b,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r36,
-                        .dims   = chakrapetchmedium_r36_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 38 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e42,
-                .end   = 0x1e49,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r37,
-                        .dims   = chakrapetchmedium_r37_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 39 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e5a,
-                .end   = 0x1e63,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r38,
-                        .dims   = chakrapetchmedium_r38_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 40 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e6c,
-                .end   = 0x1e6f,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r39,
-                        .dims   = chakrapetchmedium_r39_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 41 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e80,
-                .end   = 0x1e85,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r40,
-                        .dims   = chakrapetchmedium_r40_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 42 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e8e,
-                .end   = 0x1e8f,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r41,
-                        .dims   = chakrapetchmedium_r41_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 43 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e92,
-                .end   = 0x1e93,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r42,
-                        .dims   = chakrapetchmedium_r42_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 44 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e97,
-                .end   = 0x1e97,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r43,
-                        .dims   = chakrapetchmedium_r43_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 45 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1e9e,
-                .end   = 0x1e9e,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r44,
-                        .dims   = chakrapetchmedium_r44_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 46 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1ea0,
-                .end   = 0x1ef9,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r45,
-                        .dims   = chakrapetchmedium_r45_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 47 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2007,
-                .end   = 0x2007,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r46,
-                        .dims   = chakrapetchmedium_r46_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 48 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2010,
-                .end   = 0x2010,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r47,
-                        .dims   = chakrapetchmedium_r47_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 49 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2012,
-                .end   = 0x2015,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r48,
-                        .dims   = chakrapetchmedium_r48_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 50 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2018,
-                .end   = 0x201a,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r49,
-                        .dims   = chakrapetchmedium_r49_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 51 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x201c,
-                .end   = 0x201e,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r50,
-                        .dims   = chakrapetchmedium_r50_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 52 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2020,
-                .end   = 0x2022,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r51,
-                        .dims   = chakrapetchmedium_r51_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 53 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2026,
-                .end   = 0x2026,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r52,
-                        .dims   = chakrapetchmedium_r52_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 54 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2030,
-                .end   = 0x2030,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r53,
-                        .dims   = chakrapetchmedium_r53_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 55 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2032,
-                .end   = 0x2033,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r54,
-                        .dims   = chakrapetchmedium_r54_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 56 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2039,
-                .end   = 0x203a,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r55,
-                        .dims   = chakrapetchmedium_r55_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 57 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2044,
-                .end   = 0x2044,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r56,
-                        .dims   = chakrapetchmedium_r56_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 58 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2070,
-                .end   = 0x2070,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r57,
-                        .dims   = chakrapetchmedium_r57_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 59 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2074,
-                .end   = 0x2079,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r58,
-                        .dims   = chakrapetchmedium_r58_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 60 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x207d,
-                .end   = 0x2089,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r59,
-                        .dims   = chakrapetchmedium_r59_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 61 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x208d,
-                .end   = 0x208e,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r60,
-                        .dims   = chakrapetchmedium_r60_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 62 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x20a1,
-                .end   = 0x20a1,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r61,
-                        .dims   = chakrapetchmedium_r61_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 63 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x20a4,
-                .end   = 0x20a4,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r62,
-                        .dims   = chakrapetchmedium_r62_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 64 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x20a6,
-                .end   = 0x20a7,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r63,
-                        .dims   = chakrapetchmedium_r63_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 65 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x20ab,
-                .end   = 0x20ac,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r64,
-                        .dims   = chakrapetchmedium_r64_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 66 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x20b1,
-                .end   = 0x20b2,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r65,
-                        .dims   = chakrapetchmedium_r65_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 67 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x20b5,
-                .end   = 0x20b5,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r66,
-                        .dims   = chakrapetchmedium_r66_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 68 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x20b9,
-                .end   = 0x20ba,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r67,
-                        .dims   = chakrapetchmedium_r67_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 69 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x20bd,
-                .end   = 0x20bd,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r68,
-                        .dims   = chakrapetchmedium_r68_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 70 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x210a,
-                .end   = 0x210a,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r69,
-                        .dims   = chakrapetchmedium_r69_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 71 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2113,
-                .end   = 0x2113,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r70,
-                        .dims   = chakrapetchmedium_r70_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 72 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2117,
-                .end   = 0x2117,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r71,
-                        .dims   = chakrapetchmedium_r71_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 73 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2120,
-                .end   = 0x2120,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r72,
-                        .dims   = chakrapetchmedium_r72_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 74 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2122,
-                .end   = 0x2122,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r73,
-                        .dims   = chakrapetchmedium_r73_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 75 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x212e,
-                .end   = 0x212e,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r74,
-                        .dims   = chakrapetchmedium_r74_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 76 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2153,
-                .end   = 0x2154,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r75,
-                        .dims   = chakrapetchmedium_r75_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 77 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x215b,
-                .end   = 0x215e,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r76,
-                        .dims   = chakrapetchmedium_r76_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 78 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2190,
-                .end   = 0x2193,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r77,
-                        .dims   = chakrapetchmedium_r77_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 79 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2202,
-                .end   = 0x2202,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r78,
-                        .dims   = chakrapetchmedium_r78_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 80 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x220f,
-                .end   = 0x220f,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r79,
-                        .dims   = chakrapetchmedium_r79_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 81 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2211,
-                .end   = 0x2212,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r80,
-                        .dims   = chakrapetchmedium_r80_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 82 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2215,
-                .end   = 0x2215,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r81,
-                        .dims   = chakrapetchmedium_r81_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 83 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2219,
-                .end   = 0x221a,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r82,
-                        .dims   = chakrapetchmedium_r82_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 84 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x221e,
-                .end   = 0x221e,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r83,
-                        .dims   = chakrapetchmedium_r83_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 85 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x222b,
-                .end   = 0x222b,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r84,
-                        .dims   = chakrapetchmedium_r84_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 86 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2248,
-                .end   = 0x2248,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r85,
-                        .dims   = chakrapetchmedium_r85_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 87 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2260,
-                .end   = 0x2260,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r86,
-                        .dims   = chakrapetchmedium_r86_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 88 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2264,
-                .end   = 0x2265,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r87,
-                        .dims   = chakrapetchmedium_r87_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 89 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x23ce,
-                .end   = 0x23ce,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r88,
-                        .dims   = chakrapetchmedium_r88_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 90 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25a0,
-                .end   = 0x25a0,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r89,
-                        .dims   = chakrapetchmedium_r89_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 91 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25b2,
-                .end   = 0x25b3,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r90,
-                        .dims   = chakrapetchmedium_r90_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 92 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25b6,
-                .end   = 0x25b7,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r91,
-                        .dims   = chakrapetchmedium_r91_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 93 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25bc,
-                .end   = 0x25bd,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r92,
-                        .dims   = chakrapetchmedium_r92_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 94 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25c0,
-                .end   = 0x25c1,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r93,
-                        .dims   = chakrapetchmedium_r93_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 95 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25c6,
-                .end   = 0x25c6,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r94,
-                        .dims   = chakrapetchmedium_r94_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 96 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x25ca,
-                .end   = 0x25ca,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r95,
-                        .dims   = chakrapetchmedium_r95_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 97 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x2913,
-                .end   = 0x2913,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r96,
-                        .dims   = chakrapetchmedium_r96_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 98 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0xf6d7,
-                .end   = 0xf6d8,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r97,
-                        .dims   = chakrapetchmedium_r97_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 99 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0xf8ff,
-                .end   = 0xf8ff,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r98,
-                        .dims   = chakrapetchmedium_r98_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 100 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0xfb01,
-                .end   = 0xfb02,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r99,
-                        .dims   = chakrapetchmedium_r99_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
-            {
-                // Range 101 / 101.
-                .type  = PAX_FONT_TYPE_BITMAP_VAR,
-                .start = 0x1f170,
-                .end   = 0x1f171,
-                .bitmap_var =
-                    {
-                        .glyphs = chakrapetchmedium_r100,
-                        .dims   = chakrapetchmedium_r100_dims,
-                        .height = 16,
-                        .bpp    = 2,
-                    },
-            },
+             chakrapetchmedium_ranges[101] =
+                 {
+                     {
+                         // Range 1 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0xd,
+                         .end   = 0xd,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r0,
+                                 .dims   = chakrapetchmedium_r0_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 2 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x20,
+                         .end   = 0x7e,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r1,
+                                 .dims   = chakrapetchmedium_r1_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 3 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0xa0,
+                         .end   = 0xb4,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r2,
+                                 .dims   = chakrapetchmedium_r2_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 4 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0xb6,
+                         .end   = 0x17e,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r3,
+                                 .dims   = chakrapetchmedium_r3_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 5 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x18f,
+                         .end   = 0x18f,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r4,
+                                 .dims   = chakrapetchmedium_r4_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 6 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x192,
+                         .end   = 0x192,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r5,
+                                 .dims   = chakrapetchmedium_r5_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 7 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1a0,
+                         .end   = 0x1a1,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r6,
+                                 .dims   = chakrapetchmedium_r6_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 8 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1af,
+                         .end   = 0x1b0,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r7,
+                                 .dims   = chakrapetchmedium_r7_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 9 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1cd,
+                         .end   = 0x1dc,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r8,
+                                 .dims   = chakrapetchmedium_r8_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 10 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e6,
+                         .end   = 0x1e7,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r9,
+                                 .dims   = chakrapetchmedium_r9_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 11 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1fa,
+                         .end   = 0x1ff,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r10,
+                                 .dims   = chakrapetchmedium_r10_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 12 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x218,
+                         .end   = 0x21b,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r11,
+                                 .dims   = chakrapetchmedium_r11_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 13 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x237,
+                         .end   = 0x237,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r12,
+                                 .dims   = chakrapetchmedium_r12_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 14 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x251,
+                         .end   = 0x251,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r13,
+                                 .dims   = chakrapetchmedium_r13_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 15 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x259,
+                         .end   = 0x259,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r14,
+                                 .dims   = chakrapetchmedium_r14_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 16 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2bb,
+                         .end   = 0x2bc,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r15,
+                                 .dims   = chakrapetchmedium_r15_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 17 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2be,
+                         .end   = 0x2bf,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r16,
+                                 .dims   = chakrapetchmedium_r16_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 18 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2c6,
+                         .end   = 0x2cc,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r17,
+                                 .dims   = chakrapetchmedium_r17_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 19 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2d8,
+                         .end   = 0x2dd,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r18,
+                                 .dims   = chakrapetchmedium_r18_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 20 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x300,
+                         .end   = 0x304,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r19,
+                                 .dims   = chakrapetchmedium_r19_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 21 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x306,
+                         .end   = 0x30c,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r20,
+                                 .dims   = chakrapetchmedium_r20_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 22 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x31b,
+                         .end   = 0x31b,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r21,
+                                 .dims   = chakrapetchmedium_r21_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 23 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x323,
+                         .end   = 0x324,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r22,
+                                 .dims   = chakrapetchmedium_r22_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 24 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x326,
+                         .end   = 0x328,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r23,
+                                 .dims   = chakrapetchmedium_r23_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 25 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x32e,
+                         .end   = 0x32e,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r24,
+                                 .dims   = chakrapetchmedium_r24_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 26 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x331,
+                         .end   = 0x331,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r25,
+                                 .dims   = chakrapetchmedium_r25_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 27 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x394,
+                         .end   = 0x394,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r26,
+                                 .dims   = chakrapetchmedium_r26_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 28 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x3a9,
+                         .end   = 0x3a9,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r27,
+                                 .dims   = chakrapetchmedium_r27_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 29 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x3bc,
+                         .end   = 0x3bc,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r28,
+                                 .dims   = chakrapetchmedium_r28_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 30 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x3c0,
+                         .end   = 0x3c0,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r29,
+                                 .dims   = chakrapetchmedium_r29_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 31 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0xe01,
+                         .end   = 0xe3a,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r30,
+                                 .dims   = chakrapetchmedium_r30_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 32 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0xe3f,
+                         .end   = 0xe5b,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r31,
+                                 .dims   = chakrapetchmedium_r31_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 33 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e0c,
+                         .end   = 0x1e0f,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r32,
+                                 .dims   = chakrapetchmedium_r32_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 34 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e20,
+                         .end   = 0x1e21,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r33,
+                                 .dims   = chakrapetchmedium_r33_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 35 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e24,
+                         .end   = 0x1e25,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r34,
+                                 .dims   = chakrapetchmedium_r34_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 36 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e2a,
+                         .end   = 0x1e2b,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r35,
+                                 .dims   = chakrapetchmedium_r35_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 37 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e36,
+                         .end   = 0x1e3b,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r36,
+                                 .dims   = chakrapetchmedium_r36_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 38 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e42,
+                         .end   = 0x1e49,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r37,
+                                 .dims   = chakrapetchmedium_r37_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 39 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e5a,
+                         .end   = 0x1e63,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r38,
+                                 .dims   = chakrapetchmedium_r38_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 40 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e6c,
+                         .end   = 0x1e6f,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r39,
+                                 .dims   = chakrapetchmedium_r39_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 41 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e80,
+                         .end   = 0x1e85,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r40,
+                                 .dims   = chakrapetchmedium_r40_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 42 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e8e,
+                         .end   = 0x1e8f,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r41,
+                                 .dims   = chakrapetchmedium_r41_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 43 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e92,
+                         .end   = 0x1e93,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r42,
+                                 .dims   = chakrapetchmedium_r42_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 44 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e97,
+                         .end   = 0x1e97,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r43,
+                                 .dims   = chakrapetchmedium_r43_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 45 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1e9e,
+                         .end   = 0x1e9e,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r44,
+                                 .dims   = chakrapetchmedium_r44_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 46 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1ea0,
+                         .end   = 0x1ef9,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r45,
+                                 .dims   = chakrapetchmedium_r45_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 47 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2007,
+                         .end   = 0x2007,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r46,
+                                 .dims   = chakrapetchmedium_r46_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 48 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2010,
+                         .end   = 0x2010,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r47,
+                                 .dims   = chakrapetchmedium_r47_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 49 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2012,
+                         .end   = 0x2015,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r48,
+                                 .dims   = chakrapetchmedium_r48_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 50 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2018,
+                         .end   = 0x201a,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r49,
+                                 .dims   = chakrapetchmedium_r49_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 51 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x201c,
+                         .end   = 0x201e,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r50,
+                                 .dims   = chakrapetchmedium_r50_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 52 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2020,
+                         .end   = 0x2022,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r51,
+                                 .dims   = chakrapetchmedium_r51_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 53 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2026,
+                         .end   = 0x2026,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r52,
+                                 .dims   = chakrapetchmedium_r52_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 54 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2030,
+                         .end   = 0x2030,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r53,
+                                 .dims   = chakrapetchmedium_r53_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 55 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2032,
+                         .end   = 0x2033,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r54,
+                                 .dims   = chakrapetchmedium_r54_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 56 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2039,
+                         .end   = 0x203a,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r55,
+                                 .dims   = chakrapetchmedium_r55_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 57 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2044,
+                         .end   = 0x2044,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r56,
+                                 .dims   = chakrapetchmedium_r56_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 58 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2070,
+                         .end   = 0x2070,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r57,
+                                 .dims   = chakrapetchmedium_r57_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 59 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2074,
+                         .end   = 0x2079,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r58,
+                                 .dims   = chakrapetchmedium_r58_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 60 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x207d,
+                         .end   = 0x2089,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r59,
+                                 .dims   = chakrapetchmedium_r59_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 61 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x208d,
+                         .end   = 0x208e,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r60,
+                                 .dims   = chakrapetchmedium_r60_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 62 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x20a1,
+                         .end   = 0x20a1,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r61,
+                                 .dims   = chakrapetchmedium_r61_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 63 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x20a4,
+                         .end   = 0x20a4,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r62,
+                                 .dims   = chakrapetchmedium_r62_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 64 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x20a6,
+                         .end   = 0x20a7,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r63,
+                                 .dims   = chakrapetchmedium_r63_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 65 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x20ab,
+                         .end   = 0x20ac,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r64,
+                                 .dims   = chakrapetchmedium_r64_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 66 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x20b1,
+                         .end   = 0x20b2,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r65,
+                                 .dims   = chakrapetchmedium_r65_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 67 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x20b5,
+                         .end   = 0x20b5,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r66,
+                                 .dims   = chakrapetchmedium_r66_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 68 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x20b9,
+                         .end   = 0x20ba,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r67,
+                                 .dims   = chakrapetchmedium_r67_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 69 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x20bd,
+                         .end   = 0x20bd,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r68,
+                                 .dims   = chakrapetchmedium_r68_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 70 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x210a,
+                         .end   = 0x210a,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r69,
+                                 .dims   = chakrapetchmedium_r69_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 71 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2113,
+                         .end   = 0x2113,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r70,
+                                 .dims   = chakrapetchmedium_r70_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 72 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2117,
+                         .end   = 0x2117,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r71,
+                                 .dims   = chakrapetchmedium_r71_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 73 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2120,
+                         .end   = 0x2120,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r72,
+                                 .dims   = chakrapetchmedium_r72_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 74 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2122,
+                         .end   = 0x2122,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r73,
+                                 .dims   = chakrapetchmedium_r73_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 75 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x212e,
+                         .end   = 0x212e,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r74,
+                                 .dims   = chakrapetchmedium_r74_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 76 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2153,
+                         .end   = 0x2154,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r75,
+                                 .dims   = chakrapetchmedium_r75_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 77 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x215b,
+                         .end   = 0x215e,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r76,
+                                 .dims   = chakrapetchmedium_r76_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 78 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2190,
+                         .end   = 0x2193,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r77,
+                                 .dims   = chakrapetchmedium_r77_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 79 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2202,
+                         .end   = 0x2202,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r78,
+                                 .dims   = chakrapetchmedium_r78_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 80 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x220f,
+                         .end   = 0x220f,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r79,
+                                 .dims   = chakrapetchmedium_r79_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 81 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2211,
+                         .end   = 0x2212,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r80,
+                                 .dims   = chakrapetchmedium_r80_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 82 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2215,
+                         .end   = 0x2215,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r81,
+                                 .dims   = chakrapetchmedium_r81_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 83 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2219,
+                         .end   = 0x221a,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r82,
+                                 .dims   = chakrapetchmedium_r82_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 84 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x221e,
+                         .end   = 0x221e,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r83,
+                                 .dims   = chakrapetchmedium_r83_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 85 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x222b,
+                         .end   = 0x222b,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r84,
+                                 .dims   = chakrapetchmedium_r84_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 86 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2248,
+                         .end   = 0x2248,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r85,
+                                 .dims   = chakrapetchmedium_r85_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 87 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2260,
+                         .end   = 0x2260,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r86,
+                                 .dims   = chakrapetchmedium_r86_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 88 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2264,
+                         .end   = 0x2265,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r87,
+                                 .dims   = chakrapetchmedium_r87_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 89 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x23ce,
+                         .end   = 0x23ce,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r88,
+                                 .dims   = chakrapetchmedium_r88_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 90 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x25a0,
+                         .end   = 0x25a0,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r89,
+                                 .dims   = chakrapetchmedium_r89_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 91 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x25b2,
+                         .end   = 0x25b3,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r90,
+                                 .dims   = chakrapetchmedium_r90_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 92 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x25b6,
+                         .end   = 0x25b7,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r91,
+                                 .dims   = chakrapetchmedium_r91_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 93 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x25bc,
+                         .end   = 0x25bd,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r92,
+                                 .dims   = chakrapetchmedium_r92_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 94 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x25c0,
+                         .end   = 0x25c1,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r93,
+                                 .dims   = chakrapetchmedium_r93_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 95 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x25c6,
+                         .end   = 0x25c6,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r94,
+                                 .dims   = chakrapetchmedium_r94_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 96 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x25ca,
+                         .end   = 0x25ca,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r95,
+                                 .dims   = chakrapetchmedium_r95_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 97 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x2913,
+                         .end   = 0x2913,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r96,
+                                 .dims   = chakrapetchmedium_r96_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 98 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0xf6d7,
+                         .end   = 0xf6d8,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r97,
+                                 .dims   = chakrapetchmedium_r97_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 99 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0xf8ff,
+                         .end   = 0xf8ff,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r98,
+                                 .dims   = chakrapetchmedium_r98_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 100 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0xfb01,
+                         .end   = 0xfb02,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r99,
+                                 .dims   = chakrapetchmedium_r99_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
+                     {
+                         // Range 101 / 101.
+                         .type  = PAX_FONT_TYPE_BITMAP_VAR,
+                         .start = 0x1f170,
+                         .end   = 0x1f171,
+                         .bitmap_var =
+                             {
+                                 .glyphs = chakrapetchmedium_r100,
+                                 .dims   = chakrapetchmedium_r100_dims,
+                                 .height = 16,
+                                 .bpp    = 2,
+                             },
+                     },
 };
 const size_t chakrapetchmedium_ranges_len = 101;
 

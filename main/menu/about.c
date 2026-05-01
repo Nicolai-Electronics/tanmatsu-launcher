@@ -5,41 +5,21 @@
 #include "freertos/idf_additions.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "pax_gfx.h"
-#include "pax_matrix.h"
 #include "pax_text.h"
 #include "pax_types.h"
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
-#define FOOTER_RIGHT NULL, 0
-#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
-#else
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
-#endif
-
 static void render(bool partial, bool icons) {
-    pax_buf_t*   buffer = display_get_buffer();
-    gui_theme_t* theme  = get_theme();
-
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-
-    pax_vec2_t position = {
-        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
+    pax_buf_t*   buffer   = display_get_buffer();
+    gui_theme_t* theme    = get_theme();
+    pax_vec2_t   position = menu_calc_position(buffer, theme);
 
     if (!partial || icons) {
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "About"}}), 1, FOOTER_LEFT,
-                                     FOOTER_RIGHT);
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "About"}}), 1,
+                                     MENU_FOOTER_BACK_ONLY, NULL, 0);
     }
     if (!partial) {
         pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, 16, position.x0,

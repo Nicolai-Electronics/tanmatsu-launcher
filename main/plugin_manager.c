@@ -3,47 +3,46 @@
 // Handles plugin discovery, loading, unloading, and lifecycle management.
 
 #include "plugin_manager.h"
-#include <string.h>
-#include <stdio.h>
 #include <dirent.h>
-#include <sys/stat.h>
 #include <errno.h>
-
-#include "esp_log.h"
-#include "esp_heap_caps.h"
-#include "nvs_flash.h"
-#include "nvs.h"
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
 #include "cJSON.h"
+#include "esp_heap_caps.h"
+#include "esp_log.h"
+#include "nvs.h"
+#include "nvs_flash.h"
 #define KBELF_REVEAL_PRIVATE
-#include "kbelf.h"
 #include "fastopen.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "freertos/task.h"
 #include "freertos/timers.h"
+#include "kbelf.h"
+#include "sdkconfig.h"
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+#include "audio_mixer.h"
+#endif
 
 static const char* TAG = "plugin_mgr";
 
 // Plugin search paths
-static const char* PLUGIN_PATHS[] = {
-    "/int/plugins",
-    "/sd/plugins",
-    NULL
-};
+static const char* PLUGIN_PATHS[] = {"/int/plugins", "/sd/plugins", NULL};
 
 // NVS namespace for plugin settings
 #define PLUGIN_NVS_NAMESPACE "plugins"
 
 // Loaded plugins registry
 static plugin_context_t* loaded_plugins[PLUGIN_MAX_LOADED] = {0};
-static size_t loaded_plugin_count = 0;
-static SemaphoreHandle_t plugin_mutex = NULL;
+static size_t            loaded_plugin_count               = 0;
+static SemaphoreHandle_t plugin_mutex                      = NULL;
 
 // External functions from plugin_api.c
 extern size_t plugin_api_get_status_widgets(plugin_icontext_t* out, size_t max, int start_x, int start_y);
-extern int plugin_api_dispatch_event(uint32_t event_type, void* event_data);
-extern void plugin_api_init(void);
-extern void plugin_api_cleanup_for_plugin(plugin_context_t* ctx);
+extern int    plugin_api_dispatch_event(uint32_t event_type, void* event_data);
+extern void   plugin_api_init(void);
+extern void   plugin_api_cleanup_for_plugin(plugin_context_t* ctx);
 
 // Forward declaration of internal unload function
 static bool _plugin_manager_unload(plugin_context_t* ctx);
@@ -98,60 +97,56 @@ void plugin_manager_shutdown(void) {
 // Plugin Metadata Parsing
 // ============================================
 
-static bool parse_plugin_metadata(const char* path, plugin_discovery_info_t* info) {
-    char metadata_path[256];
-    snprintf(metadata_path, sizeof(metadata_path), "%s/plugin.json", path);
-
-    FILE* fd = fastopen(metadata_path, "r");
-    if (fd == NULL) {
-        return false;
-    }
+// Read and parse a JSON file. Returns cJSON root or NULL. Caller must cJSON_Delete().
+static cJSON* read_json_file(const char* filepath) {
+    FILE* fd = fastopen(filepath, "r");
+    if (fd == NULL) return NULL;
 
     fseek(fd, 0, SEEK_END);
     size_t size = ftell(fd);
     fseek(fd, 0, SEEK_SET);
 
     if (size == 0 || size > 8192) {
-        fastclose(fd);  // Must use fastclose to free DMA buffer
-        return false;
+        fastclose(fd);
+        return NULL;
     }
 
     char* json_data = malloc(size + 1);
     if (json_data == NULL) {
-        fastclose(fd);  // Must use fastclose to free DMA buffer
-        return false;
+        fastclose(fd);
+        return NULL;
     }
 
-    size_t read = fread(json_data, 1, size, fd);
+    size_t read     = fread(json_data, 1, size, fd);
     json_data[read] = '\0';
-    fastclose(fd);  // Must use fastclose to free DMA buffer
+    fastclose(fd);
 
     cJSON* root = cJSON_Parse(json_data);
     free(json_data);
+    return root;
+}
 
-    if (root == NULL) {
-        ESP_LOGW(TAG, "Failed to parse plugin.json at %s", metadata_path);
-        return false;
-    }
+static bool parse_plugin_metadata(const char* path, plugin_discovery_info_t* info) {
+    // Derive slug from directory name (last path component)
+    const char* slug = strrchr(path, '/');
+    if (slug == NULL) return false;
+    slug++;  // Skip the '/'
+    if (*slug == '\0') return false;
 
-    // Extract metadata
-    cJSON* name = cJSON_GetObjectItem(root, "name");
-    cJSON* slug = cJSON_GetObjectItem(root, "slug");
-    cJSON* version = cJSON_GetObjectItem(root, "version");
-    cJSON* type = cJSON_GetObjectItem(root, "type");
-
-    if (!cJSON_IsString(name) || !cJSON_IsString(slug)) {
-        cJSON_Delete(root);
+    // Read plugin.json for runtime fields (type, api_version, autostart, permissions)
+    char filepath[256];
+    snprintf(filepath, sizeof(filepath), "%s/plugin.json", path);
+    cJSON* plugin_root = read_json_file(filepath);
+    if (plugin_root == NULL) {
+        ESP_LOGW(TAG, "Failed to parse plugin.json at %s", filepath);
         return false;
     }
 
     info->path = strdup(path);
-    info->slug = strdup(slug->valuestring);
-    info->name = strdup(name->valuestring);
-    info->version = version && cJSON_IsString(version) ? strdup(version->valuestring) : strdup("1.0.0");
+    info->slug = strdup(slug);
     info->type = PLUGIN_TYPE_MENU;  // Default
 
-    // Parse type
+    cJSON* type = cJSON_GetObjectItem(plugin_root, "type");
     if (type && cJSON_IsString(type)) {
         if (strcmp(type->valuestring, "menu") == 0) {
             info->type = PLUGIN_TYPE_MENU;
@@ -162,7 +157,23 @@ static bool parse_plugin_metadata(const char* path, plugin_discovery_info_t* inf
         }
     }
 
-    cJSON_Delete(root);
+    cJSON_Delete(plugin_root);
+
+    // Read metadata.json for display fields (name, version)
+    snprintf(filepath, sizeof(filepath), "%s/metadata.json", path);
+    cJSON* meta_root = read_json_file(filepath);
+    if (meta_root != NULL) {
+        cJSON* name    = cJSON_GetObjectItem(meta_root, "name");
+        cJSON* version = cJSON_GetObjectItem(meta_root, "version");
+        info->name     = (name && cJSON_IsString(name)) ? strdup(name->valuestring) : strdup(slug);
+        info->version  = (version && cJSON_IsString(version)) ? strdup(version->valuestring) : strdup("1.0.0");
+        cJSON_Delete(meta_root);
+    } else {
+        // Fallback: use slug as name if metadata.json is missing
+        info->name    = strdup(slug);
+        info->version = strdup("1.0.0");
+    }
+
     return true;
 }
 
@@ -176,8 +187,7 @@ size_t plugin_manager_discover(plugin_discovery_info_t** out_plugins) {
     // ESP_LOGI(TAG, "Discovering plugins... (internal before: %u)", (unsigned)internal_before);
 
     // Allocate discovery list
-    plugin_discovery_info_t* plugins = calloc(PLUGIN_MAX_LOADED,
-                                               sizeof(plugin_discovery_info_t));
+    plugin_discovery_info_t* plugins = calloc(PLUGIN_MAX_LOADED, sizeof(plugin_discovery_info_t));
     if (plugins == NULL) {
         *out_plugins = NULL;
         return 0;
@@ -195,16 +205,13 @@ size_t plugin_manager_discover(plugin_discovery_info_t** out_plugins) {
             if (entry->d_name[0] == '.') continue;
 
             char plugin_path[512];
-            snprintf(plugin_path, sizeof(plugin_path), "%s/%s",
-                     *base_path, entry->d_name);
+            snprintf(plugin_path, sizeof(plugin_path), "%s/%s", *base_path, entry->d_name);
 
             if (parse_plugin_metadata(plugin_path, &plugins[count])) {
                 // Check if already loaded
-                plugins[count].is_loaded =
-                    (plugin_manager_get_by_slug(plugins[count].slug) != NULL);
+                plugins[count].is_loaded = (plugin_manager_get_by_slug(plugins[count].slug) != NULL);
 
-                ESP_LOGI(TAG, "Found plugin: %s (%s) at %s",
-                         plugins[count].name, plugins[count].slug, plugin_path);
+                ESP_LOGI(TAG, "Found plugin: %s (%s) at %s", plugins[count].name, plugins[count].slug, plugin_path);
                 count++;
             }
         }
@@ -250,7 +257,7 @@ static char* find_plugin_elf(const char* plugin_path) {
     DIR* dir = opendir(plugin_path);
     if (dir == NULL) return NULL;
 
-    char* result = NULL;
+    char*          result = NULL;
     struct dirent* entry;
     while ((entry = readdir(dir)) != NULL) {
         size_t len = strlen(entry->d_name);
@@ -349,14 +356,14 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
         return NULL;
     }
 
-    ctx->plugin_path = strdup(plugin_path);
-    ctx->plugin_slug = discovery_info.slug;
-    ctx->storage_base_path = strdup(plugin_path);
+    ctx->plugin_path        = strdup(plugin_path);
+    ctx->plugin_slug        = discovery_info.slug;
+    ctx->storage_base_path  = strdup(plugin_path);
     ctx->settings_namespace = malloc(strlen("plugin_") + strlen(discovery_info.slug) + 1);
     if (ctx->settings_namespace) {
         sprintf(ctx->settings_namespace, "plugin_%s", discovery_info.slug);
     }
-    ctx->state = PLUGIN_STATE_UNLOADED;
+    ctx->state            = PLUGIN_STATE_UNLOADED;
     ctx->status_widget_id = -1;
 
     // Free unused discovery fields
@@ -407,9 +414,9 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
     // }
 
     free(elf_path);
-    elf_path = NULL;  // Prevent double-free if we goto error_cleanup later
+    elf_path        = NULL;  // Prevent double-free if we goto error_cleanup later
     ctx->elf_handle = dyn;
-    ctx->state = PLUGIN_STATE_LOADED;
+    ctx->state      = PLUGIN_STATE_LOADED;
 
     // Run preinit and init functions
     size_t preinit_count = kbelf_dyn_preinit_len(dyn);
@@ -437,13 +444,35 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
             ctx->registration = reg;
             ESP_LOGI(TAG, "Found plugin registration at %p", (void*)reg_addr);
 
-            // Memory debugging (commented out)
-            // if (!heap_caps_check_integrity_all(true)) {
-            //     ESP_LOGE(TAG, "HEAP CORRUPTED before plugin init!");
-            // }
+            // Memory debugging
+            if (!heap_caps_check_integrity_all(true)) {
+                ESP_LOGE(TAG, "HEAP CORRUPTED before plugin init!");
+            }
+
+            // Debug: dump registration struct contents
+            ESP_LOGI(TAG, "Registration: magic=0x%08lx size=%lu", (unsigned long)reg->magic,
+                     (unsigned long)reg->struct_size);
+            ESP_LOGI(TAG, "Entry points: get_info=%p init=%p cleanup=%p", reg->entry.get_info, reg->entry.init,
+                     reg->entry.cleanup);
+            ESP_LOGI(TAG, "Entry points: menu_render=%p menu_select=%p service_run=%p hook_event=%p",
+                     reg->entry.menu_render, reg->entry.menu_select, reg->entry.service_run, reg->entry.hook_event);
+            ESP_LOGI(TAG, "Context: slug=%s path=%s ctx=%p", ctx->plugin_slug ? ctx->plugin_slug : "(null)",
+                     ctx->plugin_path ? ctx->plugin_path : "(null)", (void*)ctx);
+
+            // Debug: dump GOT.PLT entries (first 16 words after plugin_info section)
+            {
+                uint32_t* base = (uint32_t*)reg_addr;
+                ESP_LOGI(TAG, "GOT.PLT dump (from base %p):", (void*)base);
+                for (int i = 0; i < 16; i++) {
+                    uint32_t  offset = 0x614 + i * 4;
+                    uint32_t* addr   = (uint32_t*)((uint8_t*)base + offset);
+                    ESP_LOGI(TAG, "  [0x%03lx] = 0x%08lx", (unsigned long)offset, (unsigned long)*addr);
+                }
+            }
 
             // Call the plugin's init function if available
             if (reg->entry.init != NULL) {
+                ESP_LOGI(TAG, "Calling init at %p with ctx=%p", reg->entry.init, (void*)ctx);
                 int init_result = reg->entry.init(ctx);
 
                 // Memory debugging (commented out)
@@ -457,8 +486,8 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
                 }
             }
         } else {
-            ESP_LOGE(TAG, "Invalid plugin magic: 0x%08lx (expected 0x%08x)",
-                     (unsigned long)reg->magic, TANMATSU_PLUGIN_MAGIC);
+            ESP_LOGE(TAG, "Invalid plugin magic: 0x%08lx (expected 0x%08x)", (unsigned long)reg->magic,
+                     TANMATSU_PLUGIN_MAGIC);
             goto error_cleanup;
         }
     } else {
@@ -468,7 +497,7 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
 
     // Add to loaded plugins
     loaded_plugins[loaded_plugin_count++] = ctx;
-    ctx->state = PLUGIN_STATE_INITIALIZED;
+    ctx->state                            = PLUGIN_STATE_INITIALIZED;
 
     ESP_LOGI(TAG, "Plugin loaded successfully: %s", ctx->plugin_slug);
 
@@ -622,8 +651,7 @@ plugin_context_t* plugin_manager_get_by_slug(const char* slug) {
     if (slug == NULL) return NULL;
 
     for (size_t i = 0; i < loaded_plugin_count; i++) {
-        if (loaded_plugins[i] != NULL &&
-            loaded_plugins[i]->plugin_slug != NULL &&
+        if (loaded_plugins[i] != NULL && loaded_plugins[i]->plugin_slug != NULL &&
             strcmp(loaded_plugins[i]->plugin_slug, slug) == 0) {
             return loaded_plugins[i];
         }
@@ -631,14 +659,10 @@ plugin_context_t* plugin_manager_get_by_slug(const char* slug) {
     return NULL;
 }
 
-size_t plugin_manager_get_by_type(plugin_type_t type,
-                                   plugin_context_t** out_plugins,
-                                   size_t max_count) {
+size_t plugin_manager_get_by_type(plugin_type_t type, plugin_context_t** out_plugins, size_t max_count) {
     size_t count = 0;
     for (size_t i = 0; i < loaded_plugin_count && count < max_count; i++) {
-        if (loaded_plugins[i] != NULL &&
-            loaded_plugins[i]->info != NULL &&
-            loaded_plugins[i]->info->type == type) {
+        if (loaded_plugins[i] != NULL && loaded_plugins[i]->info != NULL && loaded_plugins[i]->info->type == type) {
             out_plugins[count++] = loaded_plugins[i];
         }
     }
@@ -694,9 +718,9 @@ static void plugin_service_task(void* arg) {
 
     // Clear handle BEFORE marking as not running to prevent race with stop_service()
     // This ensures stop_service() won't try to delete an already-deleting task
-    ctx->task_handle = NULL;
+    ctx->task_handle  = NULL;
     ctx->task_running = false;
-    ctx->state = PLUGIN_STATE_STOPPED;
+    ctx->state        = PLUGIN_STATE_STOPPED;
 
     // Create a small task to handle deferred unload with sufficient stack
     // This runs after the service task exits, so it's safe to unload the plugin
@@ -724,7 +748,7 @@ bool plugin_manager_start_service(plugin_context_t* ctx) {
 
     // Initialize control flags
     ctx->stop_requested = false;
-    ctx->task_running = false;
+    ctx->task_running   = false;
 
     // Allocate task stack and TCB - we own this memory, no cleanup race with FreeRTOS
     ctx->task_stack = malloc(SERVICE_TASK_STACK_SIZE * sizeof(StackType_t));
@@ -755,27 +779,30 @@ bool plugin_manager_start_service(plugin_context_t* ctx) {
     //          (unsigned)(internal_after_stack - internal_after_tcb));
 
     // Use static task creation - FreeRTOS won't free our memory
-    TaskHandle_t task = xTaskCreateStatic(
-        plugin_service_task,
-        ctx->plugin_slug,
-        SERVICE_TASK_STACK_SIZE,
-        ctx,
-        5,     // Priority
-        (StackType_t*)ctx->task_stack,
-        (StaticTask_t*)ctx->task_tcb
-    );
+    TaskHandle_t task = xTaskCreateStatic(plugin_service_task, ctx->plugin_slug, SERVICE_TASK_STACK_SIZE, ctx,
+                                          5,  // Priority
+                                          (StackType_t*)ctx->task_stack, (StaticTask_t*)ctx->task_tcb);
 
     if (task == NULL) {
         ESP_LOGE(TAG, "Failed to create service task");
         free(ctx->task_tcb);
         free(ctx->task_stack);
-        ctx->task_tcb = NULL;
+        ctx->task_tcb   = NULL;
         ctx->task_stack = NULL;
         return false;
     }
 
     ctx->task_handle = task;
-    ctx->state = PLUGIN_STATE_RUNNING;
+    ctx->state       = PLUGIN_STATE_RUNNING;
+
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+    // Allocate a per-plugin audio mixer stream so concurrent plugins don't
+    // trample each other's I2S writes. Failure is non-fatal: the plugin can
+    // still run, asp_audio_write will just return ASP_ERR_FAIL.
+    if (!audio_mixer_register_stream(task)) {
+        ESP_LOGW(TAG, "Audio mixer stream not available for plugin: %s", ctx->plugin_slug);
+    }
+#endif
 
     return true;
 }
@@ -784,6 +811,12 @@ bool plugin_manager_stop_service(plugin_context_t* ctx) {
     if (ctx == NULL) {
         return false;
     }
+
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+    // Capture the task handle up front; the force-stop path below clears
+    // ctx->task_handle, but we still need it to release the audio mixer slot.
+    TaskHandle_t original_task = (TaskHandle_t)ctx->task_handle;
+#endif
 
     // Check if already stopped (task may have ended on its own)
     if (ctx->state != PLUGIN_STATE_RUNNING && !ctx->task_running) {
@@ -810,7 +843,7 @@ bool plugin_manager_stop_service(plugin_context_t* ctx) {
 
         // Atomic read-and-clear to prevent race with task self-deletion
         TaskHandle_t task = (TaskHandle_t)ctx->task_handle;
-        ctx->task_handle = NULL;  // Clear immediately to prevent double-delete
+        ctx->task_handle  = NULL;  // Clear immediately to prevent double-delete
 
         if (task != NULL) {
             vTaskDelete(task);
@@ -820,6 +853,11 @@ bool plugin_manager_stop_service(plugin_context_t* ctx) {
     }
 
 cleanup_task_memory:
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+    // Release the audio mixer slot now that the task is gone.
+    audio_mixer_unregister_stream(original_task);
+#endif
+
     // Free task stack and TCB that we allocated
     // Since we used xTaskCreateStatic(), FreeRTOS doesn't touch this memory
     // after vTaskDelete() - we own it and can free it immediately
@@ -849,7 +887,7 @@ cleanup_task_memory:
     //          (unsigned)(internal_after_tcb_free - internal_after_stack_free),
     //          (unsigned)(internal_after_tcb_free - internal_before_free));
 
-    ctx->state = PLUGIN_STATE_STOPPED;
+    ctx->state          = PLUGIN_STATE_STOPPED;
     ctx->stop_requested = false;
 
     return true;
@@ -881,7 +919,7 @@ bool plugin_manager_set_autostart(const char* slug, bool enabled) {
     if (slug == NULL) return false;
 
     nvs_handle_t handle;
-    esp_err_t err = nvs_open(PLUGIN_NVS_NAMESPACE, NVS_READWRITE, &handle);
+    esp_err_t    err = nvs_open(PLUGIN_NVS_NAMESPACE, NVS_READWRITE, &handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to open NVS for autostart: %s", esp_err_to_name(err));
         return false;
@@ -928,7 +966,7 @@ static bool get_autostart_from_json(const char* plugin_path) {
         return false;
     }
 
-    size_t read = fread(json_data, 1, size, fd);
+    size_t read     = fread(json_data, 1, size, fd);
     json_data[read] = '\0';
     fclose(fd);
 
@@ -937,7 +975,7 @@ static bool get_autostart_from_json(const char* plugin_path) {
     if (root == NULL) return false;
 
     cJSON* autostart = cJSON_GetObjectItem(root, "autostart");
-    bool result = autostart && cJSON_IsBool(autostart) && cJSON_IsTrue(autostart);
+    bool   result    = autostart && cJSON_IsBool(autostart) && cJSON_IsTrue(autostart);
     cJSON_Delete(root);
 
     return result;
@@ -948,13 +986,13 @@ bool plugin_manager_get_autostart(const char* slug) {
 
     // First check NVS for user override
     nvs_handle_t handle;
-    esp_err_t err = nvs_open(PLUGIN_NVS_NAMESPACE, NVS_READONLY, &handle);
+    esp_err_t    err = nvs_open(PLUGIN_NVS_NAMESPACE, NVS_READONLY, &handle);
     if (err == ESP_OK) {
         char key[16];
         make_autostart_key(slug, key, sizeof(key));
 
         uint8_t value = 0;
-        err = nvs_get_u8(handle, key, &value);
+        err           = nvs_get_u8(handle, key, &value);
         nvs_close(handle);
 
         if (err == ESP_OK) {
@@ -966,7 +1004,7 @@ bool plugin_manager_get_autostart(const char* slug) {
     // No user override - check plugin.json default
     // Need to find the plugin path from slug
     plugin_discovery_info_t* plugins = NULL;
-    size_t count = plugin_manager_discover(&plugins);
+    size_t                   count   = plugin_manager_discover(&plugins);
 
     bool result = false;
     for (size_t i = 0; i < count; i++) {
@@ -993,13 +1031,13 @@ bool plugin_manager_has_running_services(void) {
 static bool check_autostart_for_plugin(const char* slug, const char* path) {
     // First check NVS for user override
     nvs_handle_t handle;
-    esp_err_t err = nvs_open(PLUGIN_NVS_NAMESPACE, NVS_READONLY, &handle);
+    esp_err_t    err = nvs_open(PLUGIN_NVS_NAMESPACE, NVS_READONLY, &handle);
     if (err == ESP_OK) {
         char key[16];
         make_autostart_key(slug, key, sizeof(key));
 
         uint8_t value = 0;
-        err = nvs_get_u8(handle, key, &value);
+        err           = nvs_get_u8(handle, key, &value);
         nvs_close(handle);
 
         if (err == ESP_OK) {
@@ -1016,8 +1054,8 @@ void plugin_manager_load_autostart(void) {
     ESP_LOGI(TAG, "Loading autostart plugins...");
 
     // Discover all available plugins
-    plugin_discovery_info_t* plugins = NULL;
-    size_t plugin_count = plugin_manager_discover(&plugins);
+    plugin_discovery_info_t* plugins      = NULL;
+    size_t                   plugin_count = plugin_manager_discover(&plugins);
 
     if (plugins == NULL || plugin_count == 0) {
         ESP_LOGI(TAG, "No plugins found for autostart");
@@ -1052,7 +1090,6 @@ void plugin_manager_load_autostart(void) {
 // Status Widget Integration
 // ============================================
 
-size_t plugin_manager_get_status_widgets(plugin_icontext_t* out, size_t max,
-                                          int start_x, int start_y) {
+size_t plugin_manager_get_status_widgets(plugin_icontext_t* out, size_t max, int start_x, int start_y) {
     return plugin_api_get_status_widgets(out, max, start_x, start_y);
 }

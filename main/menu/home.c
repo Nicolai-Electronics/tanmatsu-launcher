@@ -24,10 +24,11 @@
 #include "information.h"
 #include "lora.h"
 #include "menu/lora_information.h"
+#include "menu/menu_helpers.h"
 #include "menu/menu_rftest.h"
 #include "menu/message_dialog.h"
 #include "menu/nametag.h"
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
 #include "menu/menu_plugins.h"
 #include "plugin_manager.h"
 #endif
@@ -55,7 +56,7 @@ typedef enum {
     ACTION_NAMETAG,
     ACTION_REPOSITORY,
     ACTION_SETTINGS,
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
     ACTION_PLUGINS,
 #endif
     ACTION_TOOLS,
@@ -71,14 +72,14 @@ static void execute_action(menu_home_action_t action) {
     switch (action) {
         case ACTION_RADIO_OTA:
             radio_ota_update();
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
             plugin_manager_shutdown();
 #endif
             esp_restart();
             break;
         case ACTION_DOWNLOAD_ICONS:
             download_icons(true);
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
             plugin_manager_shutdown();
 #endif
             esp_restart();
@@ -94,7 +95,7 @@ static void execute_action(menu_home_action_t action) {
         case ACTION_SETTINGS:
             menu_settings();
             break;
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
         case ACTION_PLUGINS:
             menu_plugins(fb, theme);
             break;
@@ -303,7 +304,7 @@ void menu_home(void) {
     }
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_STOREFRONT));
     menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
     menu_insert_item_icon(&menu, "Plugins", NULL, (void*)ACTION_PLUGINS, -1, get_icon(ICON_EXTENSION));
 #endif
     if (access("/int/rftest_local.bin", F_OK) == 0) {
@@ -315,15 +316,7 @@ void menu_home(void) {
         menu_insert_item_icon(&menu, "LoRa info", NULL, (void*)ACTION_LORA_INFORMATION, -1, get_icon(ICON_INFO));
     }
 
-    int header_height = theme->header.height + (theme->header.vertical_margin * 2);
-    int footer_height = theme->footer.height + (theme->footer.vertical_margin * 2);
-
-    pax_vec2_t position = {
-        .x0 = theme->menu.horizontal_margin + theme->menu.horizontal_padding,
-        .y0 = header_height + theme->menu.vertical_margin + theme->menu.vertical_padding,
-        .x1 = pax_buf_get_width(buffer) - theme->menu.horizontal_margin - theme->menu.horizontal_padding,
-        .y1 = pax_buf_get_height(buffer) - footer_height - theme->menu.vertical_margin - theme->menu.vertical_padding,
-    };
+    pax_vec2_t position = menu_calc_position(buffer, theme);
 
     bool power_button_latch = false;
 

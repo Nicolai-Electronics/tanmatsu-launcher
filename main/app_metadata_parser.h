@@ -34,17 +34,19 @@ typedef struct {
     char*             executable_interpreter_slug;
     appfs_handle_t    executable_appfs_fd;
 
-    bool     executable_on_sd_available;
-    uint32_t executable_on_sd_revision;
-    char*    executable_on_sd_filename;
+    bool     executable_on_fs_available;
+    uint32_t executable_on_fs_revision;
+    int      executable_on_fs_filesize;
+    char*    executable_on_fs_filename;
 } app_t;
 
 appfs_handle_t find_appfs_handle_for_slug(const char* search_slug);
-app_t*         create_app(const char* path, const char* slug, bool sdcard);
-void           free_app(app_t* app);
+bool   get_executable_revision(const char* path, const char* slug, uint32_t* out_revision, char** out_executable);
+app_t* create_app(const char* path, const char* slug);
+void   free_app(app_t* app);
 
 size_t create_list_of_apps_from_directory(app_t** out_list, size_t list_size, const char* path, app_t** full_list,
-                                          size_t full_list_size, bool sdcard);
+                                          size_t full_list_size);
 size_t create_list_of_apps_from_other_appfs_entries(app_t** out_list, size_t list_size, app_t** full_list,
                                                     size_t full_list_size);
 size_t create_list_of_apps(app_t** out_list, size_t list_size);

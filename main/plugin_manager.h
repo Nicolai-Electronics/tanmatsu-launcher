@@ -6,8 +6,8 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include "tanmatsu_plugin.h"
 #include "plugin_context.h"
+#include "tanmatsu_plugin.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,12 +18,12 @@ extern "C" {
 
 // Plugin discovery result
 typedef struct {
-    char* path;                 // Full path to plugin directory
-    char* slug;                 // Plugin slug from metadata
-    char* name;                 // Display name
-    char* version;              // Version string
-    plugin_type_t type;         // Plugin type
-    bool is_loaded;             // Currently loaded?
+    char*         path;       // Full path to plugin directory
+    char*         slug;       // Plugin slug from metadata
+    char*         name;       // Display name
+    char*         version;    // Version string
+    plugin_type_t type;       // Plugin type
+    bool          is_loaded;  // Currently loaded?
 } plugin_discovery_info_t;
 
 // ============================================
@@ -68,9 +68,7 @@ plugin_context_t* plugin_manager_get_by_slug(const char* slug);
 
 // Get all loaded plugins of a specific type
 // Returns number of plugins found
-size_t plugin_manager_get_by_type(plugin_type_t type,
-                                   plugin_context_t** out_plugins,
-                                   size_t max_count);
+size_t plugin_manager_get_by_type(plugin_type_t type, plugin_context_t** out_plugins, size_t max_count);
 
 // Get count of loaded plugins
 size_t plugin_manager_get_loaded_count(void);
