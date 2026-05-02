@@ -217,7 +217,8 @@ void menu_settings_repository(void) {
                                     }
                                     case ACTION_DOWNLOAD_ICONS: {
                                         uint8_t current = DEFAULT_REPO_DOWNLOAD_ICONS;
-                                        nvs_settings_get_u8(NVS_KEY_REPO_DOWNLOAD_ICONS, DEFAULT_REPO_DOWNLOAD_ICONS, &current);
+                                        nvs_settings_get_u8(NVS_KEY_REPO_DOWNLOAD_ICONS, DEFAULT_REPO_DOWNLOAD_ICONS,
+                                                            &current);
                                         current = current ? 0 : 1;
                                         nvs_settings_set_u8(NVS_KEY_REPO_DOWNLOAD_ICONS, current);
                                         menu_populate(&menu);

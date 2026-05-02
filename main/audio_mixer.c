@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 #include "audio_mixer.h"
-
 #include <stdint.h>
 #include <string.h>
-
 #include "bsp/audio.h"
 #include "driver/i2s_common.h"
 #include "driver/i2s_types.h"
@@ -70,8 +68,10 @@ static void mixer_task_fn(void* arg) {
         int divisor = (active_count > 0) ? active_count : 1;
         for (size_t j = 0; j < MIXER_CHUNK_SAMPLES; j++) {
             int32_t s = g_accum[j] / divisor;
-            if (s > INT16_MAX) s = INT16_MAX;
-            else if (s < INT16_MIN) s = INT16_MIN;
+            if (s > INT16_MAX)
+                s = INT16_MAX;
+            else if (s < INT16_MIN)
+                s = INT16_MIN;
             g_out_buf[j] = (int16_t)s;
         }
 
@@ -100,7 +100,8 @@ esp_err_t audio_mixer_init(void) {
         return ESP_ERR_NO_MEM;
     }
 
-    BaseType_t ok = xTaskCreate(mixer_task_fn, "audio_mixer", MIXER_TASK_STACK, NULL, MIXER_TASK_PRIORITY, &g_mixer_task);
+    BaseType_t ok =
+        xTaskCreate(mixer_task_fn, "audio_mixer", MIXER_TASK_STACK, NULL, MIXER_TASK_PRIORITY, &g_mixer_task);
     if (ok != pdPASS) {
         vSemaphoreDelete(g_streams_mutex);
         g_streams_mutex = NULL;
@@ -109,8 +110,7 @@ esp_err_t audio_mixer_init(void) {
     }
 
     g_initialized = true;
-    ESP_LOGI(TAG, "Audio mixer started (chunk=%d frames, %d streams max)", MIXER_CHUNK_FRAMES,
-             AUDIO_MIXER_MAX_STREAMS);
+    ESP_LOGI(TAG, "Audio mixer started (chunk=%d frames, %d streams max)", MIXER_CHUNK_FRAMES, AUDIO_MIXER_MAX_STREAMS);
     return ESP_OK;
 }
 

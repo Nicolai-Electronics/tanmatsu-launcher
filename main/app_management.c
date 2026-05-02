@@ -291,18 +291,18 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
                     appfsDeleteFile(slug);
                 }
 
-                const char* app_name = (cJSON_GetObjectItem(metadata.json, "name") &&
-                                        cJSON_IsString(cJSON_GetObjectItem(metadata.json, "name")))
-                                           ? cJSON_GetObjectItem(metadata.json, "name")->valuestring
-                                           : slug;
+                const char* app_name     = (cJSON_GetObjectItem(metadata.json, "name") &&
+                                            cJSON_IsString(cJSON_GetObjectItem(metadata.json, "name")))
+                                               ? cJSON_GetObjectItem(metadata.json, "name")->valuestring
+                                               : slug;
                 uint32_t    app_revision = 0;
                 cJSON*      revision_obj = cJSON_GetObjectItem(application, "revision");
                 if (revision_obj != NULL && cJSON_IsNumber(revision_obj)) {
                     app_revision = (uint32_t)revision_obj->valueint;
                 }
 
-                uint8_t* buf       = NULL;
-                size_t   buf_size  = 0;
+                uint8_t* buf      = NULL;
+                size_t   buf_size = 0;
                 if (!http_session_download_ram(session, file_url, &buf, &buf_size)) {
                     ESP_LOGE(TAG, "Failed to download executable: %s", executable);
                     http_session_end(session);
@@ -357,8 +357,8 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
     // plugins and int/elf/int/script installs don't use AppFS. If the cached revision still matches
     // the metadata revision, the cache is up-to-date and we keep it.
     if (location == APP_MGMT_LOCATION_SD && appfsExists(slug)) {
-        uint32_t       new_revision    = 0;
-        cJSON*         revision_obj    = cJSON_GetObjectItem(application, "revision");
+        uint32_t new_revision = 0;
+        cJSON*   revision_obj = cJSON_GetObjectItem(application, "revision");
         if (revision_obj != NULL && cJSON_IsNumber(revision_obj)) {
             new_revision = (uint32_t)revision_obj->valueint;
         }
