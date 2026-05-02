@@ -233,6 +233,35 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
         return ESP_ERR_INVALID_RESPONSE;
     }
 
+    // Download icons before the executable. The executable download for /int+appfs
+    // ends with a multi-second AppFS flash write that would otherwise let the
+    // keep-alive TLS session time out before the icons could be fetched.
+    cJSON* icon_obj = cJSON_GetObjectItem(metadata.json, "icon");
+    if (icon_obj != NULL && cJSON_IsObject(icon_obj)) {
+        const char* icon_keys[] = {"16x16", "32x32", "64x64"};
+        for (int i = 0; i < 3; i++) {
+            cJSON* icon_entry = cJSON_GetObjectItem(icon_obj, icon_keys[i]);
+            if (icon_entry != NULL && cJSON_IsString(icon_entry)) {
+                char icon_url[256];
+                snprintf(icon_url, sizeof(icon_url), "%s/%s/%s/%s", repository_url, repository_data_url, slug,
+                         icon_entry->valuestring);
+                char icon_path[512];
+                snprintf(icon_path, sizeof(icon_path), "%s/%s", app_path, icon_entry->valuestring);
+                char status_text[64] = {0};
+                snprintf(status_text, sizeof(status_text), "Downloading icon '%s'...", icon_entry->valuestring);
+                http_session_set_callback(session, download_callback, status_text);
+                if (!http_session_download_file(session, icon_url, icon_path)) {
+                    ESP_LOGE(TAG, "Failed to download icon %s", icon_keys[i]);
+                    http_session_end(session);
+                    free_repository_data_json(&metadata);
+                    free_repository_data_json(&information);
+                    app_mgmt_uninstall(slug, location);
+                    return ESP_FAIL;
+                }
+            }
+        }
+    }
+
     // Download and store executable binary.
     // - type=appfs installed to /int: binary streams directly into AppFS (skips /int/apps/{slug}/).
     // - type=appfs installed to /sd: binary is stored on /sd/apps/{slug}/ and cached to AppFS on first launch.
@@ -316,27 +345,6 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
                     free_repository_data_json(&information);
                     app_mgmt_uninstall(slug, location);
                     return ESP_FAIL;
-                }
-            }
-        }
-    }
-
-    cJSON* icon_obj = cJSON_GetObjectItem(metadata.json, "icon");
-    if (icon_obj != NULL && cJSON_IsObject(icon_obj)) {
-        const char* icon_keys[] = {"16x16", "32x32", "64x64"};
-        for (int i = 0; i < 3; i++) {
-            cJSON* icon_entry = cJSON_GetObjectItem(icon_obj, icon_keys[i]);
-            if (icon_entry != NULL && cJSON_IsString(icon_entry)) {
-                char icon_url[256];
-                snprintf(icon_url, sizeof(icon_url), "%s/%s/%s/%s", repository_url, repository_data_url, slug,
-                         icon_entry->valuestring);
-                char icon_path[512];
-                snprintf(icon_path, sizeof(icon_path), "%s/%s", app_path, icon_entry->valuestring);
-                char status_text[64] = {0};
-                snprintf(status_text, sizeof(status_text), "Downloading icon '%s'...", icon_entry->valuestring);
-                http_session_set_callback(session, download_callback, status_text);
-                if (!http_session_download_file(session, icon_url, icon_path)) {
-                    ESP_LOGE(TAG, "Failed to download icon %s", icon_keys[i]);
                 }
             }
         }
