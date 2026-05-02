@@ -53,11 +53,11 @@ static bool get_bool_field(cJSON* obj, const char* name) {
 }
 
 static void resolve_constraints(cJSON* project, install_constraints_t* out) {
-    out->external_only       = get_bool_field(project, "external_only");
-    out->external_preferred  = get_bool_field(project, "external_preferred");
-    out->internal_only       = get_bool_field(project, "internal_only");
-    out->internal_preferred  = get_bool_field(project, "internal_preferred");
-    out->sd_present          = (sd_status() == SD_STATUS_OK);
+    out->external_only      = get_bool_field(project, "external_only");
+    out->external_preferred = get_bool_field(project, "external_preferred");
+    out->internal_only      = get_bool_field(project, "internal_only");
+    out->internal_preferred = get_bool_field(project, "internal_preferred");
+    out->sd_present         = (sd_status() == SD_STATUS_OK);
 
     // If both *_only flags are set the metadata is contradictory; let internal_only win
     // because the device always has internal storage but may not have an SD card inserted.
@@ -113,8 +113,8 @@ static void render_project(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t pos
                   position.y0 + font_size * 4, text_buffer);
 
     if (constraints != NULL && constraints->sd_required_warning) {
-        pax_draw_text(buffer, 0xFFFF0000, theme->menu.text_font, font_size, position.x0,
-                      position.y0 + font_size * 5, "SD card is required for installation");
+        pax_draw_text(buffer, 0xFFFF0000, theme->menu.text_font, font_size, position.x0, position.y0 + font_size * 5,
+                      "SD card is required for installation");
     }
 }
 
@@ -125,15 +125,12 @@ static void render_project(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t pos
 static void draw_disabled_overlay(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t menu_position, int slot) {
     int   entry_count_x = 2;
     int   entry_count_y = 1;
-    float entry_width   = ((menu_position.x1 - menu_position.x0) -
-                         (theme->menu.horizontal_margin * (entry_count_x + 1))) /
-                        entry_count_x;
-    float entry_height = ((menu_position.y1 - menu_position.y0) -
-                          (theme->menu.vertical_margin * (entry_count_y + 1))) /
-                         entry_count_y;
+    float entry_width =
+        ((menu_position.x1 - menu_position.x0) - (theme->menu.horizontal_margin * (entry_count_x + 1))) / entry_count_x;
+    float entry_height =
+        ((menu_position.y1 - menu_position.y0) - (theme->menu.vertical_margin * (entry_count_y + 1))) / entry_count_y;
 
-    float x = menu_position.x0 + theme->menu.horizontal_margin +
-              (slot * (entry_width + theme->menu.horizontal_margin));
+    float x = menu_position.x0 + theme->menu.horizontal_margin + (slot * (entry_width + theme->menu.horizontal_margin));
     float y = menu_position.y0 + theme->menu.vertical_margin;
 
     float     inset = 6.0f;
@@ -212,7 +209,7 @@ static void download_callback(size_t download_position, size_t file_size, const 
     last_percentage = percentage;
     char text[64];
     snprintf(text, sizeof(text), "%s (%u%%)", status_text ? status_text : "Downloading", percentage);
-    busy_dialog(get_icon(ICON_DOWNLOADING), "Downloading", text, true);
+    progress_dialog(get_icon(ICON_DOWNLOADING), "Downloading", text, percentage, true);
 };
 
 // Find the interpreter slug for the current device from project metadata.
@@ -310,8 +307,7 @@ static bool execute_action(pax_buf_t* buffer, menu_repository_client_project_act
     switch (action) {
         case ACTION_INSTALL:
             if (constraints != NULL && constraints->internal_disabled) {
-                message_dialog(get_icon(ICON_ERROR), "Repository",
-                               "This app must be installed on the SD card.", "OK");
+                message_dialog(get_icon(ICON_ERROR), "Repository", "This app must be installed on the SD card.", "OK");
                 return false;
             }
             location = is_plugin ? APP_MGMT_LOCATION_INTERNAL_PLUGINS : APP_MGMT_LOCATION_INTERNAL;
@@ -319,9 +315,8 @@ static bool execute_action(pax_buf_t* buffer, menu_repository_client_project_act
             break;
         case ACTION_INSTALL_SD:
             if (constraints != NULL && constraints->sd_disabled) {
-                const char* msg = constraints->internal_only
-                                      ? "This app must be installed on internal memory."
-                                      : "Insert an SD card to install here.";
+                const char* msg = constraints->internal_only ? "This app must be installed on internal memory."
+                                                             : "Insert an SD card to install here.";
                 message_dialog(get_icon(ICON_ERROR), "Repository", msg, "OK");
                 return false;
             }

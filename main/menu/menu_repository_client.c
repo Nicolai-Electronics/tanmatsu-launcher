@@ -20,6 +20,7 @@
 #include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "menu_repository_client_project.h"
+#include "message_dialog.h"
 #include "nvs_settings.h"
 #include "nvs_settings_helpers.h"
 #include "pax_codecs.h"
@@ -516,7 +517,7 @@ static void download_callback(size_t download_position, size_t file_size, const 
     last_percentage = percentage;
     char text[64];
     snprintf(text, sizeof(text), "%s (%u%%)", status_text ? status_text : "Downloading", percentage);
-    busy_dialog(get_icon(ICON_DOWNLOADING), "Downloading", text, true);
+    progress_dialog(get_icon(ICON_DOWNLOADING), "Downloading", text, percentage, true);
 }
 
 static install_status_t previous_render_status = INSTALL_STATUS_NOT_INSTALLED;

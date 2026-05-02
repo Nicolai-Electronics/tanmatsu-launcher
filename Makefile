@@ -147,6 +147,10 @@ flashmonitor: build
 	source "$(IDF_PATH)/export.sh" && \
 	idf.py $(IDF_PARAMS) flash -p $(PORT) monitor
 
+.PHONY: quickflash
+quickflash: build
+	esptool -p $(PORT) write-flash 0x20000 $(BUILD)/launcher.bin
+
 .PHONY: prepappfs
 prepappfs:
 	source "$(IDF_PATH)/export.sh" && \
@@ -276,8 +280,15 @@ buildall:
 	$(MAKE) build DEVICE=mch2022
 	$(MAKE) build DEVICE=esp32-p4-function-ev-board
 
-# Vscode
+# Vscode (creates a copy of the template vscode config for local use with the ESP-IDF plugin)
 .PHONY: vscode
 vscode:
 	rm -rf .vscode
 	cp -r .vscode.template .vscode
+
+# Badgelink (prepares the badgelink tools for use)
+.PHONY: badgelink
+badgelink:
+	cd managed_components/badgeteam__badgelink/tools; chmod +x *.sh
+	cd managed_components/badgeteam__badgelink/tools; ./install.sh
+	echo "Done, you can now run the badgelink tools from the managed_components/badgeteam__badgelink/tools folder"

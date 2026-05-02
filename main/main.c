@@ -472,12 +472,16 @@ void app_main(void) {
     startup_dialog("Checking bootloader...");
     bootloader_update();
 
-    // Force the radio coprocessor off before bringing it up, in case it was
-    // left in APPLICATION mode by a previously running app with a transfer
-    // still in flight. Without this clean power-cycle the radio can come up
-    // in an inconsistent state and cause crashes shortly after launch.
-    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
-    vTaskDelay(pdMS_TO_TICKS(200));
+    // Temporary workaround because of an issue where ESP-HOSTED can try to allocate a lot of memory
+    // if the communication channel is left open before restarting. Also prevents the radio from being
+    // in unknown state.
+    bsp_radio_state_t previous_state = BSP_POWER_RADIO_STATE_OFF;
+    bsp_power_get_radio_state(&previous_state);
+    if (previous_state != BSP_POWER_RADIO_STATE_OFF) {
+        bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_APPLICATION);
 
     startup_dialog("Initializing radio...");
     ESP_ERROR_CHECK(lora_init(16));
