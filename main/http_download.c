@@ -1,4 +1,5 @@
 #include "http_download.h"
+#include <unistd.h>
 #include "device_settings.h"
 #include "esp_event.h"
 #include "esp_http_client.h"
@@ -104,25 +105,29 @@ struct http_session {
     http_download_info_t     info;
 };
 
-http_session_t http_session_begin(const char* initial_url) {
-    struct http_session* session = calloc(1, sizeof(struct http_session));
-    if (session == NULL) return NULL;
-
+static esp_http_client_handle_t create_http_client(const char* url, http_download_info_t* info) {
     char user_agent[128] = {0};
     nvs_settings_get_http_user_agent(user_agent, sizeof(user_agent), "");
     if (strlen(user_agent) < 1) {
         device_settings_get_default_http_user_agent(user_agent, sizeof(user_agent));
     }
 
-    esp_http_client_config_t config = {.url                 = initial_url,
+    esp_http_client_config_t config = {.url                 = url,
                                        .use_global_ca_store = true,
                                        .keep_alive_enable   = true,
                                        .timeout_ms          = 10000,
                                        .buffer_size         = 4096,
-                                       .user_data           = &session->info,
+                                       .user_data           = info,
                                        .event_handler       = _event_handler,
                                        .user_agent          = user_agent};
-    session->client                 = esp_http_client_init(&config);
+    return esp_http_client_init(&config);
+}
+
+http_session_t http_session_begin(const char* initial_url) {
+    struct http_session* session = calloc(1, sizeof(struct http_session));
+    if (session == NULL) return NULL;
+
+    session->client = create_http_client(initial_url, &session->info);
     if (session->client == NULL) {
         free(session);
         return NULL;
@@ -142,49 +147,105 @@ bool http_session_download_ram(http_session_t session, const char* url, uint8_t*
 
     download_callback_t saved_callback      = session->info.callback;
     const char*         saved_callback_text = session->info.callback_text;
-    memset(&session->info, 0, sizeof(http_download_info_t));
-    session->info.buffer        = ptr;
-    session->info.callback      = saved_callback;
-    session->info.callback_text = saved_callback_text;
 
-    esp_http_client_set_url(session->client, url);
-    esp_err_t err         = esp_http_client_perform(session->client);
-    int       status_code = esp_http_client_get_status_code(session->client);
-    bool      success     = download_success(err, &session->info) && (status_code == 200);
+    // Two-shot reconnect: a slow caller-side operation between downloads (e.g. a
+    // multi-second AppFS flash write) can let the keep-alive TLS session time
+    // out server-side. If an attempt fails, drop the client, recreate it, and
+    // retry up to two more times.
+    for (int attempt = 0; attempt < 3; attempt++) {
+        // Free any buffer the event handler malloc'd on a previous failed attempt.
+        if (*ptr != NULL) {
+            free(*ptr);
+            *ptr = NULL;
+        }
 
-    if (success && size != NULL) {
-        *size = session->info.size;
+        memset(&session->info, 0, sizeof(http_download_info_t));
+        session->info.buffer        = ptr;
+        session->info.callback      = saved_callback;
+        session->info.callback_text = saved_callback_text;
+
+        esp_http_client_set_url(session->client, url);
+        esp_err_t err         = esp_http_client_perform(session->client);
+        int       status_code = esp_http_client_get_status_code(session->client);
+
+        if (download_success(err, &session->info) && (status_code == 200)) {
+            if (size != NULL) {
+                *size = session->info.size;
+            }
+            return true;
+        }
+
+        if (attempt < 2) {
+            ESP_LOGW(TAG, "Download failed (err=%s, status=%d), reconnecting and retrying (attempt %d/2)",
+                     esp_err_to_name(err), status_code, attempt + 1);
+            esp_http_client_cleanup(session->client);
+            session->client = create_http_client(url, &session->info);
+            if (session->client == NULL) {
+                ESP_LOGE(TAG, "Failed to recreate HTTP client");
+                if (*ptr != NULL) {
+                    free(*ptr);
+                    *ptr = NULL;
+                }
+                return false;
+            }
+        }
     }
 
-    if (!success && *ptr != NULL) {
+    if (*ptr != NULL) {
         free(*ptr);
         *ptr = NULL;
     }
-
-    return success;
+    return false;
 }
 
 bool http_session_download_file(http_session_t session, const char* url, const char* path) {
     if (session == NULL || path == NULL) return false;
 
-    FILE* fd = fastopen(path, "w");
-    if (fd == NULL) {
-        ESP_LOGE(TAG, "Failed to open file");
-        return false;
-    }
-
     download_callback_t saved_callback      = session->info.callback;
     const char*         saved_callback_text = session->info.callback_text;
-    memset(&session->info, 0, sizeof(http_download_info_t));
-    session->info.fd            = fd;
-    session->info.callback      = saved_callback;
-    session->info.callback_text = saved_callback_text;
 
-    esp_http_client_set_url(session->client, url);
-    esp_err_t err         = esp_http_client_perform(session->client);
-    int       status_code = esp_http_client_get_status_code(session->client);
-    fastclose(fd);
-    return download_success(err, &session->info) && (status_code == 200);
+    // Two-shot reconnect: a slow caller-side operation between downloads (e.g. a
+    // multi-second AppFS flash write) can let the keep-alive TLS session time
+    // out server-side. If an attempt fails, drop the client, recreate it, and
+    // retry this single file up to two more times.
+    for (int attempt = 0; attempt < 3; attempt++) {
+        FILE* fd = fastopen(path, "w");
+        if (fd == NULL) {
+            ESP_LOGE(TAG, "Failed to open file");
+            return false;
+        }
+
+        memset(&session->info, 0, sizeof(http_download_info_t));
+        session->info.fd            = fd;
+        session->info.callback      = saved_callback;
+        session->info.callback_text = saved_callback_text;
+
+        esp_http_client_set_url(session->client, url);
+        esp_err_t err         = esp_http_client_perform(session->client);
+        int       status_code = esp_http_client_get_status_code(session->client);
+        fastclose(fd);
+
+        if (download_success(err, &session->info) && (status_code == 200)) {
+            return true;
+        }
+
+        if (attempt < 2) {
+            ESP_LOGW(TAG, "Download failed (err=%s, status=%d), reconnecting and retrying (attempt %d/2)",
+                     esp_err_to_name(err), status_code, attempt + 1);
+            esp_http_client_cleanup(session->client);
+            session->client = create_http_client(url, &session->info);
+            if (session->client == NULL) {
+                ESP_LOGE(TAG, "Failed to recreate HTTP client");
+                unlink(path);
+                return false;
+            }
+        }
+    }
+
+    // All attempts failed: remove the (possibly empty or partial) file so callers
+    // don't have to know about this side effect of opening with mode "w".
+    unlink(path);
+    return false;
 }
 
 void http_session_end(http_session_t session) {
