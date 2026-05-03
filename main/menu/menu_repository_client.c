@@ -9,6 +9,7 @@
 #include "bsp/input.h"
 #include "cJSON.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "device_settings.h"
 #include "esp_log.h"
 #include "filesystem_utils.h"
@@ -389,9 +390,11 @@ static void load_all_icons(cJSON* json_projects) {
     }
 
     // Fill remaining NULLs with placeholder icons
-    for (int j = 0; j < total; j++) {
-        if (icon_cache[j] == NULL) {
-            icon_cache[j] = create_placeholder_icon();
+    if (download_icons) {
+        for (int j = 0; j < total; j++) {
+            if (icon_cache[j] == NULL) {
+                icon_cache[j] = create_placeholder_icon();
+            }
         }
     }
 }
@@ -500,7 +503,11 @@ static void populate_project_list(menu_t* menu, cJSON* json_projects) {
         }
         char label[128];
         snprintf(label, sizeof(label), "%s %s", prefix, sorted[j].name);
-        menu_insert_item_icon(menu, label, NULL, (void*)sorted[j].index, -1, sorted[j].icon);
+        if (sorted[j].icon != NULL) {
+            menu_insert_item_icon(menu, label, NULL, (void*)sorted[j].index, -1, sorted[j].icon);
+        } else {
+            menu_insert_item(menu, label, NULL, (void*)sorted[j].index, -1);
+        }
 
         if (project_statuses) project_statuses[j] = sorted[j].status;
         if (project_locations) project_locations[j] = sorted[j].install_location;
@@ -597,7 +604,10 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
     display_blit_buffer(buffer);
 }
 
-void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
+void menu_repository_client(char* category) {
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
+
     // Guard against any state left behind by a previous (early-returning) entry.
     free_repository_menu_state();
 
@@ -622,7 +632,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
 
     char server[128] = {0};
     nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
-    bool success = load_projects(server, &projects, NULL);
+    bool success = load_projects(server, &projects, category);
     if (!success) {
         ESP_LOGE(TAG, "Failed to load projects");
         message_dialog(get_icon(ICON_STOREFRONT), "Repository: fatal error", "Failed to load projects from server",

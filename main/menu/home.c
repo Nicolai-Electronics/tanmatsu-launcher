@@ -25,6 +25,7 @@
 #include "lora.h"
 #include "menu/lora_information.h"
 #include "menu/menu_helpers.h"
+#include "menu/menu_repository_client_categories.h"
 #include "menu/menu_rftest.h"
 #include "menu/message_dialog.h"
 #include "menu/nametag.h"
@@ -32,7 +33,7 @@
 #include "menu/menu_plugins.h"
 #include "plugin_manager.h"
 #endif
-#include "menu_repository_client.h"
+#include "menu_repository_client_categories.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
@@ -90,7 +91,7 @@ static void execute_action(menu_home_action_t action) {
             menu_nametag(fb, theme);
             break;
         case ACTION_REPOSITORY:
-            menu_repository_client(fb, theme);
+            menu_repository_client_categories();
             break;
         case ACTION_SETTINGS:
             menu_settings();

@@ -8,9 +8,14 @@
 #define DEFAULT_KEYBOARD_BRIGHTNESS 100
 #define DEFAULT_LED_BRIGHTNESS      100
 
-#define DEFAULT_REPO_SERVER         "https://apps.tanmatsu.cloud"
-#define DEFAULT_REPO_BASE_URI       "/v1"
+#define DEFAULT_REPO_SERVER   "https://apps.tanmatsu.cloud"
+#define DEFAULT_REPO_BASE_URI "/v1"
+
+#if defined(CONFIG_BSP_TARGET_MCH2022)
+#define DEFAULT_REPO_DOWNLOAD_ICONS 0
+#else
 #define DEFAULT_REPO_DOWNLOAD_ICONS 1
+#endif
 
 #define NVS_KEY_REPO_DOWNLOAD_ICONS "repo.dl_icons"
 

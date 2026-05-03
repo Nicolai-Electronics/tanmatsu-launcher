@@ -1,4 +1,5 @@
 #include "repository_client.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include "bsp/device.h"
@@ -57,9 +58,14 @@ bool load_information(const char* base_url, repository_json_data_t* out_data) {
 bool load_categories(const char* base_url, repository_json_data_t* out_data) {
     char base_uri[64] = {0};
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
-    char url[256];
+
     char device_name[64] = {0};
     bsp_device_get_name(device_name, sizeof(device_name));
+    for (size_t i = 0; i < strlen(device_name); i++) {
+        device_name[i] = tolower(device_name[i]);
+    }
+
+    char url[256];
     sprintf(url, "%s%s/categories?device=%s", base_url, base_uri, device_name);
     return download_and_parse(url, out_data);
 }
@@ -68,10 +74,17 @@ bool load_projects(const char* base_url, repository_json_data_t* out_data, const
     char base_uri[64] = {0};
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
     char url[256];
+
+    char device_name[32] = {0};
+    bsp_device_get_name(device_name, sizeof(device_name) - 1);
+    for (size_t i = 0; i < strlen(device_name); i++) {
+        device_name[i] = tolower(device_name[i]);
+    }
+
     if (category != NULL) {
-        sprintf(url, "%s%s/projects?device=%s&category=%s", base_url, base_uri, "tanmatsu", category);
+        sprintf(url, "%s%s/projects?device=%s&category=%s", base_url, base_uri, device_name, category);
     } else {
-        sprintf(url, "%s%s/projects?device=%s", base_url, base_uri, "tanmatsu");
+        sprintf(url, "%s%s/projects?device=%s", base_url, base_uri, device_name);
     }
     return download_and_parse(url, out_data);
 }
@@ -80,12 +93,19 @@ bool load_projects_paginated(const char* base_url, repository_json_data_t* out_d
                              uint32_t offset, uint32_t amount) {
     char base_uri[64] = {0};
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
+
+    char device_name[32] = {0};
+    bsp_device_get_name(device_name, sizeof(device_name) - 1);
+    for (size_t i = 0; i < strlen(device_name); i++) {
+        device_name[i] = tolower(device_name[i]);
+    }
+
     char url[256];
     if (category != NULL) {
         sprintf(url, "%s%s/projects?device=%s&category=%s&offset=%" PRIu32 "&amount=%" PRIu32, base_url, base_uri,
-                "tanmatsu", category, offset, amount);
+                device_name, category, offset, amount);
     } else {
-        sprintf(url, "%s%s/projects?device=%s&offset=%" PRIu32 "&amount=%" PRIu32, base_url, base_uri, "tanmatsu",
+        sprintf(url, "%s%s/projects?device=%s&offset=%" PRIu32 "&amount=%" PRIu32, base_url, base_uri, device_name,
                 offset, amount);
     }
     return download_and_parse(url, out_data);

@@ -75,8 +75,10 @@ static void menu_populate(menu_t* menu) {
     menu_insert_item_value(menu, "Server", server, NULL, (void*)ACTION_SERVER, -1);
     menu_insert_item_value(menu, "Base URI", base_uri, NULL, (void*)ACTION_BASE_URI, -1);
     menu_insert_item_value(menu, "User Agent", user_agent, NULL, (void*)ACTION_USER_AGENT, -1);
+#if !defined(CONFIG_BSP_TARGET_MCH2022)
     menu_insert_item_value(menu, "Download icons", download_icons ? "Enabled" : "Disabled", NULL,
                            (void*)ACTION_DOWNLOAD_ICONS, -1);
+#endif
     menu_insert_item_value(menu, "Auto-cleanup AppFS", auto_cleanup ? "Enabled" : "Disabled", NULL,
                            (void*)ACTION_AUTO_CLEANUP, -1);
     menu_insert_item_value(menu, "On AppFS mismatch auto-reinstall", mismatch_reinstall ? "Enabled" : "Disabled", NULL,
