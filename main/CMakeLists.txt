@@ -7,6 +7,7 @@ idf_build_get_property(idf_target IDF_TARGET)
 if("${idf_target}" STREQUAL "esp32p4")
 list(APPEND extra_requires
 	esp-hosted-tanmatsu
+	usb-host
 )
 endif()
 
@@ -92,7 +93,6 @@ idf_component_register(
 		"esp_efuse_custom_table.c"
 		"sdcard.c"
 		"app_metadata_parser.c"
-		"python.c"
 		"http_download.c"
 		"repository_client.c"
 		"device_information.c"

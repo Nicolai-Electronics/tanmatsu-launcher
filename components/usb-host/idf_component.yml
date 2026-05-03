@@ -1,0 +1,8 @@
+version: "1.0.0"
+description: "USB HID Boot Keyboard → BSP input injector for ESP32-P4"
+dependencies:
+  idf: ">=5.3"
+  usb_host_hid:
+    version: "^1.0.1"
+    rules:
+      - if: target == esp32p4
