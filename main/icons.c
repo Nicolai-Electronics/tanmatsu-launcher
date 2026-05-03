@@ -227,9 +227,10 @@ static void download_callback(size_t download_position, size_t file_size, const 
     if (percentage == last_percentage) {
         return;  // No change, no need to update
     }
-    last_percentage = percentage;
+    ESP_LOGI(TAG, "%s (%u%%)", status_text, percentage);
+    /*last_percentage = percentage;
     progress_dialog(get_icon(ICON_DOWNLOADING), "Icon downloader", status_text ? status_text : "Downloading",
-                    percentage, true);
+                    percentage, true);*/
 };
 
 void print_commands(void) {
@@ -304,7 +305,8 @@ esp_err_t download_icons(bool delete_old_files) {
         ESP_LOGI(TAG, "Downloading icon from '%s' and saving to '%s'...", url, path);
 
         char status[512] = {0};
-        snprintf(status, sizeof(status), "Downloading icon '%s'...", icon_paths[i]);
+        snprintf(status, sizeof(status), "Downloading icon '%s' (%u of %u)...", icon_paths[i], i + 1, ICON_LAST);
+        progress_dialog(get_icon(ICON_DOWNLOADING), "Icon downloader", status, ((i * 100) / ICON_LAST), true);
         http_session_set_callback(session, download_callback, status);
         bool success = http_session_download_file(session, url, path);
 

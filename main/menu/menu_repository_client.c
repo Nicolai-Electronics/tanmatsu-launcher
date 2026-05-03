@@ -365,7 +365,8 @@ static void load_all_icons(cJSON* json_projects) {
                     download_num++;
                     char busy_msg[64];
                     snprintf(busy_msg, sizeof(busy_msg), "Downloading icons (%d/%d)...", download_num, missing_count);
-                    busy_dialog(get_icon(ICON_STOREFRONT), "Repository", busy_msg, true);
+                    progress_dialog(get_icon(ICON_STOREFRONT), "Repository", busy_msg,
+                                    (download_num * 100) / missing_count, true);
 
                     snprintf(url, sizeof(url), "%s%s/%s/%s", server, data_path, slug_obj->valuestring,
                              icon_32->valuestring);
