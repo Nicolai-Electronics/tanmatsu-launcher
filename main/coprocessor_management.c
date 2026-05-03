@@ -25,12 +25,15 @@ static void callback(char const* status_text, uint8_t percentage) {
     if (percentage == last_percentage) {
         return;  // No change, no need to update
     }
-    last_percentage = percentage;
-    progress_dialog(get_icon(ICON_SYSTEM_UPDATE), "Coprocessor update", status_text, percentage, false);
+    last_percentage               = percentage;
+    char status_text_wrapped[128] = "";
+    snprintf(status_text_wrapped, sizeof(status_text_wrapped), "Updating coprocessor: %s (%02u%%)", status_text,
+             percentage);
+    progress_dialog(get_icon(ICON_SYSTEM_UPDATE), "Coprocessor update", status_text_wrapped, percentage, false);
 }
 
 void coprocessor_flash(bool force) {
-    uint16_t coprocessor_firmware_target = 7;
+    uint16_t coprocessor_firmware_target = 8;
 
     tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
 
