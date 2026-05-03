@@ -29,7 +29,7 @@ static pax_buf_t                    fb                   = {0};
 static pax_col_t palette[] = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
 #endif
 
-#if CONFIG_IDF_TARGET_ESP32P4
+#if CONFIG_ENABLE_LAUNCHERPLUGINS
 // Display framebuffer returned by `asp_disp_get_fb`.
 extern uint8_t*   asp_disp_fb;
 // PAX buffer returned by `asp_disp_get_pax_buf`.
@@ -87,7 +87,7 @@ esp_err_t display_init(void) {
     }
     pax_buf_set_orientation(&fb, orientation);
 
-#if CONFIG_IDF_TARGET_ESP32P4
+#if CONFIG_ENABLE_LAUNCHERPLUGINS
     asp_disp_fb      = pax_buf_get_pixels_rw(&fb);
     asp_disp_pax_buf = &fb;
 #endif

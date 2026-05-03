@@ -43,14 +43,12 @@ appfs_handle_t find_appfs_handle_for_slug(const char* search_slug) {
 }
 
 bool get_executable_revision(const char* path, const char* slug, uint32_t* out_revision, char** out_executable) {
-    printf("Finding executable revision for app %s in %s\n", slug, path);
     bool result = false;
 
     char path_buffer[256] = {0};
     snprintf(path_buffer, sizeof(path_buffer), "%s/%s/metadata.json", path, slug);
     FILE* fd = fastopen(path_buffer, "r");
     if (fd == NULL) {
-        ESP_LOGE(TAG, "Failed to open metadata file %s", path_buffer);
         return false;
     }
 

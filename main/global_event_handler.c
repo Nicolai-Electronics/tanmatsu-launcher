@@ -8,13 +8,13 @@
 #include "nvs_settings_hardware.h"
 #include "sdcard.h"
 
-static const char TAG[]                  = "Event";
-static int        input_hook_id          = -1;
-static bool       power_button_latch     = false;
-static bool       headphones_inserted    = false;
+static const char TAG[]               = "Event";
+static int        input_hook_id       = -1;
+static bool       power_button_latch  = false;
+static bool       headphones_inserted = false;
 
 #define VOLUME_DEFAULT_PERCENT 50
-#define VOLUME_STEP_PERCENT     5
+#define VOLUME_STEP_PERCENT    5
 
 static uint8_t get_active_volume(void) {
     uint8_t v = VOLUME_DEFAULT_PERCENT;

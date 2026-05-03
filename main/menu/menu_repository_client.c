@@ -9,6 +9,7 @@
 #include "bsp/input.h"
 #include "cJSON.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "device_settings.h"
 #include "esp_log.h"
 #include "filesystem_utils.h"
@@ -20,6 +21,7 @@
 #include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "menu_repository_client_project.h"
+#include "message_dialog.h"
 #include "nvs_settings.h"
 #include "nvs_settings_helpers.h"
 #include "pax_codecs.h"
@@ -283,6 +285,14 @@ static void free_icon_cache(void) {
     icon_cache_size = 0;
 }
 
+// Tear down all module-level state owned by menu_repository_client.
+// Safe to call multiple times; leaves everything in a {0} state.
+static void free_repository_menu_state(void) {
+    free_repository_data_json(&projects);
+    free_project_info();
+    free_icon_cache();
+}
+
 // Decode base64 icons and download missing ones into the icon cache.
 // Called once after loading the project list.
 static void load_all_icons(cJSON* json_projects) {
@@ -356,7 +366,8 @@ static void load_all_icons(cJSON* json_projects) {
                     download_num++;
                     char busy_msg[64];
                     snprintf(busy_msg, sizeof(busy_msg), "Downloading icons (%d/%d)...", download_num, missing_count);
-                    busy_dialog(get_icon(ICON_STOREFRONT), "Repository", busy_msg, true);
+                    progress_dialog(get_icon(ICON_STOREFRONT), "Repository", busy_msg,
+                                    (download_num * 100) / missing_count, true);
 
                     snprintf(url, sizeof(url), "%s%s/%s/%s", server, data_path, slug_obj->valuestring,
                              icon_32->valuestring);
@@ -379,9 +390,11 @@ static void load_all_icons(cJSON* json_projects) {
     }
 
     // Fill remaining NULLs with placeholder icons
-    for (int j = 0; j < total; j++) {
-        if (icon_cache[j] == NULL) {
-            icon_cache[j] = create_placeholder_icon();
+    if (download_icons) {
+        for (int j = 0; j < total; j++) {
+            if (icon_cache[j] == NULL) {
+                icon_cache[j] = create_placeholder_icon();
+            }
         }
     }
 }
@@ -490,7 +503,11 @@ static void populate_project_list(menu_t* menu, cJSON* json_projects) {
         }
         char label[128];
         snprintf(label, sizeof(label), "%s %s", prefix, sorted[j].name);
-        menu_insert_item_icon(menu, label, NULL, (void*)sorted[j].index, -1, sorted[j].icon);
+        if (sorted[j].icon != NULL) {
+            menu_insert_item_icon(menu, label, NULL, (void*)sorted[j].index, -1, sorted[j].icon);
+        } else {
+            menu_insert_item(menu, label, NULL, (void*)sorted[j].index, -1);
+        }
 
         if (project_statuses) project_statuses[j] = sorted[j].status;
         if (project_locations) project_locations[j] = sorted[j].install_location;
@@ -508,7 +525,7 @@ static void download_callback(size_t download_position, size_t file_size, const 
     last_percentage = percentage;
     char text[64];
     snprintf(text, sizeof(text), "%s (%u%%)", status_text ? status_text : "Downloading", percentage);
-    busy_dialog(get_icon(ICON_DOWNLOADING), "Downloading", text, true);
+    progress_dialog(get_icon(ICON_DOWNLOADING), "Downloading", text, percentage, true);
 }
 
 static install_status_t previous_render_status = INSTALL_STATUS_NOT_INSTALLED;
@@ -587,7 +604,13 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
     display_blit_buffer(buffer);
 }
 
-void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
+void menu_repository_client(char* category) {
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
+
+    // Guard against any state left behind by a previous (early-returning) entry.
+    free_repository_menu_state();
+
     busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Connecting to WiFi...", true);
 
     if (!wifi_stack_get_initialized()) {
@@ -609,7 +632,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
 
     char server[128] = {0};
     nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
-    bool success = load_projects(server, &projects, NULL);
+    bool success = load_projects(server, &projects, category);
     if (!success) {
         ESP_LOGE(TAG, "Failed to load projects");
         message_dialog(get_icon(ICON_STOREFRONT), "Repository: fatal error", "Failed to load projects from server",
@@ -639,8 +662,7 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
-                                free_project_info();
-                                free_icon_cache();
+                                free_repository_menu_state();
                                 menu_free(&menu);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
@@ -826,6 +848,4 @@ void menu_repository_client(pax_buf_t* buffer, gui_theme_t* theme) {
             render(buffer, theme, &menu, server, true, true);
         }
     }
-
-    free_repository_data_json(&projects);
 }
