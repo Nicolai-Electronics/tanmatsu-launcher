@@ -52,11 +52,44 @@ static bool get_bool_field(cJSON* obj, const char* name) {
     return cJSON_IsTrue(item);
 }
 
+// Locate the application[] entry whose targets[] contains the current device name.
+// Per metadata.json schema, per-target properties (type, interpreter, external_only,
+// external_preferred, internal_only, internal_preferred, ...) live inside this entry,
+// not at the top level. Returns NULL if no matching entry is found.
+static cJSON* find_application_for_device(cJSON* project) {
+    cJSON* applications = cJSON_GetObjectItem(project, "application");
+    if (applications == NULL || !cJSON_IsArray(applications)) {
+        return NULL;
+    }
+
+    char device_name[32] = {0};
+    bsp_device_get_name(device_name, sizeof(device_name));
+    size_t device_name_len = strlen(device_name);
+
+    cJSON* application = NULL;
+    cJSON_ArrayForEach(application, applications) {
+        cJSON* targets = cJSON_GetObjectItem(application, "targets");
+        if (targets == NULL || !cJSON_IsArray(targets)) {
+            continue;
+        }
+        cJSON* target = NULL;
+        cJSON_ArrayForEach(target, targets) {
+            if (target != NULL && cJSON_IsString(target) && strlen(target->valuestring) == device_name_len &&
+                strncasecmp(target->valuestring, device_name, device_name_len) == 0) {
+                return application;
+            }
+        }
+    }
+    return NULL;
+}
+
 static void resolve_constraints(cJSON* project, install_constraints_t* out) {
-    out->external_only      = get_bool_field(project, "external_only");
-    out->external_preferred = get_bool_field(project, "external_preferred");
-    out->internal_only      = get_bool_field(project, "internal_only");
-    out->internal_preferred = get_bool_field(project, "internal_preferred");
+    cJSON* application      = find_application_for_device(project);
+    cJSON* source           = application != NULL ? application : project;
+    out->external_only      = get_bool_field(source, "external_only");
+    out->external_preferred = get_bool_field(source, "external_preferred");
+    out->internal_only      = get_bool_field(source, "internal_only");
+    out->internal_preferred = get_bool_field(source, "internal_preferred");
     out->sd_present         = (sd_status() == SD_STATUS_OK);
 
     // If both *_only flags are set the metadata is contradictory; let internal_only win
@@ -216,42 +249,19 @@ static void download_callback(size_t download_position, size_t file_size, const 
 // Returns NULL if the app is not a script type or has no interpreter.
 // The returned string points into the cJSON tree — do not free.
 static const char* find_interpreter_slug(cJSON* project) {
-    cJSON* applications = cJSON_GetObjectItem(project, "application");
-    if (applications == NULL || !cJSON_IsArray(applications)) {
+    cJSON* application = find_application_for_device(project);
+    if (application == NULL) {
         return NULL;
     }
-
-    char device_name[32] = {0};
-    bsp_device_get_name(device_name, sizeof(device_name));
-    size_t device_name_len = strlen(device_name);
-
-    cJSON* application = NULL;
-    cJSON_ArrayForEach(application, applications) {
-        cJSON* targets = cJSON_GetObjectItem(application, "targets");
-        if (targets == NULL || !cJSON_IsArray(targets)) {
-            continue;
-        }
-        cJSON* target  = NULL;
-        bool   matched = false;
-        cJSON_ArrayForEach(target, targets) {
-            if (target != NULL && cJSON_IsString(target) && strlen(target->valuestring) == device_name_len &&
-                strncasecmp(target->valuestring, device_name, device_name_len) == 0) {
-                matched = true;
-                break;
-            }
-        }
-        if (matched) {
-            cJSON* type_obj = cJSON_GetObjectItem(application, "type");
-            if (type_obj != NULL && cJSON_IsString(type_obj) && strcmp(type_obj->valuestring, "script") == 0) {
-                cJSON* interp_obj = cJSON_GetObjectItem(application, "interpreter");
-                if (interp_obj != NULL && cJSON_IsString(interp_obj)) {
-                    return interp_obj->valuestring;
-                }
-            }
-            return NULL;  // Found matching app but it's not a script
-        }
+    cJSON* type_obj = cJSON_GetObjectItem(application, "type");
+    if (type_obj == NULL || !cJSON_IsString(type_obj) || strcmp(type_obj->valuestring, "script") != 0) {
+        return NULL;
     }
-    return NULL;
+    cJSON* interp_obj = cJSON_GetObjectItem(application, "interpreter");
+    if (interp_obj == NULL || !cJSON_IsString(interp_obj)) {
+        return NULL;
+    }
+    return interp_obj->valuestring;
 }
 
 // Check if interpreter is already available (in appfs or install dirs)
