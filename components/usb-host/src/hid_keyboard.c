@@ -125,6 +125,9 @@ static const bsp_input_scancode_t hid_to_bsp_scancode[256] = {
     // Modifiers handled separately
 };
 
+static QueueHandle_t app_event_queue          = NULL;
+static uint32_t      keyboard_event_modifiers = 0;
+
 /* Modifiers from byte 0 of boot report */
 static void inject_modifier_changes(uint8_t prev, uint8_t curr) {
     const struct {
@@ -149,10 +152,58 @@ static void inject_modifier_changes(uint8_t prev, uint8_t curr) {
         bsp_input_event.args_scancode.scancode = mods[i].sc | (now ? 0x00 : 0x80);
         ESP_LOGI(TAG, "inject_modifier_changes, scancode= %x", bsp_input_event.args_scancode.scancode);
         bsp_input_inject_event(&bsp_input_event);
+
+        if (mods[i].sc == BSP_INPUT_SCANCODE_LEFTSHIFT) {
+            if (now) {
+                keyboard_event_modifiers |= BSP_INPUT_MODIFIER_SHIFT_L;
+            } else {
+                keyboard_event_modifiers &= ~(BSP_INPUT_MODIFIER_SHIFT_L);
+            }
+        }
+        if (mods[i].sc == BSP_INPUT_SCANCODE_RIGHTSHIFT) {
+            if (now) {
+                keyboard_event_modifiers |= BSP_INPUT_MODIFIER_SHIFT_R;
+            } else {
+                keyboard_event_modifiers &= ~(BSP_INPUT_MODIFIER_SHIFT_R);
+            }
+        }
+        if (mods[i].sc == BSP_INPUT_SCANCODE_LEFTCTRL) {
+            if (now) {
+                keyboard_event_modifiers |= BSP_INPUT_MODIFIER_CTRL_L;
+            } else {
+                keyboard_event_modifiers &= ~(BSP_INPUT_MODIFIER_CTRL_L);
+            }
+        }
+        if (mods[i].sc == BSP_INPUT_SCANCODE_LEFTALT) {
+            if (now) {
+                keyboard_event_modifiers |= BSP_INPUT_MODIFIER_ALT_L;
+            } else {
+                keyboard_event_modifiers &= ~(BSP_INPUT_MODIFIER_ALT_L);
+            }
+        }
+        if (mods[i].sc == BSP_INPUT_SCANCODE_ESCAPED_RALT) {
+            if (now) {
+                keyboard_event_modifiers |= BSP_INPUT_MODIFIER_ALT_R;
+            } else {
+                keyboard_event_modifiers &= ~(BSP_INPUT_MODIFIER_ALT_R);
+            }
+        }
+        if (mods[i].sc == BSP_INPUT_SCANCODE_ESCAPED_LEFTMETA) {
+            if (now) {
+                keyboard_event_modifiers |= BSP_INPUT_MODIFIER_SUPER_L;
+            } else {
+                keyboard_event_modifiers &= ~(BSP_INPUT_MODIFIER_SUPER_L);
+            }
+        }
+        if (mods[i].sc == BSP_INPUT_SCANCODE_ESCAPED_MENU) {
+            if (now) {
+                keyboard_event_modifiers |= BSP_INPUT_MODIFIER_FUNCTION;
+            } else {
+                keyboard_event_modifiers &= ~(BSP_INPUT_MODIFIER_FUNCTION);
+            }
+        }
     }
 }
-
-QueueHandle_t app_event_queue = NULL;
 
 /**
  * @brief APP event queue
@@ -209,88 +260,90 @@ static void hid_print_new_device_report_header(hid_protocol_t proto) {
 static void inject_navigation_event(uint8_t hid_scancode, bool state) {
     bsp_input_navigation_key_t key = BSP_INPUT_NAVIGATION_KEY_NONE;
 
-    switch (hid_scancode) {
-        case 0x29:
+    bsp_input_scancode_t scancode = hid_to_bsp_scancode[hid_scancode];
+
+    switch (scancode) {
+        case BSP_INPUT_SCANCODE_ESC:
             key = BSP_INPUT_NAVIGATION_KEY_ESC;
             break;
-        case 0x50:
+        case BSP_INPUT_SCANCODE_ESCAPED_GREY_LEFT:
             key = BSP_INPUT_NAVIGATION_KEY_LEFT;
             break;
-        case 0x4f:
+        case BSP_INPUT_SCANCODE_ESCAPED_GREY_RIGHT:
             key = BSP_INPUT_NAVIGATION_KEY_RIGHT;
             break;
-        case 0x52:
+        case BSP_INPUT_SCANCODE_ESCAPED_GREY_UP:
             key = BSP_INPUT_NAVIGATION_KEY_UP;
             break;
-        case 0x51:
+        case BSP_INPUT_SCANCODE_ESCAPED_GREY_DOWN:
             key = BSP_INPUT_NAVIGATION_KEY_DOWN;
             break;
-        case 0x4a:
+        case BSP_INPUT_SCANCODE_ESCAPED_GREY_HOME:
             key = BSP_INPUT_NAVIGATION_KEY_HOME;
             break;
-        case 0x4d:
+        case BSP_INPUT_SCANCODE_ESCAPED_GREY_END:
             key = BSP_INPUT_NAVIGATION_KEY_END;
             break;
-        case 0x4b:
+        case BSP_INPUT_SCANCODE_ESCAPED_GREY_PGUP:
             key = BSP_INPUT_NAVIGATION_KEY_PGUP;
             break;
-        case 0x4e:
+        case BSP_INPUT_SCANCODE_ESCAPED_GREY_PGDN:
             key = BSP_INPUT_NAVIGATION_KEY_PGDN;
             break;
-        case 0x5d:
+        case BSP_INPUT_SCANCODE_ESCAPED_MENU:
             key = BSP_INPUT_NAVIGATION_KEY_MENU;
             break;
         // case 0x: key = BSP_INPUT_NAVIGATION_KEY_START; break;
         // case 0x: key = BSP_INPUT_NAVIGATION_KEY_SELECT; break;
-        case 0x28:
+        case BSP_INPUT_SCANCODE_ENTER:
             key = BSP_INPUT_NAVIGATION_KEY_RETURN;
             break;
-        case 0xe3:
+        case BSP_INPUT_SCANCODE_ESCAPED_LEFTMETA:
             key = BSP_INPUT_NAVIGATION_KEY_SUPER;
             break;
-        case 0x09:
+        case BSP_INPUT_SCANCODE_TAB:
             key = BSP_INPUT_NAVIGATION_KEY_TAB;
             break;
-        case 0x08:
+        case BSP_INPUT_SCANCODE_BACKSPACE:
             key = BSP_INPUT_NAVIGATION_KEY_BACKSPACE;
             break;
-        case 0x20:
+        case BSP_INPUT_SCANCODE_SPACE:
             key = BSP_INPUT_NAVIGATION_KEY_SPACE_M;
             break;
-        case 0x70:
+        case BSP_INPUT_SCANCODE_F1:
             key = BSP_INPUT_NAVIGATION_KEY_F1;
             break;
-        case 0x71:
+        case BSP_INPUT_SCANCODE_F2:
             key = BSP_INPUT_NAVIGATION_KEY_F2;
             break;
-        case 0x72:
+        case BSP_INPUT_SCANCODE_F3:
             key = BSP_INPUT_NAVIGATION_KEY_F3;
             break;
-        case 0x73:
+        case BSP_INPUT_SCANCODE_F4:
             key = BSP_INPUT_NAVIGATION_KEY_F4;
             break;
-        case 0x74:
+        case BSP_INPUT_SCANCODE_F5:
             key = BSP_INPUT_NAVIGATION_KEY_F5;
             break;
-        case 0x75:
+        case BSP_INPUT_SCANCODE_6:
             key = BSP_INPUT_NAVIGATION_KEY_F6;
             break;
-        case 0x76:
+        case BSP_INPUT_SCANCODE_F7:
             key = BSP_INPUT_NAVIGATION_KEY_F7;
             break;
-        case 0x77:
+        case BSP_INPUT_SCANCODE_F8:
             key = BSP_INPUT_NAVIGATION_KEY_F8;
             break;
-        case 0x78:
+        case BSP_INPUT_SCANCODE_F9:
             key = BSP_INPUT_NAVIGATION_KEY_F9;
             break;
-        case 0x79:
+        case BSP_INPUT_SCANCODE_F10:
             key = BSP_INPUT_NAVIGATION_KEY_F10;
             break;
-        case 0x7A:
+        case BSP_INPUT_SCANCODE_F11:
             key = BSP_INPUT_NAVIGATION_KEY_F11;
             break;
-        case 0x7B:
+        case BSP_INPUT_SCANCODE_F12:
             key = BSP_INPUT_NAVIGATION_KEY_F12;
             break;
         // case 0x: key = BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A; break;
@@ -298,10 +351,10 @@ static void inject_navigation_event(uint8_t hid_scancode, bool state) {
         // case 0x: key = BSP_INPUT_NAVIGATION_KEY_GAMEPAD_X; break;
         // case 0x: key = BSP_INPUT_NAVIGATION_KEY_GAMEPAD_Y; break;
         // case 0x: key = BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS; break;
-        case 0xAF:
+        case BSP_INPUT_SCANCODE_ESCAPED_VOLUME_UP:
             key = BSP_INPUT_NAVIGATION_KEY_VOLUME_UP;
             break;
-        case 0xAE:
+        case BSP_INPUT_SCANCODE_ESCAPED_VOLUME_DOWN:
             key = BSP_INPUT_NAVIGATION_KEY_VOLUME_DOWN;
             break;
         default:
@@ -335,211 +388,162 @@ static void inject_keyboard_event_inner(char ascii, char ascii_shift, char const
               .args_keyboard.modifiers = modifiers,
     };
     bsp_input_inject_event(&event);
+    printf("Keyboard %02x with modifiers %02" PRIx32 "\r\n", value_ascii, modifiers);
 }
 
 static void inject_keyboard_event(uint8_t hid_scancode, bool state) {
     bsp_input_scancode_t scancode = hid_to_bsp_scancode[hid_scancode];
-
-    static uint32_t modifiers = 0;
-    if (scancode == BSP_INPUT_SCANCODE_LEFTSHIFT) {
-        if (state) {
-            modifiers |= BSP_INPUT_MODIFIER_SHIFT_L;
-        } else {
-            modifiers &= ~(BSP_INPUT_MODIFIER_SHIFT_L);
+    if (state) {
+        if (scancode == BSP_INPUT_SCANCODE_BACKSPACE) {
+            inject_keyboard_event_inner('\b', '\b', "\b", "\b", "\b", "\b", keyboard_event_modifiers);
         }
-    }
-    if (scancode == BSP_INPUT_SCANCODE_RIGHTSHIFT) {
-        if (state) {
-            modifiers |= BSP_INPUT_MODIFIER_SHIFT_R;
-        } else {
-            modifiers &= ~(BSP_INPUT_MODIFIER_SHIFT_R);
+        if (scancode == BSP_INPUT_SCANCODE_GRAVE) {
+            inject_keyboard_event_inner('`', '~', "`", "~", "`", "~", keyboard_event_modifiers);
         }
-    }
-    if (scancode == BSP_INPUT_SCANCODE_LEFTCTRL) {
-        if (state) {
-            modifiers |= BSP_INPUT_MODIFIER_CTRL_L;
-        } else {
-            modifiers &= ~(BSP_INPUT_MODIFIER_CTRL_L);
+        if (scancode == BSP_INPUT_SCANCODE_1) {
+            inject_keyboard_event_inner('1', '!', "1", "!", "¡", "¹", keyboard_event_modifiers);
         }
-    }
-    if (scancode == BSP_INPUT_SCANCODE_LEFTALT) {
-        if (state) {
-            modifiers |= BSP_INPUT_MODIFIER_ALT_L;
-        } else {
-            modifiers &= ~(BSP_INPUT_MODIFIER_ALT_L);
+        if (scancode == BSP_INPUT_SCANCODE_2) {
+            inject_keyboard_event_inner('2', '@', "2", "@", "²", "̋", keyboard_event_modifiers);
         }
-    }
-    if (scancode == BSP_INPUT_SCANCODE_ESCAPED_RALT) {
-        if (state) {
-            modifiers |= BSP_INPUT_MODIFIER_ALT_R;
-        } else {
-            modifiers &= ~(BSP_INPUT_MODIFIER_ALT_R);
+        if (scancode == BSP_INPUT_SCANCODE_3) {
+            inject_keyboard_event_inner('3', '#', "3", "#", "³", "̄", keyboard_event_modifiers);
         }
-    }
-    if (scancode == BSP_INPUT_SCANCODE_ESCAPED_LEFTMETA) {
-        if (state) {
-            modifiers |= BSP_INPUT_MODIFIER_SUPER_L;
-        } else {
-            modifiers &= ~(BSP_INPUT_MODIFIER_SUPER_L);
+        if (scancode == BSP_INPUT_SCANCODE_4) {
+            inject_keyboard_event_inner('4', '$', "4", "$", "¤", "£", keyboard_event_modifiers);
         }
-    }
-    if (scancode == BSP_INPUT_SCANCODE_ESCAPED_MENU) {
-        if (state) {
-            modifiers |= BSP_INPUT_MODIFIER_FUNCTION;
-        } else {
-            modifiers &= ~(BSP_INPUT_MODIFIER_FUNCTION);
+        if (scancode == BSP_INPUT_SCANCODE_5) {
+            inject_keyboard_event_inner('5', '%', "5", "%", "€", "¸", keyboard_event_modifiers);
         }
-    }
-
-    if (scancode == BSP_INPUT_SCANCODE_BACKSPACE && state) {
-        inject_keyboard_event_inner('\b', '\b', "\b", "\b", "\b", "\b", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_GRAVE) {
-        inject_keyboard_event_inner('`', '~', "`", "~", "`", "~", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_1) {
-        inject_keyboard_event_inner('1', '!', "1", "!", "¡", "¹", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_2) {
-        inject_keyboard_event_inner('2', '@', "2", "@", "²", "̋", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_3) {
-        inject_keyboard_event_inner('3', '#', "3", "#", "³", "̄", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_4) {
-        inject_keyboard_event_inner('4', '$', "4", "$", "¤", "£", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_5) {
-        inject_keyboard_event_inner('5', '%', "5", "%", "€", "¸", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_6) {
-        inject_keyboard_event_inner('6', '^', "6", "^", "¼", "̂", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_7) {
-        inject_keyboard_event_inner('7', '&', "7", "&", "½", "̛", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_8) {
-        inject_keyboard_event_inner('8', '*', "8", "*", "¾", "̨", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_9) {
-        inject_keyboard_event_inner('9', '(', "9", "(", "‘", "̆", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_0) {
-        inject_keyboard_event_inner('0', ')', "0", ")", "’", "̊", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_MINUS) {
-        inject_keyboard_event_inner('-', '_', "-", "_", "¥", "̣", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_EQUAL) {
-        inject_keyboard_event_inner('=', '+', "=", "+", "̋", "̛", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_TAB) {
-        inject_keyboard_event_inner('\t', '\t', "\t", "\t", "\t", "\t", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_Q) {
-        inject_keyboard_event_inner('q', 'Q', "q", "Q", "ä", "Ä", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_W) {
-        inject_keyboard_event_inner('w', 'W', "w", "W", "å", "Å", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_E) {
-        inject_keyboard_event_inner('e', 'E', "e", "E", "é", "É", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_R) {
-        inject_keyboard_event_inner('r', 'R', "r", "R", "®", "™", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_T) {
-        inject_keyboard_event_inner('t', 'T', "t", "T", "þ", "Þ", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_Y) {
-        inject_keyboard_event_inner('y', 'Y', "y", "Y", "ü", "Ü", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_U) {
-        inject_keyboard_event_inner('u', 'U', "u", "U", "ú", "Ú", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_I) {
-        inject_keyboard_event_inner('i', 'I', "i", "I", "í", "Í", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_O) {
-        inject_keyboard_event_inner('o', 'O', "o", "O", "ó", "Ó", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_P) {
-        inject_keyboard_event_inner('p', 'P', "p", "P", "ö", "Ö", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_LEFTBRACE) {
-        inject_keyboard_event_inner('[', '{', "[", "{", "«", "“", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_RIGHTBRACE) {
-        inject_keyboard_event_inner(']', '}', "]", "}", "»", "”", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_A) {
-        inject_keyboard_event_inner('a', 'A', "a", "A", "á", "Á", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_S) {
-        inject_keyboard_event_inner('s', 'S', "s", "S", "ß", "§", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_D) {
-        inject_keyboard_event_inner('d', 'D', "d", "D", "ð", "Ð", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_F) {
-        inject_keyboard_event_inner('f', 'F', "f", "F", "ë", "Ë", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_G) {
-        inject_keyboard_event_inner('g', 'G', "g", "G", "g", "G", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_H) {
-        inject_keyboard_event_inner('h', 'H', "h", "H", "h", "H", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_J) {
-        inject_keyboard_event_inner('j', 'J', "j", "J", "ï", "Ï", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_K) {
-        inject_keyboard_event_inner('k', 'K', "k", "K", "œ", "Œ", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_L) {
-        inject_keyboard_event_inner('l', 'L', "l", "L", "ø", "L", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_SEMICOLON) {
-        inject_keyboard_event_inner(';', ':', ";", ":", "̨", "̈", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_APOSTROPHE) {
-        inject_keyboard_event_inner('\'', '"', "'", "\"", "́", "̈", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_Z) {
-        inject_keyboard_event_inner('z', 'Z', "z", "Z", "æ", "Æ", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_X) {
-        inject_keyboard_event_inner('x', 'X', "x", "X", "·", " ̵", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_C) {
-        inject_keyboard_event_inner('c', 'C', "c", "C", "©", "¢", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_V) {
-        inject_keyboard_event_inner('v', 'V', "v", "V", "v", "V", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_B) {
-        inject_keyboard_event_inner('b', 'B', "b", "B", "b", "B", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_N) {
-        inject_keyboard_event_inner('n', 'N', "n", "N", "ñ", "Ñ", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_M) {
-        inject_keyboard_event_inner('m', 'M', "m", "M", "µ", "±", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_COMMA) {
-        inject_keyboard_event_inner(',', '<', ",", "<", "̧", "̌", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_DOT) {
-        inject_keyboard_event_inner('.', '>', ".", ">", "̇", "̌", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_SLASH) {
-        inject_keyboard_event_inner('/', '?', "/", "?", "¿", "̉", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_BACKSLASH) {
-        inject_keyboard_event_inner('\\', '|', "\\", "|", "¬", "¦", modifiers);
-    }
-    if (scancode == BSP_INPUT_SCANCODE_SPACE) {
-        inject_keyboard_event_inner(' ', ' ', " ", " ", " ", " ", modifiers);
+        if (scancode == BSP_INPUT_SCANCODE_6) {
+            inject_keyboard_event_inner('6', '^', "6", "^", "¼", "̂", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_7) {
+            inject_keyboard_event_inner('7', '&', "7", "&", "½", "̛", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_8) {
+            inject_keyboard_event_inner('8', '*', "8", "*", "¾", "̨", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_9) {
+            inject_keyboard_event_inner('9', '(', "9", "(", "‘", "̆", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_0) {
+            inject_keyboard_event_inner('0', ')', "0", ")", "’", "̊", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_MINUS) {
+            inject_keyboard_event_inner('-', '_', "-", "_", "¥", "̣", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_EQUAL) {
+            inject_keyboard_event_inner('=', '+', "=", "+", "̋", "̛", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_TAB) {
+            inject_keyboard_event_inner('\t', '\t', "\t", "\t", "\t", "\t", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_Q) {
+            inject_keyboard_event_inner('q', 'Q', "q", "Q", "ä", "Ä", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_W) {
+            inject_keyboard_event_inner('w', 'W', "w", "W", "å", "Å", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_E) {
+            inject_keyboard_event_inner('e', 'E', "e", "E", "é", "É", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_R) {
+            inject_keyboard_event_inner('r', 'R', "r", "R", "®", "™", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_T) {
+            inject_keyboard_event_inner('t', 'T', "t", "T", "þ", "Þ", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_Y) {
+            inject_keyboard_event_inner('y', 'Y', "y", "Y", "ü", "Ü", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_U) {
+            inject_keyboard_event_inner('u', 'U', "u", "U", "ú", "Ú", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_I) {
+            inject_keyboard_event_inner('i', 'I', "i", "I", "í", "Í", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_O) {
+            inject_keyboard_event_inner('o', 'O', "o", "O", "ó", "Ó", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_P) {
+            inject_keyboard_event_inner('p', 'P', "p", "P", "ö", "Ö", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_LEFTBRACE) {
+            inject_keyboard_event_inner('[', '{', "[", "{", "«", "“", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_RIGHTBRACE) {
+            inject_keyboard_event_inner(']', '}', "]", "}", "»", "”", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_A) {
+            inject_keyboard_event_inner('a', 'A', "a", "A", "á", "Á", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_S) {
+            inject_keyboard_event_inner('s', 'S', "s", "S", "ß", "§", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_D) {
+            inject_keyboard_event_inner('d', 'D', "d", "D", "ð", "Ð", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_F) {
+            inject_keyboard_event_inner('f', 'F', "f", "F", "ë", "Ë", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_G) {
+            inject_keyboard_event_inner('g', 'G', "g", "G", "g", "G", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_H) {
+            inject_keyboard_event_inner('h', 'H', "h", "H", "h", "H", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_J) {
+            inject_keyboard_event_inner('j', 'J', "j", "J", "ï", "Ï", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_K) {
+            inject_keyboard_event_inner('k', 'K', "k", "K", "œ", "Œ", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_L) {
+            inject_keyboard_event_inner('l', 'L', "l", "L", "ø", "L", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_SEMICOLON) {
+            inject_keyboard_event_inner(';', ':', ";", ":", "̨", "̈", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_APOSTROPHE) {
+            inject_keyboard_event_inner('\'', '"', "'", "\"", "́", "̈", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_Z) {
+            inject_keyboard_event_inner('z', 'Z', "z", "Z", "æ", "Æ", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_X) {
+            inject_keyboard_event_inner('x', 'X', "x", "X", "·", " ̵", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_C) {
+            inject_keyboard_event_inner('c', 'C', "c", "C", "©", "¢", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_V) {
+            inject_keyboard_event_inner('v', 'V', "v", "V", "v", "V", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_B) {
+            inject_keyboard_event_inner('b', 'B', "b", "B", "b", "B", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_N) {
+            inject_keyboard_event_inner('n', 'N', "n", "N", "ñ", "Ñ", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_M) {
+            inject_keyboard_event_inner('m', 'M', "m", "M", "µ", "±", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_COMMA) {
+            inject_keyboard_event_inner(',', '<', ",", "<", "̧", "̌", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_DOT) {
+            inject_keyboard_event_inner('.', '>', ".", ">", "̇", "̌", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_SLASH) {
+            inject_keyboard_event_inner('/', '?', "/", "?", "¿", "̉", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_BACKSLASH) {
+            inject_keyboard_event_inner('\\', '|', "\\", "|", "¬", "¦", keyboard_event_modifiers);
+        }
+        if (scancode == BSP_INPUT_SCANCODE_SPACE) {
+            inject_keyboard_event_inner(' ', ' ', " ", " ", " ", " ", keyboard_event_modifiers);
+        }
     }
 }
 
@@ -573,7 +577,7 @@ static void hid_host_keyboard_report_callback(const uint8_t* const data, const i
             bsp_input_event.args_scancode.scancode = sc | 0x80;
             bsp_input_inject_event(&bsp_input_event);
             inject_navigation_event(prev_keys[i], false);
-            inject_keyboard_event(kb_report->key[i], false);
+            inject_keyboard_event(prev_keys[i], false);
             ESP_LOGI(TAG, "released, scancode= %x", bsp_input_event.args_scancode.scancode);
         }
 
