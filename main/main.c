@@ -58,8 +58,8 @@
 #include "audio_mixer.h"
 #endif
 #ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
-#include "plugin_manager.h"
 #include "hid_keyboard.h"
+#include "plugin_manager.h"
 #endif
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
@@ -543,7 +543,8 @@ void app_main(void) {
 
     bsp_power_set_usb_host_boost_enabled(true);
 
-#if CONFIG_IDF_TARGET_ESP32P4
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
+    defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
     res = hid_kbd_init();
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize USB HID keyboard support");
