@@ -439,55 +439,97 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
         plugin_registration_t* reg = (plugin_registration_t*)reg_addr;
 
         // Validate the registration
-        if (reg->magic == TANMATSU_PLUGIN_MAGIC) {
-            ctx->registration = reg;
-            ESP_LOGI(TAG, "Found plugin registration at %p", (void*)reg_addr);
-
-            // Memory debugging
-            if (!heap_caps_check_integrity_all(true)) {
-                ESP_LOGE(TAG, "HEAP CORRUPTED before plugin init!");
-            }
-
-            // Debug: dump registration struct contents
-            ESP_LOGI(TAG, "Registration: magic=0x%08lx size=%lu", (unsigned long)reg->magic,
-                     (unsigned long)reg->struct_size);
-            ESP_LOGI(TAG, "Entry points: get_info=%p init=%p cleanup=%p", reg->entry.get_info, reg->entry.init,
-                     reg->entry.cleanup);
-            ESP_LOGI(TAG, "Entry points: menu_render=%p menu_select=%p service_run=%p",
-                     reg->entry.menu_render, reg->entry.menu_select, reg->entry.service_run);
-            ESP_LOGI(TAG, "Context: slug=%s path=%s ctx=%p", ctx->plugin_slug ? ctx->plugin_slug : "(null)",
-                     ctx->plugin_path ? ctx->plugin_path : "(null)", (void*)ctx);
-
-            // Debug: dump GOT.PLT entries (first 16 words after plugin_info section)
-            {
-                uint32_t* base = (uint32_t*)reg_addr;
-                ESP_LOGI(TAG, "GOT.PLT dump (from base %p):", (void*)base);
-                for (int i = 0; i < 16; i++) {
-                    uint32_t  offset = 0x614 + i * 4;
-                    uint32_t* addr   = (uint32_t*)((uint8_t*)base + offset);
-                    ESP_LOGI(TAG, "  [0x%03lx] = 0x%08lx", (unsigned long)offset, (unsigned long)*addr);
-                }
-            }
-
-            // Call the plugin's init function if available
-            if (reg->entry.init != NULL) {
-                ESP_LOGI(TAG, "Calling init at %p with ctx=%p", reg->entry.init, (void*)ctx);
-                int init_result = reg->entry.init(ctx);
-
-                // Memory debugging (commented out)
-                // if (!heap_caps_check_integrity_all(true)) {
-                //     ESP_LOGE(TAG, "HEAP CORRUPTED after plugin init!");
-                // }
-
-                if (init_result != 0) {
-                    ESP_LOGE(TAG, "Plugin init failed with code %d", init_result);
-                    goto error_cleanup;
-                }
-            }
-        } else {
+        if (reg->magic != TANMATSU_PLUGIN_MAGIC) {
             ESP_LOGE(TAG, "Invalid plugin magic: 0x%08lx (expected 0x%08x)", (unsigned long)reg->magic,
                      TANMATSU_PLUGIN_MAGIC);
             goto error_cleanup;
+        }
+
+        // Reject plugins built against a layout the launcher cannot safely read.
+        // A larger struct_size means the plugin embeds entry-point fields past
+        // the launcher's plugin_entry_t end — calling get_info() would walk
+        // into garbage. A smaller struct_size is acceptable for now (the
+        // launcher only added fields at the tail across compatible versions),
+        // but tighten this if minimum-supported-version is ever raised.
+        if (reg->struct_size > sizeof(plugin_registration_t)) {
+            ESP_LOGE(TAG, "Plugin struct_size %lu exceeds launcher's %zu (newer plugin API?)",
+                     (unsigned long)reg->struct_size, sizeof(plugin_registration_t));
+            goto error_cleanup;
+        }
+
+        ctx->registration = reg;
+        ESP_LOGI(TAG, "Found plugin registration at %p", (void*)reg_addr);
+
+        // Memory debugging
+        if (!heap_caps_check_integrity_all(true)) {
+            ESP_LOGE(TAG, "HEAP CORRUPTED before plugin init!");
+        }
+
+        // Debug: dump registration struct contents
+        ESP_LOGI(TAG, "Registration: magic=0x%08lx size=%lu", (unsigned long)reg->magic,
+                 (unsigned long)reg->struct_size);
+        ESP_LOGI(TAG, "Entry points: get_info=%p init=%p cleanup=%p", reg->entry.get_info, reg->entry.init,
+                 reg->entry.cleanup);
+        ESP_LOGI(TAG, "Entry points: menu_render=%p menu_select=%p service_run=%p",
+                 reg->entry.menu_render, reg->entry.menu_select, reg->entry.service_run);
+        ESP_LOGI(TAG, "Context: slug=%s path=%s ctx=%p", ctx->plugin_slug ? ctx->plugin_slug : "(null)",
+                 ctx->plugin_path ? ctx->plugin_path : "(null)", (void*)ctx);
+
+        // Debug: dump GOT.PLT entries (first 16 words after plugin_info section)
+        {
+            uint32_t* base = (uint32_t*)reg_addr;
+            ESP_LOGI(TAG, "GOT.PLT dump (from base %p):", (void*)base);
+            for (int i = 0; i < 16; i++) {
+                uint32_t  offset = 0x614 + i * 4;
+                uint32_t* addr   = (uint32_t*)((uint8_t*)base + offset);
+                ESP_LOGI(TAG, "  [0x%03lx] = 0x%08lx", (unsigned long)offset, (unsigned long)*addr);
+            }
+        }
+
+        // Verify the plugin was built for a compatible API major version.
+        // get_info is required; minor version skew is allowed (backwards
+        // compatible additions), major skew is not.
+        if (reg->entry.get_info == NULL) {
+            ESP_LOGE(TAG, "Plugin has no get_info entry point");
+            goto error_cleanup;
+        }
+        const plugin_info_t* info = reg->entry.get_info();
+        if (info == NULL) {
+            ESP_LOGE(TAG, "Plugin get_info returned NULL");
+            goto error_cleanup;
+        }
+        uint32_t plugin_major = (info->api_version >> 16) & 0xFF;
+        uint32_t plugin_minor = (info->api_version >> 8) & 0xFF;
+        uint32_t plugin_patch = info->api_version & 0xFF;
+        if (plugin_major != TANMATSU_PLUGIN_API_VERSION_MAJOR) {
+            ESP_LOGE(TAG, "Plugin '%s' requires API v%lu.%lu.%lu, launcher provides v%d.%d.%d",
+                     info->slug ? info->slug : "?", (unsigned long)plugin_major,
+                     (unsigned long)plugin_minor, (unsigned long)plugin_patch,
+                     TANMATSU_PLUGIN_API_VERSION_MAJOR, TANMATSU_PLUGIN_API_VERSION_MINOR,
+                     TANMATSU_PLUGIN_API_VERSION_PATCH);
+            goto error_cleanup;
+        }
+        if (plugin_minor > TANMATSU_PLUGIN_API_VERSION_MINOR) {
+            ESP_LOGW(TAG, "Plugin '%s' built for API v%lu.%lu (launcher is v%d.%d) — newer features may be unavailable",
+                     info->slug ? info->slug : "?", (unsigned long)plugin_major,
+                     (unsigned long)plugin_minor, TANMATSU_PLUGIN_API_VERSION_MAJOR,
+                     TANMATSU_PLUGIN_API_VERSION_MINOR);
+        }
+
+        // Call the plugin's init function if available
+        if (reg->entry.init != NULL) {
+            ESP_LOGI(TAG, "Calling init at %p with ctx=%p", reg->entry.init, (void*)ctx);
+            int init_result = reg->entry.init(ctx);
+
+            // Memory debugging (commented out)
+            // if (!heap_caps_check_integrity_all(true)) {
+            //     ESP_LOGE(TAG, "HEAP CORRUPTED after plugin init!");
+            // }
+
+            if (init_result != 0) {
+                ESP_LOGE(TAG, "Plugin init failed with code %d", init_result);
+                goto error_cleanup;
+            }
         }
     } else {
         ESP_LOGE(TAG, "Could not find plugin registration");
