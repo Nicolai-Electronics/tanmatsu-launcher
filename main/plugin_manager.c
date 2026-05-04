@@ -40,7 +40,6 @@ static SemaphoreHandle_t plugin_mutex                      = NULL;
 
 // External functions from plugin_api.c
 extern size_t plugin_api_get_status_widgets(plugin_icontext_t* out, size_t max, int start_x, int start_y);
-extern int    plugin_api_dispatch_event(uint32_t event_type, void* event_data);
 extern void   plugin_api_init(void);
 extern void   plugin_api_cleanup_for_plugin(plugin_context_t* ctx);
 
@@ -454,8 +453,8 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
                      (unsigned long)reg->struct_size);
             ESP_LOGI(TAG, "Entry points: get_info=%p init=%p cleanup=%p", reg->entry.get_info, reg->entry.init,
                      reg->entry.cleanup);
-            ESP_LOGI(TAG, "Entry points: menu_render=%p menu_select=%p service_run=%p hook_event=%p",
-                     reg->entry.menu_render, reg->entry.menu_select, reg->entry.service_run, reg->entry.hook_event);
+            ESP_LOGI(TAG, "Entry points: menu_render=%p menu_select=%p service_run=%p",
+                     reg->entry.menu_render, reg->entry.menu_select, reg->entry.service_run);
             ESP_LOGI(TAG, "Context: slug=%s path=%s ctx=%p", ctx->plugin_slug ? ctx->plugin_slug : "(null)",
                      ctx->plugin_path ? ctx->plugin_path : "(null)", (void*)ctx);
 
@@ -891,14 +890,6 @@ cleanup_task_memory:
     ctx->stop_requested = false;
 
     return true;
-}
-
-// ============================================
-// Event Dispatch
-// ============================================
-
-int plugin_manager_dispatch_event(uint32_t event_type, void* event_data) {
-    return plugin_api_dispatch_event(event_type, event_data);
 }
 
 // ============================================

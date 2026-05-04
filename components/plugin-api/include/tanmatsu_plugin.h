@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "asp/err.h"
+#include "asp/input_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,7 +19,7 @@ extern "C" {
 // Plugin API Version
 // ============================================
 
-#define TANMATSU_PLUGIN_API_VERSION_MAJOR 2
+#define TANMATSU_PLUGIN_API_VERSION_MAJOR 3
 #define TANMATSU_PLUGIN_API_VERSION_MINOR 0
 #define TANMATSU_PLUGIN_API_VERSION_PATCH 0
 #define TANMATSU_PLUGIN_API_VERSION \
@@ -34,7 +35,7 @@ extern "C" {
 typedef enum {
     PLUGIN_TYPE_MENU = 0,      // Adds items to launcher menu
     PLUGIN_TYPE_SERVICE = 1,   // Background service task
-    PLUGIN_TYPE_HOOK = 2,      // Event handler hooks
+    PLUGIN_TYPE_HOOK = 2,      // Registers input event hooks from init()
 } plugin_type_t;
 
 // Plugin state
@@ -106,10 +107,6 @@ typedef struct {
     // Optional for PLUGIN_TYPE_SERVICE: Service main loop
     // This runs in its own FreeRTOS task
     void (*service_run)(plugin_context_t* ctx);
-
-    // Optional for PLUGIN_TYPE_HOOK: Event handler
-    // Return 0 if not handled, positive if handled
-    int (*hook_event)(plugin_context_t* ctx, uint32_t event_type, void* event_data);
 } plugin_entry_t;
 
 // ============================================
@@ -181,54 +178,53 @@ void asp_plugin_status_widget_unregister(int widget_id);
 // ============================================
 
 // ============================================
-// Host API: Input
-// ============================================
-
-// Input event types (matches bsp_input_event_type_t)
-#define PLUGIN_INPUT_EVENT_TYPE_NONE       0
-#define PLUGIN_INPUT_EVENT_TYPE_NAVIGATION 1
-#define PLUGIN_INPUT_EVENT_TYPE_KEYBOARD   2
-#define PLUGIN_INPUT_EVENT_TYPE_ACTION     3
-#define PLUGIN_INPUT_EVENT_TYPE_SCANCODE   4
-
-// Input event structure
-typedef struct {
-    uint32_t type;          // Event type (PLUGIN_INPUT_EVENT_TYPE_*)
-    uint32_t key;           // Key code
-    bool state;             // true = pressed, false = released
-    uint32_t modifiers;     // Modifier keys state
-} plugin_input_event_t;
-
-// Poll for input event with timeout
-// Returns true if event received, false on timeout
-bool asp_plugin_input_poll(plugin_input_event_t* event, uint32_t timeout_ms);
-
-// Get current state of specific key
-bool asp_plugin_input_get_key_state(uint32_t key);
-
-// ============================================
 // Host API: Input Hooks
 // ============================================
+// Plugins observe and inject events through the unified input event queue.
+// All event types — keyboard, navigation, scancode, and action — flow through
+// the same pipeline. There is no separate "lifecycle event" subsystem; system
+// signals (SD card insert/remove, WiFi state, USB connect/disconnect, etc.)
+// are dispatched as INPUT_EVENT_TYPE_ACTION events with a subtype identifying
+// the source. See asp/input.h and asp/input_types.h for the event structure.
+
+// Launcher-extended action subtypes. These augment asp_input_action_type_t
+// (defined in asp/input_types.h) with values the launcher synthesizes for
+// system-level state changes that don't originate from the BSP. Values are
+// placed above the BSP's enumerator range to avoid collision.
+#define ASP_INPUT_ACTION_TYPE_LAUNCHER_BASE      0x100
+#define ASP_INPUT_ACTION_TYPE_WIFI_CONNECTED     (ASP_INPUT_ACTION_TYPE_LAUNCHER_BASE + 0)
+#define ASP_INPUT_ACTION_TYPE_WIFI_DISCONNECTED  (ASP_INPUT_ACTION_TYPE_LAUNCHER_BASE + 1)
+#define ASP_INPUT_ACTION_TYPE_USB_CONNECTED      (ASP_INPUT_ACTION_TYPE_LAUNCHER_BASE + 2)
+#define ASP_INPUT_ACTION_TYPE_USB_DISCONNECTED   (ASP_INPUT_ACTION_TYPE_LAUNCHER_BASE + 3)
+#define ASP_INPUT_ACTION_TYPE_APP_LAUNCH         (ASP_INPUT_ACTION_TYPE_LAUNCHER_BASE + 4)
+#define ASP_INPUT_ACTION_TYPE_APP_EXIT           (ASP_INPUT_ACTION_TYPE_LAUNCHER_BASE + 5)
+#define ASP_INPUT_ACTION_TYPE_POWER_LOW          (ASP_INPUT_ACTION_TYPE_LAUNCHER_BASE + 6)
 
 // Input hook callback type
-// Called for every input event before it reaches the application
-// Return true if the event was consumed (should not be processed by application)
-// Return false to pass the event through to normal processing
-typedef bool (*plugin_input_hook_fn)(plugin_input_event_t* event, void* user_data);
+// Called for every input event before it reaches the application.
+// Return true if the event was consumed (should not be forwarded).
+// Return false to pass the event through to subsequent hooks and the queue.
+typedef bool (*plugin_input_hook_fn)(asp_input_event_t* event, void* user_data);
 
-// Register an input hook
-// Hooks are called in registration order for every input event
-// If any hook returns true, the event is consumed and not queued
+// Register an input hook.
+// Hooks are called in registration order for every input event.
+// If any hook returns true, the event is consumed and not queued.
 // Returns: hook_id (>=0) on success, -1 on error
 int asp_plugin_input_hook_register(plugin_context_t* ctx, plugin_input_hook_fn callback, void* user_data);
 
 // Unregister an input hook
 void asp_plugin_input_hook_unregister(int hook_id);
 
-// Inject a synthetic input event into the input queue
-// This bypasses hooks and directly queues the event
+// Inject a synthetic input event into the input queue.
+// The injected event flows through the registered hook chain just like a real
+// event, so other plugins (and the global handler) can observe or consume it.
 // Returns: true on success, false on error
-bool asp_plugin_input_inject(plugin_input_event_t* event);
+bool asp_plugin_input_inject(asp_input_event_t* event);
+
+// Note: to receive events without registering a hook, plugins can poll the
+// shared input queue using asp_input_poll() from <asp/input.h>. To query the
+// instantaneous state of an action or navigation key, use asp_input_get_action()
+// or asp_input_get_nav() from the same header.
 
 // ============================================
 // Host API: RGB LEDs
@@ -349,30 +345,6 @@ int asp_plugin_menu_add_item(const char* label, pax_buf_t* icon,
 
 // Remove menu item
 void asp_plugin_menu_remove_item(int item_id);
-
-// ============================================
-// Host API: Event System (for PLUGIN_TYPE_HOOK)
-// ============================================
-
-// Event types
-#define PLUGIN_EVENT_APP_LAUNCH         0x0001
-#define PLUGIN_EVENT_APP_EXIT           0x0002
-#define PLUGIN_EVENT_WIFI_CONNECTED     0x0003
-#define PLUGIN_EVENT_WIFI_DISCONNECTED  0x0004
-#define PLUGIN_EVENT_SD_INSERTED        0x0005
-#define PLUGIN_EVENT_SD_REMOVED         0x0006
-#define PLUGIN_EVENT_POWER_LOW          0x0007
-#define PLUGIN_EVENT_USB_CONNECTED      0x0008
-#define PLUGIN_EVENT_USB_DISCONNECTED   0x0009
-
-typedef int (*plugin_event_handler_t)(uint32_t event, void* data, void* arg);
-
-// Register event handler for specified event mask
-// Returns: handler_id (>=0) on success, -1 on error
-int asp_plugin_event_register(plugin_context_t* ctx, uint32_t event_mask, plugin_event_handler_t handler, void* arg);
-
-// Unregister event handler
-void asp_plugin_event_unregister(int handler_id);
 
 // ============================================
 // Host API: Networking

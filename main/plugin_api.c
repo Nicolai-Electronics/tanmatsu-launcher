@@ -158,6 +158,9 @@ int plugin_api_render_status_widgets(pax_buf_t* buffer, int x_right, int y, int 
 // ============================================
 // Input Hook API Implementation
 // ============================================
+// asp_input_event_t and bsp_input_event_t share the same memory layout
+// (enforced by static_assert in badge-elf-api). Plugin hooks therefore receive
+// the BSP event directly via reinterpret cast — no field translation needed.
 
 // Track registered hooks per plugin for cleanup
 #define MAX_PLUGIN_INPUT_HOOKS 8
@@ -172,6 +175,10 @@ typedef struct {
 
 static plugin_input_hook_entry_t plugin_input_hooks[MAX_PLUGIN_INPUT_HOOKS] = {0};
 
+#include "asp/input_types.h"
+_Static_assert(sizeof(asp_input_event_t) == sizeof(bsp_input_event_t),
+               "asp_input_event_t and bsp_input_event_t must share layout");
+
 // Internal callback that wraps plugin hook to BSP hook
 static bool plugin_input_hook_wrapper(bsp_input_event_t* bsp_event, void* user_data) {
     int hook_index = (int)(intptr_t)user_data;
@@ -184,31 +191,7 @@ static bool plugin_input_hook_wrapper(bsp_input_event_t* bsp_event, void* user_d
         return false;
     }
 
-    // Convert BSP event to plugin event format
-    plugin_input_event_t plugin_event = {0};
-    plugin_event.type                 = bsp_event->type;
-
-    switch (bsp_event->type) {
-        case INPUT_EVENT_TYPE_NAVIGATION:
-            plugin_event.key       = bsp_event->args_navigation.key;
-            plugin_event.state     = bsp_event->args_navigation.state;
-            plugin_event.modifiers = bsp_event->args_navigation.modifiers;
-            break;
-        case INPUT_EVENT_TYPE_KEYBOARD:
-            plugin_event.key       = (uint32_t)bsp_event->args_keyboard.ascii;
-            plugin_event.state     = true;
-            plugin_event.modifiers = bsp_event->args_keyboard.modifiers;
-            break;
-        case INPUT_EVENT_TYPE_SCANCODE:
-            plugin_event.key       = bsp_event->args_scancode.scancode;
-            plugin_event.state     = !(bsp_event->args_scancode.scancode & BSP_INPUT_SCANCODE_RELEASE_MODIFIER);
-            plugin_event.modifiers = 0;
-            break;
-        default:
-            break;
-    }
-
-    return entry->callback(&plugin_event, entry->user_data);
+    return entry->callback((asp_input_event_t*)bsp_event, entry->user_data);
 }
 
 int asp_plugin_input_hook_register(plugin_context_t* ctx, plugin_input_hook_fn callback, void* user_data) {
@@ -267,69 +250,42 @@ void asp_plugin_input_hook_unregister(int hook_id) {
     ESP_LOGI(TAG, "Unregistered plugin input hook %d", hook_id);
 }
 
-bool asp_plugin_input_inject(plugin_input_event_t* event) {
+bool asp_plugin_input_inject(asp_input_event_t* event) {
     if (!event) {
         return false;
     }
-
-    bsp_input_event_t bsp_event = {0};
-    bsp_event.type              = event->type;
-
-    switch (event->type) {
-        case INPUT_EVENT_TYPE_NAVIGATION:
-            bsp_event.args_navigation.key       = event->key;
-            bsp_event.args_navigation.state     = event->state;
-            bsp_event.args_navigation.modifiers = event->modifiers;
-            break;
-        case INPUT_EVENT_TYPE_KEYBOARD:
-            bsp_event.args_keyboard.ascii     = (char)event->key;
-            bsp_event.args_keyboard.utf8      = NULL;
-            bsp_event.args_keyboard.modifiers = event->modifiers;
-            break;
-        case INPUT_EVENT_TYPE_SCANCODE:
-            bsp_event.args_scancode.scancode = event->key;
-            if (!event->state) {
-                bsp_event.args_scancode.scancode |= BSP_INPUT_SCANCODE_RELEASE_MODIFIER;
-            }
-            break;
-        default:
-            return false;
-    }
-
-    return bsp_input_inject_event(&bsp_event) == ESP_OK;
+    return bsp_input_inject_event((bsp_input_event_t*)event) == ESP_OK;
 }
 
-// ============================================
-// Input API Implementation
-// ============================================
+// Input poll and key-state queries are provided by badge-elf-api: use
+// asp_input_poll(), asp_input_get_nav(), asp_input_get_action() from
+// <asp/input.h> instead of any plugin-specific wrapper.
 
-bool asp_plugin_input_poll(plugin_input_event_t* event, uint32_t timeout_ms) {
-    QueueHandle_t input_queue = NULL;
-    if (bsp_input_get_queue(&input_queue) != ESP_OK || input_queue == NULL) {
-        return false;
-    }
-
-    bsp_input_event_t bsp_event;
-    if (xQueueReceive(input_queue, &bsp_event, pdMS_TO_TICKS(timeout_ms)) == pdTRUE) {
-        event->type = bsp_event.type;
-        if (bsp_event.type == INPUT_EVENT_TYPE_NAVIGATION) {
-            event->key       = bsp_event.args_navigation.key;
-            event->state     = bsp_event.args_navigation.state;
-            event->modifiers = 0;
-        } else if (bsp_event.type == INPUT_EVENT_TYPE_KEYBOARD) {
-            // Keyboard events provide ASCII character, not key code
-            event->key       = (uint32_t)bsp_event.args_keyboard.ascii;
-            event->state     = true;  // Keyboard events are character inputs
-            event->modifiers = bsp_event.args_keyboard.modifiers;
-        }
-        return true;
-    }
+// Deprecated symbols. The host's kbelf symbol table (in managed component
+// badgeteam__badge-elf) still references these by name so the launcher must
+// continue to export them to link. They are no longer declared in the public
+// plugin API and any plugin attempting to call them will get a no-op result.
+bool asp_plugin_input_poll(void* event, uint32_t timeout_ms) {
+    (void)event;
+    (void)timeout_ms;
     return false;
 }
 
 bool asp_plugin_input_get_key_state(uint32_t key) {
-    // TODO: Implement direct key state query
+    (void)key;
     return false;
+}
+
+int asp_plugin_event_register(plugin_context_t* ctx, uint32_t event_mask, void* handler, void* arg) {
+    (void)ctx;
+    (void)event_mask;
+    (void)handler;
+    (void)arg;
+    return -1;
+}
+
+void asp_plugin_event_unregister(int handler_id) {
+    (void)handler_id;
 }
 
 // LED API moved to badge-elf-api (asp/led.h)
@@ -460,57 +416,9 @@ void asp_plugin_menu_remove_item(int item_id) {
     ESP_LOGW(TAG, "asp_plugin_menu_remove_item not yet implemented");
 }
 
-// ============================================
-// Event API Implementation
-// ============================================
-
-#define MAX_EVENT_HANDLERS 16
-
-typedef struct {
-    bool                   active;
-    uint32_t               event_mask;
-    plugin_event_handler_t handler;
-    void*                  arg;
-    plugin_context_t*      owner;  // Track which plugin owns this registration
-} event_handler_entry_t;
-
-static event_handler_entry_t event_handlers[MAX_EVENT_HANDLERS] = {0};
-
-int asp_plugin_event_register(plugin_context_t* ctx, uint32_t event_mask, plugin_event_handler_t handler, void* arg) {
-    for (int i = 0; i < MAX_EVENT_HANDLERS; i++) {
-        if (!event_handlers[i].active) {
-            event_handlers[i].active     = true;
-            event_handlers[i].event_mask = event_mask;
-            event_handlers[i].handler    = handler;
-            event_handlers[i].arg        = arg;
-            event_handlers[i].owner      = ctx;
-            ESP_LOGI(TAG, "Registered event handler %d for mask 0x%lx", i, (unsigned long)event_mask);
-            return i;
-        }
-    }
-    ESP_LOGW(TAG, "No free event handler slots");
-    return -1;
-}
-
-void asp_plugin_event_unregister(int handler_id) {
-    if (handler_id >= 0 && handler_id < MAX_EVENT_HANDLERS) {
-        event_handlers[handler_id].active  = false;
-        event_handlers[handler_id].handler = NULL;
-        ESP_LOGI(TAG, "Unregistered event handler %d", handler_id);
-    }
-}
-
-// Called by plugin manager to dispatch events to registered handlers
-int plugin_api_dispatch_event(uint32_t event_type, void* event_data) {
-    int handled = 0;
-    for (int i = 0; i < MAX_EVENT_HANDLERS; i++) {
-        if (event_handlers[i].active && (event_handlers[i].event_mask & event_type) && event_handlers[i].handler) {
-            int result = event_handlers[i].handler(event_type, event_data, event_handlers[i].arg);
-            if (result > 0) handled++;
-        }
-    }
-    return handled;
-}
+// Plugin lifecycle events are dispatched as INPUT_EVENT_TYPE_ACTION events on
+// the shared input queue (see ASP_INPUT_ACTION_TYPE_* in tanmatsu_plugin.h).
+// Plugins register input hooks to observe them.
 
 // Network API moved to badge-elf-api (asp/http.h)
 
@@ -789,18 +697,6 @@ void plugin_api_cleanup_for_plugin(plugin_context_t* ctx) {
             plugin_input_hooks[i].user_data   = NULL;
             plugin_input_hooks[i].in_use      = false;
             plugin_input_hooks[i].owner       = NULL;
-        }
-    }
-
-    // Clear all event handlers owned by this plugin
-    for (int i = 0; i < MAX_EVENT_HANDLERS; i++) {
-        if (event_handlers[i].active && event_handlers[i].owner == ctx) {
-            ESP_LOGI(TAG, "Auto-unregistering event handler %d", i);
-            event_handlers[i].active     = false;
-            event_handlers[i].event_mask = 0;
-            event_handlers[i].handler    = NULL;
-            event_handlers[i].arg        = NULL;
-            event_handlers[i].owner      = NULL;
         }
     }
 

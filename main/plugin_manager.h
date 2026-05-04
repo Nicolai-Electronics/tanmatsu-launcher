@@ -84,14 +84,6 @@ bool plugin_manager_start_service(plugin_context_t* ctx);
 bool plugin_manager_stop_service(plugin_context_t* ctx);
 
 // ============================================
-// Event Dispatch
-// ============================================
-
-// Dispatch event to all hook plugins
-// Returns number of plugins that handled the event
-int plugin_manager_dispatch_event(uint32_t event_type, void* event_data);
-
-// ============================================
 // Autostart Management
 // ============================================
 

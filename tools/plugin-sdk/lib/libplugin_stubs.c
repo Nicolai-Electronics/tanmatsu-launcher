@@ -18,11 +18,9 @@ void asp_plugin_status_widget_unregister(int widget_id) {}
 // Drawing Primitives - Use PAX library directly (pax_draw_circle, pax_draw_rect, etc.)
 // These are already exported via kbelf_lib_pax_gfx
 
-// Input API
-int asp_plugin_input_poll(void* event, unsigned int timeout_ms) { return 0; }
-int asp_plugin_input_get_key_state(unsigned int key) { return 0; }
-
-// Input Hook API
+// Input Hook API (events are asp_input_event_t* — see asp/input_types.h)
+// Polling and key-state queries are provided by badge-elf-api (asp_input_poll,
+// asp_input_get_nav, asp_input_get_action) and not duplicated here.
 int asp_plugin_input_hook_register(void* ctx, void* callback, void* user_data) { return 0; }
 void asp_plugin_input_hook_unregister(int hook_id) {}
 int asp_plugin_input_inject(void* event) { return 0; }
@@ -64,9 +62,8 @@ int asp_plugin_should_stop(void* ctx) { return 0; }
 int asp_plugin_menu_add_item(const char* label, void* icon, void* callback, void* user_data) { return 0; }
 void asp_plugin_menu_remove_item(int item_id) {}
 
-// Event API
-int asp_plugin_event_register(void* ctx, unsigned int event_mask, void* callback, void* user_data) { return 0; }
-void asp_plugin_event_unregister(int registration_id) {}
+// Lifecycle events flow through the input event queue (see asp/input.h and
+// ASP_INPUT_ACTION_TYPE_* in tanmatsu_plugin.h) — no separate event API.
 
 // Network API
 int asp_net_is_connected(int* out_connected) { return 0; }

@@ -68,7 +68,9 @@ static void handle_volume(bool up, bool state) {
 
 static bool input_hook_callback(bsp_input_event_t* event, void* user_data) {
     if (event->type == INPUT_EVENT_TYPE_ACTION) {
-        // Handle all action events
+        // Only consume subtypes this handler actually owns. Unknown or
+        // launcher-extended subtypes (WiFi, USB, app launch, etc.) fall
+        // through so plugin hooks downstream can observe them.
         switch (event->args_action.type) {
             case BSP_INPUT_ACTION_TYPE_POWER_BUTTON:
                 if (event->args_action.state) {
@@ -77,19 +79,17 @@ static bool input_hook_callback(bsp_input_event_t* event, void* user_data) {
                     power_button_latch = false;
                     // Trigger standby mode here
                 }
-                // For now don't handle this
-                return false;  // Temporary
-                break;
+                // Currently a no-op latch; let plugins observe.
+                return false;
             case BSP_INPUT_ACTION_TYPE_SD_CARD:
                 handle_sdcard(event->args_action.state);
-                break;
+                return true;
             case BSP_INPUT_ACTION_TYPE_AUDIO_JACK:
                 handle_audiojack(event->args_action.state);
-                break;
+                return true;
             default:
-                break;
+                return false;
         }
-        return true;
     } else if (event->type == INPUT_EVENT_TYPE_NAVIGATION) {
         if (event->args_navigation.key == BSP_INPUT_NAVIGATION_KEY_VOLUME_UP) {
             handle_volume(true, event->args_navigation.state);
