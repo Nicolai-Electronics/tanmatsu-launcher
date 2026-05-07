@@ -62,6 +62,8 @@ static int16_t g_out_buf[MIXER_CHUNK_SAMPLES];
 static void power_up(void) {
     if (g_powered_on) return;
 
+    ESP_LOGI(TAG, "Audio resuming — leaving power-saving state, re-enabling I2S and amplifier");
+
     esp_err_t err = i2s_channel_enable(g_i2s);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "i2s_channel_enable failed: %s", esp_err_to_name(err));
@@ -76,7 +78,6 @@ static void power_up(void) {
     bsp_audio_set_amplifier(!jack_inserted);
 
     g_powered_on = true;
-    ESP_LOGD(TAG, "Audio output powered up (jack=%d)", jack_inserted ? 1 : 0);
 }
 
 // Mute the amplifier first (avoids driving residual DMA samples into the
@@ -87,6 +88,8 @@ static void power_up(void) {
 static void power_down(void) {
     if (!g_powered_on) return;
 
+    ESP_LOGI(TAG, "Audio idle and DMA drained — entering power-saving state, disabling amplifier and I2S");
+
     bsp_audio_set_amplifier(false);
 
     esp_err_t err = i2s_channel_disable(g_i2s);
@@ -95,7 +98,6 @@ static void power_down(void) {
     }
 
     g_powered_on = false;
-    ESP_LOGD(TAG, "Audio output powered down (idle)");
 }
 
 static void mixer_task_fn(void* arg) {
