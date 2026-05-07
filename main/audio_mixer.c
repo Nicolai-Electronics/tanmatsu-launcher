@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "bsp/audio.h"
+#include "bsp/input.h"
 #include "driver/i2s_common.h"
 #include "driver/i2s_types.h"
 #include "esp_log.h"
@@ -23,6 +24,14 @@ static char const* TAG = "audio_mixer";
 #define MIXER_TASK_STACK    3072
 #define MIXER_TASK_PRIORITY 7  // above plugin tasks (which run at 5)
 
+// After every stream has gone silent we keep the I2S channel running and
+// feed it silence chunks for a short drain window before disabling the
+// hardware, so the last bit of audio sitting in the DMA queue actually
+// plays out instead of being chopped off. The default I2S DMA queue is
+// 6 descriptors x 240 frames = 1440 frames (~33 ms @ 44.1 kHz); we
+// over-shoot to leave headroom for jitter and codec latency.
+#define MIXER_DRAIN_CHUNKS 8  // 8 * 256 frames ≈ 46 ms @ 44.1 kHz
+
 typedef struct {
     bool                 active;  // slot is allocated to a plugin
     bool                 paused;  // stream is paused (asp_audio_stop)
@@ -35,14 +44,68 @@ static SemaphoreHandle_t g_streams_mutex = NULL;
 static i2s_chan_handle_t g_i2s           = NULL;
 static TaskHandle_t      g_mixer_task    = NULL;
 static bool              g_initialized   = false;
+// I2S/amplifier are enabled by bsp_audio_initialize before the mixer task
+// starts, so the initial state is "powered on". The mixer task drops it
+// to "powered off" after its first idle drain pass. Only the mixer task
+// reads or writes this, so no synchronization is needed.
+static bool              g_powered_on = true;
 
 // Scratch buffers for the mixer task. Static to keep them out of the task stack.
 static int16_t g_in_buf[MIXER_CHUNK_SAMPLES];
 static int32_t g_accum[MIXER_CHUNK_SAMPLES];
 static int16_t g_out_buf[MIXER_CHUNK_SAMPLES];
 
+// Re-enable the I2S DMA channel and turn the speaker amplifier back on
+// before resuming mixing. The amplifier follows the current jack state so
+// we don't drive the speaker while headphones are connected. Only called
+// from the mixer task.
+static void power_up(void) {
+    if (g_powered_on) return;
+
+    esp_err_t err = i2s_channel_enable(g_i2s);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "i2s_channel_enable failed: %s", esp_err_to_name(err));
+    }
+
+    bool jack_inserted = false;
+    if (bsp_input_read_action(BSP_INPUT_ACTION_TYPE_AUDIO_JACK, &jack_inserted) != ESP_OK) {
+        // Couldn't read jack state — default to amp-on, matches the original
+        // behaviour for boards that don't report jack state reliably.
+        jack_inserted = false;
+    }
+    bsp_audio_set_amplifier(!jack_inserted);
+
+    g_powered_on = true;
+    ESP_LOGD(TAG, "Audio output powered up (jack=%d)", jack_inserted ? 1 : 0);
+}
+
+// Mute the amplifier first (avoids driving residual DMA samples into the
+// speaker as a click) and then disable the I2S DMA channel. The mixer
+// task only calls this once it has fed the DMA queue enough silence to
+// flush any real audio that might still be in flight. Only called from
+// the mixer task.
+static void power_down(void) {
+    if (!g_powered_on) return;
+
+    bsp_audio_set_amplifier(false);
+
+    esp_err_t err = i2s_channel_disable(g_i2s);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "i2s_channel_disable failed: %s", esp_err_to_name(err));
+    }
+
+    g_powered_on = false;
+    ESP_LOGD(TAG, "Audio output powered down (idle)");
+}
+
 static void mixer_task_fn(void* arg) {
     (void)arg;
+    // Number of consecutive silent chunks pushed into the DMA queue since
+    // the last real audio sample. Once this reaches MIXER_DRAIN_CHUNKS the
+    // hardware DMA queue is guaranteed to contain only silence, so it's
+    // safe to power the amp/I2S down without cutting off the tail.
+    int silence_chunks = 0;
+
     while (1) {
         memset(g_accum, 0, sizeof(g_accum));
 
@@ -63,9 +126,43 @@ static void mixer_task_fn(void* arg) {
         }
         xSemaphoreGive(g_streams_mutex);
 
+        if (active_count == 0) {
+            // No producer had samples this round. If we're still powered
+            // up, keep the I2S clock alive and push silence chunks into the
+            // DMA queue until any previously-mixed audio has fully drained;
+            // only then is it safe to disable the amp/I2S without chopping
+            // off the tail of the last sound.
+            if (!g_powered_on) {
+                // Already idle: just block until a producer wakes us.
+                ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+                continue;
+            }
+            if (silence_chunks < MIXER_DRAIN_CHUNKS) {
+                memset(g_out_buf, 0, sizeof(g_out_buf));
+                size_t written = 0;
+                i2s_channel_write(g_i2s, g_out_buf, sizeof(g_out_buf), &written, portMAX_DELAY);
+                silence_chunks++;
+                continue;
+            }
+            // DMA queue has been fully overwritten with silence — power
+            // down and sleep until a producer pokes us via audio_mixer_write.
+            power_down();
+            silence_chunks = 0;
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            continue;
+        }
+
+        // Real audio this round — bring the hardware back up if we drifted
+        // off, and reset the drain counter so a single late sample doesn't
+        // immediately let us power down on the next iteration.
+        if (!g_powered_on) {
+            power_up();
+        }
+        silence_chunks = 0;
+
         // Per-source volume = total / N. Saturate as a safety net in case
         // a single source is already at the int16 boundary.
-        int divisor = (active_count > 0) ? active_count : 1;
+        int divisor = active_count;
         for (size_t j = 0; j < MIXER_CHUNK_SAMPLES; j++) {
             int32_t s = g_accum[j] / divisor;
             if (s > INT16_MAX)
@@ -206,7 +303,16 @@ size_t audio_mixer_write(TaskHandle_t task, const void* samples, size_t size_byt
     if (buf == NULL) return 0;
 
     TickType_t ticks = (timeout_ms < 0) ? portMAX_DELAY : pdMS_TO_TICKS(timeout_ms);
-    return xStreamBufferSend(buf, samples, size_bytes, ticks);
+    size_t     sent  = xStreamBufferSend(buf, samples, size_bytes, ticks);
+
+    // If the mixer is currently parked in ulTaskNotifyTake (idle, hardware
+    // powered down) it won't notice the new samples until something prods
+    // it. Notify on every successful send — it's cheap, and the mixer task
+    // ignores spurious wake-ups since it always re-checks the streams.
+    if (sent > 0 && g_mixer_task != NULL) {
+        xTaskNotifyGive(g_mixer_task);
+    }
+    return sent;
 }
 
 bool audio_mixer_start(TaskHandle_t task) {

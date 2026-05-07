@@ -13,6 +13,12 @@
 // (44.1 kHz by default). asp_audio_set_rate still passes through to the BSP
 // unchanged; if plugins disagree on rate the last writer wins and others play
 // at the wrong pitch.
+//
+// Idle power management: when every stream has been silent long enough for
+// the I2S DMA queue to drain, the mixer disables the speaker amplifier and
+// the I2S channel and blocks until audio_mixer_write delivers more samples.
+// The shutdown is internal — no API change is required from callers, and
+// the amplifier is restored to the headphone-aware state on wake-up.
 
 #pragma once
 
