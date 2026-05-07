@@ -583,5 +583,6 @@ void app_main(void) {
     plugin_manager_load_autostart();
 #endif
 
+    startup_finish();
     menu_home();
 }

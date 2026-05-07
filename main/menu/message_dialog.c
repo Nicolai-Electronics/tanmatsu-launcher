@@ -402,23 +402,30 @@ void startup_dialog(const char* message) {
     if (!display_is_initialized()) {
         return;
     }
-    pax_buf_t*   buffer = display_get_buffer();
-    gui_theme_t* theme  = get_theme();
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-    static bool initialized = false;
-    if (!initialized) {
-        synthwave(buffer);
-        initialized = true;
-    }
-    synthwave_step(buffer);
-    pax_draw_text(buffer, 0xFFFFFFFF, theme->menu.text_font, theme->menu.text_height, theme->menu.horizontal_margin,
-                  (pax_buf_get_height(buffer) - theme->menu.text_height - theme->menu.vertical_margin), message);
+    // The animator owns the framebuffer; we just kick it off (idempotent)
+    // and post the new status message. The synth grid keeps animating
+    // smoothly between status updates instead of stepping only when a
+    // new message arrives.
+    synthwave_animation_start();
+    synthwave_animation_set_message(message);
 #else
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
     pax_background(buffer, theme->palette.color_background);
     pax_draw_text(buffer, theme->menu.palette.color_active_foreground, theme->menu.text_font, theme->menu.text_height,
                   theme->menu.horizontal_margin,
                   (pax_buf_get_height(buffer) - theme->menu.text_height - theme->menu.vertical_margin), message);
-#endif
     display_blit_buffer(buffer);
+#endif
+}
+
+void startup_finish(void) {
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+    // Stop the animator and wait for its last frame to complete before
+    // anything else (menu_home in main, or a busy/message dialog in an
+    // unusual error path) takes over the framebuffer.
+    synthwave_animation_stop();
+#endif
 }

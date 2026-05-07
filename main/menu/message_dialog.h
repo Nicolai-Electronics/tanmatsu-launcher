@@ -26,6 +26,13 @@ void busy_dialog(pax_buf_t* icon, const char* title, const char* message, bool h
 void progress_dialog(pax_buf_t* icon, const char* title, const char* message, uint8_t progress, bool header);
 void startup_dialog(const char* message);
 
+// Tear down any resources owned by startup_dialog (currently the
+// synthwave animator task on Tanmatsu/Konsool). Call this once after
+// the final startup_dialog and before any other code starts rendering
+// to the framebuffer, so the boot animation and the next screen don't
+// race for the display.
+void startup_finish(void);
+
 bsp_input_navigation_key_t adv_dialog(pax_buf_t* icon, const char* title, const char* message,
                                       gui_element_icontext_t* headers, int header_count);
 
