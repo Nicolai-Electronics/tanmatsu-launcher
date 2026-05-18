@@ -69,7 +69,9 @@ void coprocessor_flash(bool force) {
         .swclk = 23,
     };
 
-    // To-do: display progress screen
+    // Stop the boot animation so it does not compete with the progress dialog
+    // drawn by the flashing callback below.
+    startup_finish();
 
     ch32v20x_program(&handle, coprocessor_firmware_start, coprocessor_firmware_end - coprocessor_firmware_start,
                      callback);
