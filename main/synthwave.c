@@ -1,7 +1,13 @@
 #include "synthwave.h"
 #include <stdio.h>
+#include <string.h>
 #include "bsp/display.h"
+#include "common/display.h"
+#include "common/theme.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
 #include "pax_fonts.h"
 #include "pax_gfx.h"
 #include "pax_text.h"
@@ -261,4 +267,126 @@ void synthwave_step(pax_buf_t* fb) {
     if (j > 20) {
         j = 0;
     }
+}
+
+// --- Animator task -----------------------------------------------------------
+//
+// During boot, startup_dialog() used to step the synthwave grid by exactly
+// one pixel per call, so the animation only moved when a new status message
+// was posted. The animator below decouples that: a dedicated FreeRTOS task
+// renders the background and bottom grid at a fixed frame rate while the
+// main thread just pushes status messages via synthwave_animation_set_message.
+
+#define SYNTHWAVE_FPS           25
+#define SYNTHWAVE_FRAME_MS      (1000 / SYNTHWAVE_FPS)
+#define SYNTHWAVE_MESSAGE_MAX   128
+#define SYNTHWAVE_TASK_STACK    4096
+#define SYNTHWAVE_TASK_PRIORITY 4
+
+static char const* SYNTHWAVE_TAG = "synthwave";
+
+static TaskHandle_t      g_anim_task   = NULL;
+static SemaphoreHandle_t g_msg_mutex   = NULL;
+static SemaphoreHandle_t g_done_sem    = NULL;
+static char              g_message[SYNTHWAVE_MESSAGE_MAX] = {0};
+static volatile bool     g_should_stop = false;
+
+static void synthwave_anim_task_fn(void* arg) {
+    (void)arg;
+    pax_buf_t*   fb    = display_get_buffer();
+    gui_theme_t* theme = get_theme();
+
+    // The synthwave background (sun, mountains, mountain wireframe, top
+    // grid line) is static; draw it once on startup so each animation
+    // frame only has to repaint the cheap bottom panel and the message
+    // overlay on top.
+    synthwave(fb);
+
+    char       local_msg[SYNTHWAVE_MESSAGE_MAX] = {0};
+    TickType_t period                           = pdMS_TO_TICKS(SYNTHWAVE_FRAME_MS);
+    TickType_t last_wake                        = xTaskGetTickCount();
+
+    while (!g_should_stop) {
+        synthwave_step(fb);
+
+        xSemaphoreTake(g_msg_mutex, portMAX_DELAY);
+        memcpy(local_msg, g_message, sizeof(local_msg));
+        xSemaphoreGive(g_msg_mutex);
+
+        if (local_msg[0] != '\0') {
+            // synthwave_step only repaints the bottom panel, so the
+            // message overlay (drawn on top of that panel) gets cleared
+            // and re-drawn implicitly each frame — no separate erase
+            // step is needed.
+            pax_draw_text(fb, 0xFFFFFFFF, theme->menu.text_font, theme->menu.text_height,
+                          theme->menu.horizontal_margin,
+                          (pax_buf_get_height(fb) - theme->menu.text_height - theme->menu.vertical_margin), local_msg);
+        }
+
+        display_blit_buffer(fb);
+
+        // vTaskDelayUntil yields the CPU between frames and keeps the
+        // frame rate steady even when blit/draw timings vary.
+        vTaskDelayUntil(&last_wake, period);
+    }
+
+    // Hand the framebuffer back to the caller of synthwave_animation_stop
+    // before deleting ourselves; otherwise stop() could race with the
+    // final blit.
+    xSemaphoreGive(g_done_sem);
+    vTaskDelete(NULL);
+}
+
+void synthwave_animation_start(void) {
+    if (g_anim_task != NULL) return;
+
+    if (g_msg_mutex == NULL) {
+        g_msg_mutex = xSemaphoreCreateMutex();
+        if (g_msg_mutex == NULL) {
+            ESP_LOGE(SYNTHWAVE_TAG, "Failed to create message mutex");
+            return;
+        }
+    }
+    if (g_done_sem == NULL) {
+        g_done_sem = xSemaphoreCreateBinary();
+        if (g_done_sem == NULL) {
+            ESP_LOGE(SYNTHWAVE_TAG, "Failed to create done semaphore");
+            return;
+        }
+    }
+    g_should_stop = false;
+
+    BaseType_t ok = xTaskCreate(synthwave_anim_task_fn, "synthwave", SYNTHWAVE_TASK_STACK, NULL,
+                                SYNTHWAVE_TASK_PRIORITY, &g_anim_task);
+    if (ok != pdPASS) {
+        ESP_LOGE(SYNTHWAVE_TAG, "Failed to create animator task");
+        g_anim_task = NULL;
+    }
+}
+
+void synthwave_animation_stop(void) {
+    if (g_anim_task == NULL) return;
+    g_should_stop = true;
+    // Wait for the task to finish its current frame and signal completion
+    // before returning, so the caller can safely take over the framebuffer.
+    xSemaphoreTake(g_done_sem, portMAX_DELAY);
+    g_anim_task = NULL;
+}
+
+void synthwave_animation_set_message(const char* message) {
+    if (g_msg_mutex == NULL) {
+        // Animator hasn't been started yet — drop the update silently.
+        // Callers are expected to start the animator before posting
+        // messages, and we don't want set_message to allocate the mutex
+        // out from under a concurrent start path.
+        return;
+    }
+    xSemaphoreTake(g_msg_mutex, portMAX_DELAY);
+    if (message == NULL) {
+        g_message[0] = '\0';
+    } else {
+        strncpy(g_message, message, sizeof(g_message) - 1);
+        g_message[sizeof(g_message) - 1] = '\0';
+    }
+    xSemaphoreGive(g_msg_mutex);
 }
