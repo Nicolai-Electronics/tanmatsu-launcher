@@ -19,11 +19,11 @@
 #include "esp_lcd_mipi_dsi.h"
 #endif
 
-static size_t                       display_h_res        = 0;
-static size_t                       display_v_res        = 0;
-static lcd_color_rgb_pixel_format_t display_color_format = LCD_COLOR_PIXEL_FORMAT_RGB565;
-static lcd_rgb_data_endian_t        display_data_endian  = LCD_RGB_DATA_ENDIAN_LITTLE;
-static pax_buf_t                    fb                   = {0};
+static size_t                     display_h_res        = 0;
+static size_t                     display_v_res        = 0;
+static bsp_display_color_format_t display_color_format = 0;
+static bsp_display_endianness_t   display_data_endian  = 0;
+static pax_buf_t                  fb                   = {0};
 
 #if defined(CONFIG_BSP_TARGET_KAMI)
 static pax_col_t palette[] = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
@@ -43,31 +43,63 @@ esp_err_t display_init(void) {
         return res;
     }
 
+    // Convert ESP-IDF color format into PAX buffer type
     pax_buf_type_t format = PAX_BUF_24_888RGB;
-
     switch (display_color_format) {
-        case LCD_COLOR_PIXEL_FORMAT_RGB565:
+        case BSP_DISPLAY_COLOR_FORMAT_1_PAL:
+            format = PAX_BUF_1_PAL;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_2_PAL:
+            format = PAX_BUF_2_PAL;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_4_PAL:
+            format = PAX_BUF_4_PAL;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_8_PAL:
+            format = PAX_BUF_8_PAL;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_16_PAL:
+            format = PAX_BUF_16_PAL;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_1_GREY:
+            format = PAX_BUF_1_GREY;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_2_GREY:
+            format = PAX_BUF_2_GREY;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_4_GREY:
+            format = PAX_BUF_4_GREY;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_8_GREY:
+            format = PAX_BUF_8_GREY;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_8_332RGB:
+            format = PAX_BUF_8_332RGB;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_16_565RGB:
             format = PAX_BUF_16_565RGB;
             break;
-        case LCD_COLOR_PIXEL_FORMAT_RGB888:
+        case BSP_DISPLAY_COLOR_FORMAT_4_1111ARGB:
+            format = PAX_BUF_4_1111ARGB;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_8_2222ARGB:
+            format = PAX_BUF_8_2222ARGB;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_16_4444ARGB:
+            format = PAX_BUF_16_4444ARGB;
+            break;
+        case BSP_DISPLAY_COLOR_FORMAT_24_888RGB:
             format = PAX_BUF_24_888RGB;
             break;
-        default:
+        case BSP_DISPLAY_COLOR_FORMAT_32_8888ARGB:
+            format = PAX_BUF_32_8888ARGB;
             break;
+        case BSP_DISPLAY_COLOR_FORMAT_18_666RGB:
+        default:
+            return ESP_FAIL;
     }
 
-#if defined(CONFIG_BSP_TARGET_KAMI)
-    format = PAX_BUF_2_PAL;
-#endif
-
-    pax_buf_init(&fb, NULL, display_h_res, display_v_res, format);
-    pax_buf_reversed(&fb, display_data_endian == LCD_RGB_DATA_ENDIAN_BIG);
-
-#if defined(CONFIG_BSP_TARGET_KAMI)
-    fb.palette      = palette;
-    fb.palette_size = sizeof(palette) / sizeof(pax_col_t);
-#endif
-
+    // Convert BSP display rotation format into PAX orientation type
     bsp_display_rotation_t display_rotation = bsp_display_get_default_rotation();
     pax_orientation_t      orientation      = PAX_O_UPRIGHT;
     switch (display_rotation) {
@@ -85,6 +117,15 @@ esp_err_t display_init(void) {
             orientation = PAX_O_UPRIGHT;
             break;
     }
+
+    pax_buf_init(&fb, NULL, display_h_res, display_v_res, format);
+    pax_buf_reversed(&fb, display_data_endian == BSP_DISPLAY_ENDIAN_BIG);
+
+#if defined(CONFIG_BSP_TARGET_KAMI)
+    fb.palette      = palette;
+    fb.palette_size = sizeof(palette) / sizeof(pax_col_t);
+#endif
+
     pax_buf_set_orientation(&fb, orientation);
 
 #if CONFIG_ENABLE_LAUNCHERPLUGINS
