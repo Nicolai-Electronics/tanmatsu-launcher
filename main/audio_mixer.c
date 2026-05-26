@@ -48,7 +48,7 @@ static bool              g_initialized   = false;
 // starts, so the initial state is "powered on". The mixer task drops it
 // to "powered off" after its first idle drain pass. Only the mixer task
 // reads or writes this, so no synchronization is needed.
-static bool              g_powered_on = true;
+static bool              g_powered_on    = true;
 
 // Scratch buffers for the mixer task. Static to keep them out of the task stack.
 static int16_t g_in_buf[MIXER_CHUNK_SAMPLES];

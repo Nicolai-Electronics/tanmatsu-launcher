@@ -470,8 +470,8 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
                  (unsigned long)reg->struct_size);
         ESP_LOGI(TAG, "Entry points: get_info=%p init=%p cleanup=%p", reg->entry.get_info, reg->entry.init,
                  reg->entry.cleanup);
-        ESP_LOGI(TAG, "Entry points: menu_render=%p menu_select=%p service_run=%p",
-                 reg->entry.menu_render, reg->entry.menu_select, reg->entry.service_run);
+        ESP_LOGI(TAG, "Entry points: menu_render=%p menu_select=%p service_run=%p", reg->entry.menu_render,
+                 reg->entry.menu_select, reg->entry.service_run);
         ESP_LOGI(TAG, "Context: slug=%s path=%s ctx=%p", ctx->plugin_slug ? ctx->plugin_slug : "(null)",
                  ctx->plugin_path ? ctx->plugin_path : "(null)", (void*)ctx);
 
@@ -503,17 +503,15 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
         uint32_t plugin_patch = info->api_version & 0xFF;
         if (plugin_major != TANMATSU_PLUGIN_API_VERSION_MAJOR) {
             ESP_LOGE(TAG, "Plugin '%s' requires API v%lu.%lu.%lu, launcher provides v%d.%d.%d",
-                     info->slug ? info->slug : "?", (unsigned long)plugin_major,
-                     (unsigned long)plugin_minor, (unsigned long)plugin_patch,
-                     TANMATSU_PLUGIN_API_VERSION_MAJOR, TANMATSU_PLUGIN_API_VERSION_MINOR,
+                     info->slug ? info->slug : "?", (unsigned long)plugin_major, (unsigned long)plugin_minor,
+                     (unsigned long)plugin_patch, TANMATSU_PLUGIN_API_VERSION_MAJOR, TANMATSU_PLUGIN_API_VERSION_MINOR,
                      TANMATSU_PLUGIN_API_VERSION_PATCH);
             goto error_cleanup;
         }
         if (plugin_minor > TANMATSU_PLUGIN_API_VERSION_MINOR) {
             ESP_LOGW(TAG, "Plugin '%s' built for API v%lu.%lu (launcher is v%d.%d) — newer features may be unavailable",
-                     info->slug ? info->slug : "?", (unsigned long)plugin_major,
-                     (unsigned long)plugin_minor, TANMATSU_PLUGIN_API_VERSION_MAJOR,
-                     TANMATSU_PLUGIN_API_VERSION_MINOR);
+                     info->slug ? info->slug : "?", (unsigned long)plugin_major, (unsigned long)plugin_minor,
+                     TANMATSU_PLUGIN_API_VERSION_MAJOR, TANMATSU_PLUGIN_API_VERSION_MINOR);
         }
 
         // Call the plugin's init function if available
