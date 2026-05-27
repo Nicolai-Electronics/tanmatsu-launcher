@@ -15,7 +15,7 @@
 #include "pax_text.h"
 #include "pax_types.h"
 
-const char TAG[] = "LoRa information menu";
+static const char TAG[] = "LoRa information menu";
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
