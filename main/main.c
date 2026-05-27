@@ -341,7 +341,7 @@ void app_main(void) {
     const bsp_configuration_t bsp_configuration = {
         .display =
             {
-                .requested_color_format = LCD_COLOR_PIXEL_FORMAT_RGB888,
+                .requested_color_format = BSP_DISPLAY_COLOR_FORMAT_24_888RGB,
                 .num_fbs                = 1,
             },
     };
