@@ -80,7 +80,6 @@ static QueueHandle_t input_event_queue              = NULL;
 static wl_handle_t   wl_handle                      = WL_INVALID_HANDLE;
 static bool          wifi_stack_initialized         = false;
 static bool          wifi_stack_task_done           = false;
-static bool          wifi_firmware_version_match    = false;
 static bool          wifi_firmware_version_mismatch = false;
 static bool          display_available              = false;
 
@@ -140,22 +139,12 @@ static void wifi_task(void* pvParameters) {
     }
 
 #if defined(CONFIG_IDF_TARGET_ESP32P4)
-    ESP_LOGI("INFO", "getting fw version");
-    esp_hosted_coprocessor_fwver_t fwver;
-    if (ESP_OK == esp_hosted_get_coprocessor_fwversion(&fwver)) {
-        ESP_LOGI("INFO", "FW Version: %" PRIu32 ".%" PRIu32 ".%" PRIu32, fwver.major1, fwver.minor1, fwver.patch1);
-        if (fwver.major1 != 2 || fwver.minor1 != 12 || fwver.patch1 != 3) {
-            ESP_LOGW(TAG, "WiFi firmware version mismatch detected. Expected version 2.12.3");
-            wifi_firmware_version_mismatch = true;
-        } else {
-            wifi_firmware_version_match = true;
-        }
+    radio_system_protocol_information_t radio_information = {0};
+    if (radio_system_protocol_get_information(&radio_information) == ESP_OK) {
+        wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.1.0") != 0);
     } else {
-        ESP_LOGW("INFO", "failed to get fw version");
-        wifi_firmware_version_match = true;
+        wifi_firmware_version_mismatch = true;
     }
-#else
-    wifi_firmware_version_match = true;
 #endif
 
     if (ntp_get_enabled()) {
