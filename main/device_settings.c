@@ -12,6 +12,8 @@
 #include "nvs_settings_hardware.h"
 #include "nvs_settings_lora.h"
 
+extern lora_handle_t* lora_get_handle(void);
+
 esp_err_t device_settings_apply(void) {
     uint8_t display_brightness = 100;
     nvs_settings_get_display_brightness(&display_brightness, DEFAULT_DISPLAY_BRIGHTNESS);
@@ -38,7 +40,7 @@ esp_err_t device_settings_get_lora_frequency(uint32_t* out_value) {
     esp_err_t res = nvs_settings_get_lora_frequency(out_value, 0);
     if (res != ESP_OK || out_value == 0) {
         lora_protocol_status_params_t status = {0};
-        lora_get_status(&status);
+        lora_get_status(lora_get_handle(), &status);
         *out_value = status.chip_type == LORA_PROTOCOL_CHIP_SX1268 ? 433875000 : 869618000;
     }
     return res;

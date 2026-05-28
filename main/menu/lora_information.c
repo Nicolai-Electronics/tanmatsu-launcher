@@ -17,6 +17,8 @@
 
 static const char TAG[] = "LoRa information menu";
 
+extern lora_handle_t* lora_get_handle(void);
+
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
 #define FOOTER_RIGHT NULL, 0
@@ -34,18 +36,6 @@ static const char TAG[] = "LoRa information menu";
 #define TEXT_SIZE    9
 #endif
 
-// Temporarily copied here, should come from LoRa driver instead
-typedef enum {
-    SX126X_ERROR_RC64K_CALIB_ERR = 0x0001,
-    SX126X_ERROR_RC13M_CALIB_ERR = 0x0002,
-    SX126X_ERROR_PLL_CALIB_ERR   = 0x0004,
-    SX126X_ERROR_ADC_CALIB_ERR   = 0x0008,
-    SX126X_ERROR_IMG_CALIB_ERR   = 0x0010,
-    SX126X_XOSC_START_ERR        = 0x0020,
-    SX126X_PLL_LOCK_ERR          = 0x0040,
-    SX126X_PA_RAMP_ERR           = 0x0100,
-} sx126x_error_t;
-
 static void render(bool partial, bool icons, size_t num_packets, lora_protocol_lora_packet_t* packets) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
@@ -60,7 +50,7 @@ static void render(bool partial, bool icons, size_t num_packets, lora_protocol_l
     int  line = 0;
 
     lora_protocol_status_params_t status = {0};
-    esp_err_t                     res    = lora_get_status(&status);
+    esp_err_t                     res    = lora_get_status(lora_get_handle(), &status);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to read LoRa radio status: %s", esp_err_to_name(res));
         snprintf(text_buffer, sizeof(text_buffer), "Failed to read LoRa radio status");
@@ -80,7 +70,7 @@ static void render(bool partial, bool icons, size_t num_packets, lora_protocol_l
     }
 
     lora_protocol_mode_t mode = LORA_PROTOCOL_MODE_UNKNOWN;
-    res                       = lora_get_mode(&mode);
+    res                       = lora_get_mode(lora_get_handle(), &mode);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
         snprintf(text_buffer, sizeof(text_buffer), "Failed to get LoRa mode");
@@ -102,7 +92,7 @@ static void render(bool partial, bool icons, size_t num_packets, lora_protocol_l
     }
 
     lora_protocol_config_params_t config = {0};
-    res                                  = lora_get_config(&config);
+    res                                  = lora_get_config(lora_get_handle(), &config);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to read LoRa radio config: %s", esp_err_to_name(res));
         snprintf(text_buffer, sizeof(text_buffer), "Failed to read LoRa radio config");
@@ -202,7 +192,7 @@ void test_tx(void) {
         .length = 16,
         .data   = {0x42, 0x42, 0xDE, 0xAD, 0xBE, 0xEF, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42},
     };
-    esp_err_t res = lora_send_packet(&packet);
+    esp_err_t res = lora_send_packet(lora_get_handle(), &packet);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to send LoRa packet: %s", esp_err_to_name(res));
     } else {
@@ -220,8 +210,9 @@ void menu_lora_information(void) {
 
     while (1) {
         bool received = false;
-        if (lora_receive_packet(&lora_packets[sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t) - 1], 0) ==
-            ESP_OK) {
+        if (lora_receive_packet(lora_get_handle(),
+                                &lora_packets[sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t) - 1],
+                                0) == ESP_OK) {
             for (size_t i = 1; i < sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t); i++) {
                 memcpy(&lora_packets[i - 1], &lora_packets[i], sizeof(lora_protocol_lora_packet_t));
             }

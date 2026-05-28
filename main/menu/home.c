@@ -39,15 +39,17 @@
 #include "pax_types.h"
 #include "radio_ota.h"
 #include "sdcard.h"
+#include "sensors.h"
 #include "settings.h"
 #include "tools.h"
 #include "usb_device.h"
 
 static const char TAG[] = "home menu";
 
-extern bool wifi_stack_get_initialized(void);
-extern bool wifi_stack_get_version_mismatch(void);
-extern bool wifi_stack_get_task_done(void);
+extern bool           wifi_stack_get_initialized(void);
+extern bool           wifi_stack_get_version_mismatch(void);
+extern bool           wifi_stack_get_task_done(void);
+extern lora_handle_t* lora_get_handle(void);
 
 typedef enum {
     ACTION_NONE,
@@ -201,7 +203,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                           "Radio communication error!\r\nPlease flash the radio firmware using the recovery website.");
         } else {
             lora_protocol_status_params_t status = {0};
-            esp_err_t                     res    = lora_get_status(&status);
+            esp_err_t                     res    = lora_get_status(lora_get_handle(), &status);
             if (device_has_lora() && (res != ESP_OK || status.errors > 0)) {
                 pax_draw_text(
                     buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
@@ -332,24 +334,16 @@ void menu_home(void) {
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
-                                    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+                                    menu_sensors();  // Temporary
                                 }
                                 render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F2:
-                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
-                                    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_BOOTLOADER);
-                                } else {
-                                    execute_action(ACTION_TOOLS);
-                                }
+                                execute_action(ACTION_TOOLS);
                                 render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F3:
-                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
-                                    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_APPLICATION);
-                                } else {
-                                    execute_action(ACTION_INFORMATION);
-                                }
+                                execute_action(ACTION_INFORMATION);
                                 render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F4:

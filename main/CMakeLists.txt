@@ -73,8 +73,10 @@ idf_component_register(
 		"menu/chat/lora_presets.c"
 		"menu/chat/messages.c"
 		"menu/settings_theme.c"
+		"menu/sensors.c"
 		"radio_ota.c"
 		"lora_settings_handler.c"
+		"radio_system_protocol_client.c"
 
 		# Tests
 		"hardware_test/test_keyboard_stuck_keys.c"
@@ -135,6 +137,7 @@ idf_component_register(
 		tanmatsu-addon
 		tanmatsu-lora
 		tanmatsu-settings
+		scd4x
 		${extra_requires}
 	INCLUDE_DIRS
 		"."

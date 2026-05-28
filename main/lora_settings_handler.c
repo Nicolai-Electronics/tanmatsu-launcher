@@ -5,6 +5,8 @@
 #include "lora.h"
 #include "nvs_settings.h"
 
+extern lora_handle_t* lora_get_handle(void);
+
 esp_err_t lora_apply_settings(void) {
     lora_protocol_config_params_t config = {
         .frequency                  = 869618000,  // Hz
@@ -30,5 +32,5 @@ esp_err_t lora_apply_settings(void) {
     nvs_settings_get_lora_coding_rate(&config.coding_rate);
     nvs_settings_get_lora_power(&config.power);
 
-    return lora_set_config(&config);
+    return lora_set_config(lora_get_handle(), &config);
 }

@@ -21,6 +21,8 @@
 
 static const char TAG[] = "LoRa settings menu";
 
+extern lora_handle_t lora_handle;
+
 typedef enum {
     SETTING_NONE,
     SETTING_FREQUENCY,
@@ -195,7 +197,7 @@ static void edit_updown(menu_t* menu, bool up) {
 }
 
 static void apply(void) {
-    esp_err_t res = lora_set_mode(LORA_PROTOCOL_MODE_STANDBY_RC);
+    esp_err_t res = lora_set_mode(&lora_handle, LORA_PROTOCOL_MODE_STANDBY_RC);
     if (res == ESP_OK) {
         ESP_LOGI(TAG, "LoRa set to standby mode");
     } else {
@@ -209,7 +211,7 @@ static void apply(void) {
         ESP_LOGE(TAG, "Failed to set LoRa configuration: %s", esp_err_to_name(res));
     }
 
-    res = lora_set_mode(LORA_PROTOCOL_MODE_RX);
+    res = lora_set_mode(&lora_handle, LORA_PROTOCOL_MODE_RX);
     if (res == ESP_OK) {
         ESP_LOGI(TAG, "LoRa set to RX mode");
     } else {

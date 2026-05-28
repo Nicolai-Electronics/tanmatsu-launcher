@@ -47,6 +47,7 @@
 #include "pax_text.h"
 #include "portmacro.h"
 #include "radio_ota.h"
+#include "radio_system_protocol_client.h"
 #include "sdcard.h"
 #include "sdkconfig.h"
 #include "timezone.h"
@@ -82,6 +83,12 @@ static bool          wifi_stack_task_done           = false;
 static bool          wifi_firmware_version_match    = false;
 static bool          wifi_firmware_version_mismatch = false;
 static bool          display_available              = false;
+
+lora_handle_t lora_handle = {0};
+
+lora_handle_t* lora_get_handle(void) {
+    return &lora_handle;
+}
 
 static void fix_rtc_out_of_bounds(void) {
     time_t rtc_time = time(NULL);
@@ -186,7 +193,7 @@ static void wifi_task(void* pvParameters) {
     }*/
 
     lora_protocol_status_params_t status;
-    esp_err_t                     res = lora_get_status(&status);
+    esp_err_t                     res = lora_get_status(&lora_handle, &status);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to read LoRa radio status: %s", esp_err_to_name(res));
         vTaskDelete(NULL);
@@ -195,7 +202,7 @@ static void wifi_task(void* pvParameters) {
     ESP_LOGI(TAG, "LoRa radio version string: %s", status.version_string);
 
     lora_protocol_mode_t mode;
-    res = lora_get_mode(&mode);
+    res = lora_get_mode(&lora_handle, &mode);
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
         vTaskDelete(NULL);
@@ -208,7 +215,7 @@ static void wifi_task(void* pvParameters) {
         ESP_LOGW(TAG, "SX1262 LoRa radio detected");
     }
 
-    res = lora_set_mode(LORA_PROTOCOL_MODE_STANDBY_RC);
+    res = lora_set_mode(&lora_handle, LORA_PROTOCOL_MODE_STANDBY_RC);
     if (res == ESP_OK) {
         ESP_LOGI(TAG, "LoRa set to standby mode");
     } else {
@@ -222,7 +229,7 @@ static void wifi_task(void* pvParameters) {
         ESP_LOGE(TAG, "Failed to set LoRa configuration: %s", esp_err_to_name(res));
     }
 
-    res = lora_set_mode(LORA_PROTOCOL_MODE_RX);
+    res = lora_set_mode(&lora_handle, LORA_PROTOCOL_MODE_RX);
     if (res == ESP_OK) {
         ESP_LOGI(TAG, "LoRa set to RX mode");
     } else {
@@ -231,7 +238,7 @@ static void wifi_task(void* pvParameters) {
 
     vTaskDelay(pdMS_TO_TICKS(1000));
 
-    res = lora_get_mode(&mode);
+    res = lora_get_mode(&lora_handle, &mode);
     if (res == ESP_OK) {
         ESP_LOGI(TAG, "LoRa mode (after setting to RX): %d", (int)mode);
     } else {
@@ -494,7 +501,8 @@ void app_main(void) {
     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_APPLICATION);
 
     startup_dialog("Initializing radio...");
-    ESP_ERROR_CHECK(lora_init(16));
+    ESP_ERROR_CHECK(lora_init_remote(&lora_handle, 32));
+    radio_system_protocol_init();  // Return value ignored
 
     if (wifi_remote_initialize() == ESP_OK) {
         res = wifi_connection_init_stack();

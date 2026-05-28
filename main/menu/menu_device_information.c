@@ -14,6 +14,12 @@
 #include "pax_matrix.h"
 #include "pax_text.h"
 #include "pax_types.h"
+#include "radio_system_protocol_client.h"
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#include "bsp/tanmatsu.h"
+#include "tanmatsu_coprocessor.h"
+#endif
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
@@ -41,26 +47,34 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
     char text_buffer[256];
     int  line = 0;
     if (!partial) {
+        const esp_app_desc_t*               app_description   = esp_app_get_description();
+        radio_system_protocol_information_t radio_information = {0};
+        if (radio_system_protocol_get_information(&radio_information) != ESP_OK) {
+            snprintf(radio_information.firmware_version, 32, "Unknown");
+        }
 
-        const esp_app_desc_t* app_description = esp_app_get_description();
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
-                      position.y0 + (TEXT_SIZE + 2) * (line++), "Firmware identity:");
-        snprintf(text_buffer, sizeof(text_buffer), "Project name:        %s", app_description->project_name);
-        pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
-                      position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
-        snprintf(text_buffer, sizeof(text_buffer), "Project version:     %s", app_description->version);
+                      position.y0 + (TEXT_SIZE + 2) * (line++), "Firmware versions:");
+        snprintf(text_buffer, sizeof(text_buffer), "Launcher    %s", app_description->version);
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
-        char bsp_buffer[64];
-        bsp_device_get_name(bsp_buffer, sizeof(bsp_buffer));
-        snprintf(text_buffer, sizeof(text_buffer), "BSP device name:     %s", bsp_buffer);
+        snprintf(text_buffer, sizeof(text_buffer), "Radio       %s", radio_information.firmware_version);
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
-        bsp_device_get_manufacturer(bsp_buffer, sizeof(bsp_buffer));
-        snprintf(text_buffer, sizeof(text_buffer), "BSP device vendor:   %s", bsp_buffer);
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+        uint16_t                      coprocessor_firmware_version;
+        tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
+        if (bsp_tanmatsu_coprocessor_get_handle(&coprocessor_handle) == ESP_OK) {
+            tanmatsu_coprocessor_get_firmware_version(coprocessor_handle, &coprocessor_firmware_version);
+        }
+        snprintf(text_buffer, sizeof(text_buffer), "Coprocessor r%" PRIu16, coprocessor_firmware_version);
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
+#endif
+
         line++;
+
 #ifdef CONFIG_IDF_TARGET_ESP32P4
         device_identity_t identity = {0};
         if (read_device_identity(&identity) != ESP_OK) {
