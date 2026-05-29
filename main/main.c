@@ -141,7 +141,7 @@ static void wifi_task(void* pvParameters) {
 #if defined(CONFIG_IDF_TARGET_ESP32P4)
     radio_system_protocol_information_t radio_information = {0};
     if (radio_system_protocol_get_information(&radio_information) == ESP_OK) {
-        wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.1.0") != 0);
+        wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.1.1") != 0);
     } else {
         wifi_firmware_version_mismatch = true;
     }
@@ -545,9 +545,9 @@ void app_main(void) {
             esp_restart();
         }
     }
-    if (patch < 3 && wifi_stack_get_version_mismatch()) {
-        // Patch level 2: new radio update, attempt updating radio
-        nvs_settings_set_firmware_patch_level(3);
+    if (patch < 4 && wifi_stack_get_version_mismatch()) {
+        // Patch level 2-4: new radio update, attempt updating radio
+        nvs_settings_set_firmware_patch_level(4);
         radio_ota_update();
         bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
         vTaskDelay(pdMS_TO_TICKS(100));
