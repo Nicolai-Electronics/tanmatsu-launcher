@@ -122,7 +122,7 @@ esp_err_t radio_system_protocol_get_information(radio_system_protocol_informatio
     return ESP_OK;
 }
 #else
-esp_err_t radio_system_protocol_init(uint32_t packet_queue_size) {
+esp_err_t radio_system_protocol_init(void) {
     return ESP_ERR_NOT_SUPPORTED;
 }
 
