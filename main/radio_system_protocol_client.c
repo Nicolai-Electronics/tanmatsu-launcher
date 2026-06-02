@@ -126,7 +126,7 @@ esp_err_t radio_system_protocol_init(void) {
     return ESP_ERR_NOT_SUPPORTED;
 }
 
-esp_err_t radio_system_protocol_get_information(system_protocol_information_t* out_information) {
+esp_err_t radio_system_protocol_get_information(radio_system_protocol_information_t* out_information) {
     return ESP_ERR_NOT_SUPPORTED;
 }
 #endif
