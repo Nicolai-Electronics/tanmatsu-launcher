@@ -212,6 +212,17 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             char target_path[512] = {0};
             snprintf(target_path, sizeof(target_path), "%s/%s", app_path, target_file->valuestring);
 
+            // Create directories. Second parameter forces the last part of the target_path to be treated as the
+            // filename if the target_file value does not contain a dot
+            if (fs_utils_mkdir_recursive(target_path, strchr(target_file->valuestring, '.') == NULL) != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to create directories for asset: %s", source_file->valuestring);
+                http_session_end(session);
+                free_repository_data_json(&metadata);
+                free_repository_data_json(&information);
+                app_mgmt_uninstall(slug, location);
+                return ESP_FAIL;
+            }
+
             char status_text[64] = {0};
             snprintf(status_text, sizeof(status_text), "Downloading asset '%s'...", target_file->valuestring);
             http_session_set_callback(session, download_callback, status_text);
@@ -225,12 +236,7 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
             }
         }
     } else {
-        http_session_end(session);
-        free_repository_data_json(&metadata);
-        free_repository_data_json(&information);
-        app_mgmt_uninstall(slug, location);
-        ESP_LOGE(TAG, "No assets found in application metadata");
-        return ESP_ERR_INVALID_RESPONSE;
+        ESP_LOGI(TAG, "No assets found in application metadata");
     }
 
     // Download icons before the executable. The executable download for /int+appfs

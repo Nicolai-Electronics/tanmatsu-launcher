@@ -182,6 +182,48 @@ esp_err_t fs_utils_copy_recursive(const char* src, const char* dst) {
     return result;
 }
 
+static esp_err_t mkdir_p(const char* path) {
+    char* buf = strdup(path);
+    if (buf == NULL) return ESP_ERR_NO_MEM;
+
+    for (char* p = buf + 1; *p; p++) {
+        if (*p == '/') {
+            *p = '\0';
+            mkdir(buf, 0777);
+            *p = '/';
+        }
+    }
+    mkdir(buf, 0777);
+
+    bool ok = fs_utils_is_directory(buf);
+    free(buf);
+    return ok ? ESP_OK : ESP_FAIL;
+}
+
+esp_err_t fs_utils_mkdir_recursive(const char* path, bool force_remove_filename) {
+    char* buf = strdup(path);
+    if (buf == NULL) return ESP_ERR_NO_MEM;
+
+    // Strip trailing slashes
+    size_t len = strlen(buf);
+    while (len > 1 && buf[len - 1] == '/') {
+        buf[--len] = '\0';
+    }
+
+    // If the last component contains '.', treat it as a filename and strip it
+    char* last_slash = strrchr(buf, '/');
+    if (last_slash != NULL) {
+        char* last_component = last_slash + 1;
+        if (strchr(last_component, '.') != NULL || force_remove_filename) {
+            *last_slash = '\0';
+        }
+    }
+
+    esp_err_t ret = (strlen(buf) > 0) ? mkdir_p(buf) : ESP_OK;
+    free(buf);
+    return ret;
+}
+
 uint64_t fs_utils_get_directory_size(const char* path) {
     struct stat st;
     if (stat(path, &st) != 0) {
