@@ -176,13 +176,7 @@ void menu_settings_repository(void) {
                                 render(buffer, theme, &menu, position, true, false);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F4:
-                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_CTRL) {
-                                    nvs_settings_set_repo_server("https://cavac.at/tanmatsu");
-                                    nvs_settings_set_repo_base_uri("/v1");
-                                    menu_populate(&menu);
-                                } else {
-                                    reset_defaults(&menu);
-                                }
+                                reset_defaults(&menu);
                                 render(buffer, theme, &menu, position, false, true);
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
