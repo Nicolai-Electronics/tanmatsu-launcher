@@ -74,6 +74,7 @@ idf_component_register(
 		"menu/chat/messages.c"
 		"menu/settings_theme.c"
 		"menu/sensors.c"
+		"menu/message.c"
 		"radio_ota.c"
 		"lora_settings_handler.c"
 		"radio_system_protocol_client.c"

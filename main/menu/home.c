@@ -196,7 +196,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
             pax_draw_text(
                 buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
                 pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                "Radio firmware version mismatch!\r\nPlease flash the radio firmware using the recovery website.");
+                "Radio firmware version mismatch!\r\nYou can update the radio using the radio update button.");
         } else if (!wifi_stack_get_initialized()) {
             pax_draw_text(buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
                           pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,

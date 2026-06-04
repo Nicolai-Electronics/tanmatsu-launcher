@@ -20,6 +20,7 @@
 #include "device_settings.h"
 #include "driver/gpio.h"
 #include "eeprom.h"
+#include "esp_app_desc.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
 #include "esp_lcd_panel_ops.h"
@@ -38,6 +39,7 @@
 #include "lora_settings_handler.h"
 #include "menu/apps.h"
 #include "menu/home.h"
+#include "menu/message.h"
 #include "menu/message_dialog.h"
 #include "ntp.h"
 #include "nvs_flash.h"
@@ -578,6 +580,33 @@ void app_main(void) {
     startup_dialog("Initializing plugins...");
     plugin_manager_init();
     plugin_manager_load_autostart();
+#endif
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+    uint8_t welcome = 0;
+    nvs_settings_get_welcome_message_state(&welcome);
+
+    if (welcome < 1) {
+        const esp_app_desc_t* app_description   = esp_app_get_description();
+        char                  title_buffer[128] = {0};
+        snprintf(title_buffer, sizeof(title_buffer), "Welcome to Tanmatsu launcher %s", app_description->version);
+        message_screen(get_icon(ICON_HELP), title_buffer,
+                       "This update adds an option to use boosted RX gain\n"
+                       "mode to the LoRa driver. Low data rate optimization\n"
+                       "is now enabled automatically when required.\n"
+                       "\n"
+                       "Apps that use the LoRa functionality will require\n"
+                       "an update.\n"
+                       "\n"
+                       "Other fixes:\n"
+                       " - App assets can now reside in subdirectories\n"
+                       "\n"
+                       "Please make sure to update installed apps using the\n"
+                       "repository. We recommend you try the new Meshcore app\n"
+                       "by CJ van Soest, it supports multiple channels\n"
+                       "and direct messages.\n");
+        nvs_settings_set_welcome_message_state(1);
+    }
 #endif
 
     menu_home();
