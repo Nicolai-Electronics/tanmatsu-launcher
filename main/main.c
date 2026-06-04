@@ -143,7 +143,7 @@ static void wifi_task(void* pvParameters) {
 #if defined(CONFIG_IDF_TARGET_ESP32P4)
     radio_system_protocol_information_t radio_information = {0};
     if (radio_system_protocol_get_information(&radio_information) == ESP_OK) {
-        wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.1.1") != 0);
+        wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.2.0") != 0);
     } else {
         wifi_firmware_version_mismatch = true;
     }
