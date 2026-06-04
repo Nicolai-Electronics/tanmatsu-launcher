@@ -5,6 +5,7 @@
 #include "appfs.h"
 #include "badgelink.h"
 #include "bootloader_update.h"
+#include "bsp/audio.h"
 #include "bsp/device.h"
 #include "bsp/display.h"
 #include "bsp/i2c.h"
@@ -547,9 +548,10 @@ void app_main(void) {
             esp_restart();
         }
     }
-    if (patch < 4 && wifi_stack_get_version_mismatch()) {
-        // Patch level 2-4: new radio update, attempt updating radio
-        nvs_settings_set_firmware_patch_level(4);
+    if (patch < 5 && wifi_stack_get_version_mismatch()) {
+        // Patch level 2-5: new radio update, attempt updating radio
+        nvs_settings_set_firmware_patch_level(5);
+        bsp_audio_set_amplifier(false);  // Disable amplifier to prevent noise on reboot
         radio_ota_update();
         bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
         vTaskDelay(pdMS_TO_TICKS(100));
