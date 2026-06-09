@@ -185,8 +185,9 @@ void menu_navigate_previous(menu_t* menu) {
     if (menu == NULL) return;
     if (menu->length < 1) return;
     menu->previous_position = menu->position;
-    menu->position--;
-    if (menu->position > menu->length) {
+    if (menu->position > 0) {
+        menu->position--;
+    } else {
         menu->position = menu->length - 1;
     }
 }
