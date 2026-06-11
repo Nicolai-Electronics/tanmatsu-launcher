@@ -95,7 +95,11 @@ esp_err_t sd_mount(void) {
 
     // Power cycle the SD card to ensure it's in a known state
     // This prevents issues when the card was left in SDMMC mode from a previous session
-    reset_sd_card();
+    res = reset_sd_card();
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to reset SD card");
+        return res;
+    }
 
     sdmmc_host_t host    = SDMMC_HOST_DEFAULT();
     host.slot            = SDMMC_HOST_SLOT_0;     // Use SLOT0 for native IOMUX pins
