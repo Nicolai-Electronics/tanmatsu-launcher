@@ -5,6 +5,7 @@
 #include "bsp/device.h"
 #include "cJSON.h"
 #include "device_settings.h"
+#include "esp_log.h"
 #include "http_download.h"
 #include "nvs_settings.h"
 #include "wifi_connection.h"
@@ -115,6 +116,10 @@ bool load_project(const char* base_url, repository_json_data_t* out_data, const 
     char base_uri[64] = {0};
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
     char url[256];
-    sprintf(url, "%s%s/projects/%s", base_url, base_uri, project_slug);
+    int  res = snprintf(url, sizeof(url), "%s%s/projects/%s", base_url, base_uri, project_slug);
+    if (res < 0 || res >= sizeof(url)) {
+        ESP_LOGE(TAG, "URL is too long");
+        return false;
+    }
     return download_and_parse(url, out_data);
 }
