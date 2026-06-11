@@ -244,8 +244,10 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
     // keep-alive TLS session time out before the icons could be fetched.
     cJSON* icon_obj = cJSON_GetObjectItem(metadata.json, "icon");
     if (icon_obj != NULL && cJSON_IsObject(icon_obj)) {
-        const char* icon_keys[] = {"16x16", "32x32", "64x64"};
-        for (int i = 0; i < 3; i++) {
+        const char* icon_keys[] = {"32x32", "64x64"};
+        size_t      icon_keys_length =
+            (location == APP_MGMT_LOCATION_SD) ? 2 : 1;  // Only download 64x64 icon when installing to SD card
+        for (int i = 0; i < icon_keys_length; i++) {
             cJSON* icon_entry = cJSON_GetObjectItem(icon_obj, icon_keys[i]);
             if (icon_entry != NULL && cJSON_IsString(icon_entry)) {
                 char icon_url[256];
