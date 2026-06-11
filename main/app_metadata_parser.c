@@ -199,7 +199,7 @@ app_t* create_app(const char* path, const char* slug) {
             snprintf(path_buffer, sizeof(path_buffer), "%s/%s/%s", path, slug, icon32_obj->valuestring);
             FILE* icon_fd = fastopen(path_buffer, "rb");
             app->icon     = calloc(1, sizeof(pax_buf_t));
-            if (app->icon != NULL) {
+            if (app->icon != NULL && icon_fd != NULL) {
                 if (!pax_decode_png_fd(app->icon, icon_fd, PAX_BUF_32_8888ARGB, 0)) {
                     free(app->icon);
                     app->icon = NULL;
