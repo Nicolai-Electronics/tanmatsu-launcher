@@ -167,6 +167,7 @@ static void add_manually(pax_buf_t* buffer, gui_theme_t* theme) {
     int index = wifi_settings_find_empty_slot();
     if (index == -1) {
         message_dialog(get_icon(ICON_ERROR), "Error", "No empty slot, can not add another network", "Go back");
+        return;
     }
     menu_wifi_edit(buffer, theme, index, true, "", 0);
 }
