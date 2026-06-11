@@ -558,7 +558,9 @@ error_cleanup:
         ctx->elf_handle = NULL;
     }
 
-    free(elf_path);
+    if (elf_path != NULL) {
+        free(elf_path);
+    }
 
     if (ctx) {
         free(ctx->plugin_path);
