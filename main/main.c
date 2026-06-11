@@ -150,8 +150,12 @@ static void wifi_task(void* pvParameters) {
     }
 #endif
 
+    // Always try to auto-connect to a saved WiFi network on boot, so launcher
+    // and apps have network access without manual reconnect after each reboot.
+    bool wifi_ok = (wifi_connect_try_all() == ESP_OK);
+
     if (ntp_get_enabled()) {
-        if (wifi_connect_try_all() == ESP_OK) {
+        if (wifi_ok) {
             esp_err_t res = ntp_start_service("pool.ntp.org");
             if (res == ESP_OK) {
                 res = ntp_sync_wait();
