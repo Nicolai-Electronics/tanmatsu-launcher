@@ -589,26 +589,23 @@ void app_main(void) {
     uint8_t welcome = 0;
     nvs_settings_get_welcome_message_state(&welcome);
 
-    if (welcome < 1) {
+    const uint8_t welcome_target = 2;
+    if (welcome < welcome_target) {
         const esp_app_desc_t* app_description   = esp_app_get_description();
         char                  title_buffer[128] = {0};
         snprintf(title_buffer, sizeof(title_buffer), "Welcome to Tanmatsu launcher %s", app_description->version);
         message_screen(get_icon(ICON_HELP), title_buffer,
-                       "This update adds an option to use boosted RX gain\n"
-                       "mode to the LoRa driver. Low data rate optimization\n"
-                       "is now enabled automatically when required.\n"
+                       "This update fixes some issues which could cause\n"
+                       "the battery to not be charged when a charger got\n"
+                       "connected while the device was already on.\n"
                        "\n"
-                       "Apps that use the LoRa functionality will require\n"
-                       "an update.\n"
+                       "The battery percentage calculation has been adjusted\n"
+                       "so that it more closely represents the actual state\n"
+                       "of charge.\n"
                        "\n"
-                       "Other fixes:\n"
-                       " - App assets can now reside in subdirectories\n"
                        "\n"
-                       "Please make sure to update installed apps using the\n"
-                       "repository. We recommend you try the new Meshcore app\n"
-                       "by CJ van Soest, it supports multiple channels\n"
-                       "and direct messages.\n");
-        nvs_settings_set_welcome_message_state(1);
+                       "\n");
+        nvs_settings_set_welcome_message_state(welcome_target);
     }
 #endif
 
