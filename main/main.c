@@ -370,6 +370,10 @@ void app_main(void) {
     bsp_led_clear();
     bsp_led_set_mode(true);
 
+    // Bootloader
+    startup_dialog("Checking bootloader...");
+    bootloader_update();
+
     // Initialize filesystems
     startup_dialog("Mounting FAT filesystem...");
 
@@ -477,9 +481,6 @@ void app_main(void) {
 
     startup_dialog("Initializing certificate store...");
     ESP_ERROR_CHECK(initialize_custom_ca_store());
-
-    startup_dialog("Checking bootloader...");
-    bootloader_update();
 
     // Temporary workaround because of an issue where ESP-HOSTED can try to allocate a lot of memory
     // if the communication channel is left open before restarting. Also prevents the radio from being

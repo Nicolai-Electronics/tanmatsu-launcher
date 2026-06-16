@@ -106,11 +106,7 @@ void bootloader_update(void) {
     }
 
     ESP_LOGI(TAG, "Bootloader update successful");
-    busy_dialog(NULL, "Bootloader update successful",
-                "The bootloader has been updated successfully.\r\nDevice will restart now.", true);
-    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    esp_restart();
+    busy_dialog(NULL, "Bootloader update successful", "The bootloader has been updated successfully.", true);
 }
 
 #else

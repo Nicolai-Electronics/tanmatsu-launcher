@@ -33,7 +33,7 @@ static void callback(char const* status_text, uint8_t percentage) {
 }
 
 void coprocessor_flash(bool force) {
-    uint16_t coprocessor_firmware_target = 8;
+    uint16_t coprocessor_firmware_target = 9;
 
     tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
 
@@ -45,7 +45,7 @@ void coprocessor_flash(bool force) {
 
             if (bsp_tanmatsu_coprocessor_get_handle(&coprocessor_handle) != ESP_OK) {
                 ESP_LOGE(TAG, "Could not get coprocessor handle");
-                // To-do: display error message
+                busy_dialog(NULL, "Fatal error", "Could not get coprocessor handle, please report this error", false);
                 while (1) {
                     vTaskDelay(pdMS_TO_TICKS(1000));
                 }
@@ -69,8 +69,6 @@ void coprocessor_flash(bool force) {
         .swclk = 23,
     };
 
-    // To-do: display progress screen
-
     ch32v20x_program(&handle, coprocessor_firmware_start, coprocessor_firmware_end - coprocessor_firmware_start,
                      callback);
 
@@ -80,7 +78,7 @@ void coprocessor_flash(bool force) {
     ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal));
     if (i2c_master_probe(i2c_bus_handle_internal, 0x5f, 50) != ESP_OK) {
         ESP_LOGE(TAG, "Coprocessor does not respond after flashing");
-        // To-do: display error message
+        busy_dialog(NULL, "Fatal error", "Coprocessor unresponsive after flashing, please report this error", false);
         while (1) {
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
