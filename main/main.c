@@ -610,22 +610,53 @@ void app_main(void) {
     uint8_t welcome = 0;
     nvs_settings_get_welcome_message_state(&welcome);
 
-    const uint8_t welcome_target = 2;
+    const uint8_t welcome_target = 3;
     if (welcome < welcome_target) {
         const esp_app_desc_t* app_description   = esp_app_get_description();
         char                  title_buffer[128] = {0};
         snprintf(title_buffer, sizeof(title_buffer), "Welcome to Tanmatsu launcher %s", app_description->version);
-        message_screen(get_icon(ICON_HELP), title_buffer,
-                       "This update fixes some issues which could cause\n"
-                       "the battery to not be charged when a charger got\n"
-                       "connected while the device was already on.\n"
-                       "\n"
-                       "The battery percentage calculation has been adjusted\n"
-                       "so that it more closely represents the actual state\n"
-                       "of charge.\n"
-                       "\n"
-                       "\n"
-                       "\n");
+        device_identity_t identity = {0};
+        read_device_identity(&identity);
+        if (identity.revision == 1) {
+            message_screen(get_icon(ICON_HELP), title_buffer,
+                           "This update fixes issues with LoRa connectivity on\n"
+                           "revision 1 boards. Your board is a revision 1 board\n"
+                           "LoRa should now function correctly, we recommend you\n"
+                           "try one of the Meshcore apps. Another small change is\n"
+                           "that we moved the 'LoRa info' menu from the\n"
+                           "homescreen to the information menu, accessible using\n"
+                           "the yellow square button or from the settings page.\n");
+        } else if (identity.revision == 7) {
+            message_screen(get_icon(ICON_HELP), title_buffer,
+                           "This update fixes issues with LoRa connectivity on\n"
+                           "revision 1 boards. Your board is newer so nothing\n"
+                           "has changed there. Another small change is that\n"
+                           "we moved the 'LoRa info' menu from the homescreen\n"
+                           "to the information menu, accessible using the yellow\n"
+                           "square button or from the settings page.\n"
+                           "\n"
+                           "A new infrared API is now available on the radio to\n"
+                           "utilize the infrared LED. Your board has the infrared\n"
+                           "LED installed, however not all 3D printed back cases\n"
+                           "have the cutout for the LED. If your device doesn't\n"
+                           "have the LED visible you can download a new revision\n"
+                           "of the 3d printable back cover from Github at:\n"
+                           "github.com/Nicolai-Electronics/tanmatsu-mechanical\n");
+        } else {
+            message_screen(get_icon(ICON_HELP), title_buffer,
+                           "This update fixes issues with LoRa connectivity on\n"
+                           "revision 1 boards. Your board is newer so nothing\n"
+                           "has changed there. Another small change is that\n"
+                           "we moved the 'LoRa info' menu from the homescreen\n"
+                           "to the information menu, accessible using the yellow\n"
+                           "square button or from the settings page.\n"
+                           "\n"
+                           "A new infrared API is now available on the radio to\n"
+                           "utilize the infrared LED. Your device doesn't have\n"
+                           "the LED installed, however the footprint is available.\n"
+                           "Any small IR LED will work, for the updated back cover\n"
+                           "you can use EVERLIGHT IR968-8P(X1-X4)XBY (C17179483).\n");
+        }
         nvs_settings_set_welcome_message_state(welcome_target);
     }
 #endif
