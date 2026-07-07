@@ -23,7 +23,6 @@
 #include "icons.h"
 #include "information.h"
 #include "lora.h"
-#include "menu/lora_information.h"
 #include "menu/menu_helpers.h"
 #include "menu/menu_repository_client_categories.h"
 #include "menu/menu_rftest.h"
@@ -66,7 +65,6 @@ typedef enum {
     ACTION_INFORMATION,
     ACTION_RFTEST,
     ACTION_CHAT,
-    ACTION_LORA_INFORMATION,
 } menu_home_action_t;
 
 static void execute_action(menu_home_action_t action) {
@@ -114,9 +112,6 @@ static void execute_action(menu_home_action_t action) {
             break;
         case ACTION_CHAT:
             menu_chat();
-            break;
-        case ACTION_LORA_INFORMATION:
-            menu_lora_information();
             break;
         default:
             break;
@@ -196,7 +191,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
             pax_draw_text(
                 buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
                 pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                "Radio firmware version mismatch!\r\nYou can update the radio using the radio update button.");
+                "Radio firmware version mismatch!\r\nYou can update the radio using the 'Update radio' button.");
         } else if (!wifi_stack_get_initialized()) {
             pax_draw_text(buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
                           pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
@@ -294,13 +289,6 @@ void menu_home(void) {
 
     menu_t menu = {0};
     menu_initialize(&menu);
-    if (wifi_stack_get_version_mismatch()) {
-        menu_insert_item_icon(&menu, "Update radio", NULL, (void*)ACTION_RADIO_OTA, -1, get_icon(ICON_SYSTEM_UPDATE));
-    }
-    if (get_icons_missing()) {
-        menu_insert_item_icon(&menu, "Download icons", NULL, (void*)ACTION_DOWNLOAD_ICONS, -1,
-                              get_icon(ICON_DOWNLOADING));
-    }
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
     if (access("/sd/nametag.png", F_OK) == 0 || access("/int/nametag.png", F_OK) == 0) {
         menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_NAMETAG, -1, get_icon(ICON_BADGE));
@@ -314,9 +302,12 @@ void menu_home(void) {
         menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_BUG_REPORT));
     }
     // menu_insert_item_icon(&menu, "Chat", NULL, (void*)ACTION_CHAT, -1, get_icon(ICON_GLOBE)); // Soon...
-
-    if (device_has_lora()) {
-        menu_insert_item_icon(&menu, "LoRa info", NULL, (void*)ACTION_LORA_INFORMATION, -1, get_icon(ICON_INFO));
+    if (wifi_stack_get_version_mismatch()) {
+        menu_insert_item_icon(&menu, "Update radio", NULL, (void*)ACTION_RADIO_OTA, -1, get_icon(ICON_SYSTEM_UPDATE));
+    }
+    if (get_icons_missing()) {
+        menu_insert_item_icon(&menu, "Download icons", NULL, (void*)ACTION_DOWNLOAD_ICONS, -1,
+                              get_icon(ICON_DOWNLOADING));
     }
 
     pax_vec2_t position = menu_calc_position(buffer, theme);

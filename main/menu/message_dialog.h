@@ -25,6 +25,7 @@ void message_dialog(pax_buf_t* icon, const char* title, const char* message, con
 void busy_dialog(pax_buf_t* icon, const char* title, const char* message, bool header);
 void progress_dialog(pax_buf_t* icon, const char* title, const char* message, uint8_t progress, bool header);
 void startup_dialog(const char* message);
+void reinit_startup_dialog(void);
 
 bsp_input_navigation_key_t adv_dialog(pax_buf_t* icon, const char* title, const char* message,
                                       gui_element_icontext_t* headers, int header_count);

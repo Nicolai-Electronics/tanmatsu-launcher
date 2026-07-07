@@ -18,6 +18,7 @@
 #include "common/theme.h"
 #include "coprocessor_management.h"
 #include "custom_certificates.h"
+#include "device_information.h"
 #include "device_settings.h"
 #include "driver/gpio.h"
 #include "eeprom.h"
@@ -68,6 +69,7 @@
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "bsp/tanmatsu.h"
+#include "radio_system_protocol_client.h"
 #include "tanmatsu_coprocessor.h"
 #endif
 
@@ -141,12 +143,30 @@ static void wifi_task(void* pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 
-#if defined(CONFIG_IDF_TARGET_ESP32P4)
+    ESP_LOGI(TAG, "WiFi task started");
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     radio_system_protocol_information_t radio_information = {0};
     if (radio_system_protocol_get_information(&radio_information) == ESP_OK) {
-        wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.2.0") != 0);
+        wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.3.0") != 0);
     } else {
         wifi_firmware_version_mismatch = true;
+        ESP_LOGW(TAG, "Radio version mismatch (expected 'v3.3.0', found '%s')", radio_information.firmware_version);
+    }
+
+    device_identity_t identity = {0};
+    if (read_device_identity(&identity) == ESP_OK) {
+        if (radio_information.board_revision != identity.revision) {
+            if (radio_system_protocol_set_board_revision(identity.revision) == ESP_OK) {
+                ESP_LOGI(TAG, "Set board revision on radio");
+            } else {
+                ESP_LOGW(TAG, "Failed to set board revision on radio");
+            }
+        } else {
+            ESP_LOGI(TAG, "Board revision on radio already configured");
+        }
+    } else {
+        ESP_LOGW(TAG, "Failed to read device identity");
     }
 #endif
 
@@ -373,6 +393,7 @@ void app_main(void) {
     // Bootloader
     startup_dialog("Checking bootloader...");
     bootloader_update();
+    reinit_startup_dialog();
 
     // Initialize filesystems
     startup_dialog("Mounting FAT filesystem...");

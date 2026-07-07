@@ -64,7 +64,6 @@ static void radio_system_protocol_transaction_receive(uint32_t msg_id, const uin
         ESP_LOGW(TAG, "Received radio system message but size incorrect");
         return;
     }
-    radio_system_protocol_header_t* header = (radio_system_protocol_header_t*)packet;
     memcpy(radio_system_protocol_packet_buffer, packet, length);
     radio_system_protocol_packet_size = length;
     xSemaphoreGive(radio_system_protocol_transaction_semaphore);
@@ -121,12 +120,52 @@ esp_err_t radio_system_protocol_get_information(radio_system_protocol_informatio
            sizeof(radio_system_protocol_information_t));
     return ESP_OK;
 }
+
+esp_err_t radio_system_protocol_set_board_revision(uint8_t board_revision) {
+    const size_t request_length = sizeof(radio_system_protocol_header_t) + sizeof(radio_system_protocol_board_rev_t);
+    uint8_t      request[request_length];
+
+    radio_system_protocol_header_t* header = (radio_system_protocol_header_t*)request;
+    header->sequence_number                = radio_system_sequence_number;
+    header->type                           = RADIO_SYSTEM_PROTOCOL_TYPE_SET_BOARD_REV;
+
+    radio_system_protocol_board_rev_t* payload =
+        (radio_system_protocol_board_rev_t*)(request + sizeof(radio_system_protocol_header_t));
+    payload->board_revision = board_revision;
+
+    uint8_t   response[sizeof(radio_system_protocol_header_t)] = {0};
+    size_t    response_length                                  = 0;
+    esp_err_t result =
+        radio_system_protocol_transaction(request, request_length, response, &response_length, sizeof(response));
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG, "Transaction failed");
+        return result;
+    }
+    if (response_length < sizeof(radio_system_protocol_header_t)) {
+        ESP_LOGE(TAG, "Invalid response length: %u\r\n", response_length);
+        return ESP_FAIL;
+    }
+    radio_system_protocol_header_t* response_header = (radio_system_protocol_header_t*)response;
+    if (response_header->sequence_number != header->sequence_number) {
+        ESP_LOGE(TAG, "Invalid response sequence number: %u\r\n", response_header->sequence_number);
+        return ESP_FAIL;
+    }
+    if (response_header->type != RADIO_SYSTEM_PROTOCOL_TYPE_ACK) {
+        ESP_LOGE(TAG, "Invalid response type: %u\r\n", response_header->type);
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+}
 #else
 esp_err_t radio_system_protocol_init(void) {
     return ESP_ERR_NOT_SUPPORTED;
 }
 
 esp_err_t radio_system_protocol_get_information(radio_system_protocol_information_t* out_information) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t radio_system_protocol_set_board_revision(uint8_t board_revision) {
     return ESP_ERR_NOT_SUPPORTED;
 }
 #endif

@@ -1,8 +1,10 @@
 #include "information.h"
+#include "common/device.h"
 #include "common/display.h"
 #include "common/theme.h"
 #include "gui_menu.h"
 #include "icons.h"
+#include "lora_information.h"
 #include "menu/about.h"
 #include "menu/menu_helpers.h"
 #include "menu/menu_power_information.h"
@@ -14,6 +16,7 @@ typedef enum {
     ACTION_DEVICE_INFO,
     ACTION_ABOUT,
     ACTION_POWER_INFORMATION,
+    ACTION_LORA_INFORMATION,
 } menu_home_action_t;
 
 static bool on_action(void* action_arg, void* user_ctx) {
@@ -30,6 +33,9 @@ static bool on_action(void* action_arg, void* user_ctx) {
         case ACTION_POWER_INFORMATION:
             menu_power_information();
             break;
+        case ACTION_LORA_INFORMATION:
+            menu_lora_information();
+            break;
         default:
             break;
     }
@@ -42,6 +48,10 @@ void menu_information(void) {
     menu_insert_item_icon(&menu, "Device information", NULL, (void*)ACTION_DEVICE_INFO, -1, get_icon(ICON_INFO));
     menu_insert_item_icon(&menu, "Power information", NULL, (void*)ACTION_POWER_INFORMATION, -1,
                           get_icon(ICON_BATTERY_UNKNOWN));
+    if (device_has_lora()) {
+        menu_insert_item_icon(&menu, "LoRa information", NULL, (void*)ACTION_LORA_INFORMATION, -1,
+                              get_icon(ICON_WORKSPACES));
+    }
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
 
     menu_run_list(&menu, ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "Information"}}), 1, MENU_FOOTER_BACK,

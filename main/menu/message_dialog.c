@@ -1,4 +1,5 @@
 #include "message_dialog.h"
+#include <stdbool.h>
 #include <time.h>
 #include "bsp/input.h"
 #include "bsp/power.h"
@@ -30,7 +31,8 @@
 #include "tanmatsu_coprocessor.h"
 #endif
 
-static char clock_buffer[6] = {0};
+static bool startup_dialog_initialized = false;
+static char clock_buffer[6]            = {0};
 
 static gui_element_icontext_t clock_indicator(void) {
     time_t     now      = time(NULL);
@@ -406,10 +408,10 @@ void startup_dialog(const char* message) {
     gui_theme_t* theme  = get_theme();
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-    static bool initialized = false;
-    if (!initialized) {
+
+    if (!startup_dialog_initialized) {
         synthwave(buffer);
-        initialized = true;
+        startup_dialog_initialized = true;
     }
     synthwave_step(buffer);
     pax_draw_text(buffer, 0xFFFFFFFF, theme->menu.text_font, theme->menu.text_height, theme->menu.horizontal_margin,
@@ -421,4 +423,8 @@ void startup_dialog(const char* message) {
                   (pax_buf_get_height(buffer) - theme->menu.text_height - theme->menu.vertical_margin), message);
 #endif
     display_blit_buffer(buffer);
+}
+
+void reinit_startup_dialog(void) {
+    startup_dialog_initialized = false;
 }
