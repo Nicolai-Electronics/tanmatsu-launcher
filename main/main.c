@@ -148,22 +148,26 @@ static void wifi_task(void* pvParameters) {
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     radio_system_protocol_information_t radio_information = {0};
     if (radio_system_protocol_get_information(&radio_information) == ESP_OK) {
-        wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.3.0") != 0);
+        wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.3.2") != 0);
     } else {
         wifi_firmware_version_mismatch = true;
-        ESP_LOGW(TAG, "Radio version mismatch (expected 'v3.3.0', found '%s')", radio_information.firmware_version);
+        ESP_LOGW(TAG, "Radio version mismatch (expected 'v3.3.2', found '%s')", radio_information.firmware_version);
     }
 
     device_identity_t identity = {0};
     if (read_device_identity(&identity) == ESP_OK) {
-        if (radio_information.board_revision != identity.revision) {
-            if (radio_system_protocol_set_board_revision(identity.revision) == ESP_OK) {
-                ESP_LOGI(TAG, "Set board revision on radio");
+        if (radio_information.board_revision != identity.revision ||
+            radio_information.country_code[0] != identity.region[0] ||
+            radio_information.country_code[1] != identity.region[1]) {
+            radio_system_protocol_configuration_t configuration;
+            configuration.board_revision = identity.revision, memcpy(configuration.country_code, identity.region, 2);
+            if (radio_system_protocol_set_configuration(&configuration) == ESP_OK) {
+                ESP_LOGI(TAG, "Configured radio");
             } else {
-                ESP_LOGW(TAG, "Failed to set board revision on radio");
+                ESP_LOGW(TAG, "Failed to configure radio");
             }
         } else {
-            ESP_LOGI(TAG, "Board revision on radio already configured");
+            ESP_LOGI(TAG, "Radio already configured");
         }
     } else {
         ESP_LOGW(TAG, "Failed to read device identity");
@@ -570,9 +574,9 @@ void app_main(void) {
             esp_restart();
         }
     }
-    if (patch < 5 && wifi_stack_get_version_mismatch()) {
-        // Patch level 2-5: new radio update, attempt updating radio
-        nvs_settings_set_firmware_patch_level(5);
+    if (patch < 6 && wifi_stack_get_version_mismatch()) {
+        // Patch level 2-6: new radio update, attempt updating radio
+        nvs_settings_set_firmware_patch_level(6);
         bsp_audio_set_amplifier(false);  // Disable amplifier to prevent noise on reboot
         radio_ota_update();
         bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
@@ -610,53 +614,16 @@ void app_main(void) {
     uint8_t welcome = 0;
     nvs_settings_get_welcome_message_state(&welcome);
 
-    const uint8_t welcome_target = 3;
+    const uint8_t welcome_target = 4;
     if (welcome < welcome_target) {
         const esp_app_desc_t* app_description   = esp_app_get_description();
         char                  title_buffer[128] = {0};
         snprintf(title_buffer, sizeof(title_buffer), "Welcome to Tanmatsu launcher %s", app_description->version);
         device_identity_t identity = {0};
         read_device_identity(&identity);
-        if (identity.revision == 1) {
-            message_screen(get_icon(ICON_HELP), title_buffer,
-                           "This update fixes issues with LoRa connectivity on\n"
-                           "revision 1 boards. Your board is a revision 1 board\n"
-                           "LoRa should now function correctly, we recommend you\n"
-                           "try one of the Meshcore apps. Another small change is\n"
-                           "that we moved the 'LoRa info' menu from the\n"
-                           "homescreen to the information menu, accessible using\n"
-                           "the yellow square button or from the settings page.\n");
-        } else if (identity.revision == 7) {
-            message_screen(get_icon(ICON_HELP), title_buffer,
-                           "This update fixes issues with LoRa connectivity on\n"
-                           "revision 1 boards. Your board is newer so nothing\n"
-                           "has changed there. Another small change is that\n"
-                           "we moved the 'LoRa info' menu from the homescreen\n"
-                           "to the information menu, accessible using the yellow\n"
-                           "square button or from the settings page.\n"
-                           "\n"
-                           "A new infrared API is now available on the radio to\n"
-                           "utilize the infrared LED. Your board has the infrared\n"
-                           "LED installed, however not all 3D printed back cases\n"
-                           "have the cutout for the LED. If your device doesn't\n"
-                           "have the LED visible you can download a new revision\n"
-                           "of the 3d printable back cover from Github at:\n"
-                           "github.com/Nicolai-Electronics/tanmatsu-mechanical\n");
-        } else {
-            message_screen(get_icon(ICON_HELP), title_buffer,
-                           "This update fixes issues with LoRa connectivity on\n"
-                           "revision 1 boards. Your board is newer so nothing\n"
-                           "has changed there. Another small change is that\n"
-                           "we moved the 'LoRa info' menu from the homescreen\n"
-                           "to the information menu, accessible using the yellow\n"
-                           "square button or from the settings page.\n"
-                           "\n"
-                           "A new infrared API is now available on the radio to\n"
-                           "utilize the infrared LED. Your device doesn't have\n"
-                           "the LED installed, however the footprint is available.\n"
-                           "Any small IR LED will work, for the updated back cover\n"
-                           "you can use EVERLIGHT IR968-8P(X1-X4)XBY (C17179483).\n");
-        }
+        message_screen(get_icon(ICON_HELP), title_buffer,
+                       "This release fixes multiple issues in the LoRa driver\n"
+                       "that is part of the radio firmware.\n");
         nvs_settings_set_welcome_message_state(welcome_target);
     }
 #endif

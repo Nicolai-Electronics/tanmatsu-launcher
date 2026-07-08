@@ -3,7 +3,7 @@ dependencies:
   badgeteam/badge-bsp: "^1.0.0"
   robotman2412/pax-gfx: "^2.1.0"
   robotman2412/pax-codecs: "^1.0.1"
-  badgeteam/appfs: "^1.0.2"
+  badgeteam/appfs: "^1.2.0"
   badgeteam/custom-certificates: "^1.1.0"
   nicolaielectronics/wifi-manager: "^0.3.0"
   nicolaielectronics/tanmatsu-wifi: "^1.2.0"
