@@ -287,4 +287,40 @@ esp_err_t radio_system_protocol_nvs_delete(const char* namespace_name, const cha
 esp_err_t radio_system_protocol_set_board_revision(uint8_t board_revision) {
     return ESP_ERR_NOT_SUPPORTED;
 }
+#else
+
+esp_err_t radio_system_protocol_init(void) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t radio_system_protocol_get_information(radio_system_protocol_information_t* out_information) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t radio_system_protocol_set_configuration(const radio_system_protocol_configuration_t* configuration) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t radio_system_protocol_nvs_list(const char* namespace_name, const char* key_filter,
+                                         radio_system_protocol_nvs_value_type_t type, uint32_t offset,
+                                         radio_system_protocol_nvs_entry_t* out_entries, uint32_t max_entries,
+                                         uint32_t* out_count) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t radio_system_protocol_nvs_read(const char* namespace_name, const char* key,
+                                         radio_system_protocol_nvs_value_type_t type,
+                                         radio_system_protocol_nvs_value_t* out_value, size_t out_value_size) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t radio_system_protocol_nvs_write(const radio_system_protocol_nvs_value_t* value, size_t value_size) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t radio_system_protocol_nvs_delete(const char* namespace_name, const char* key,
+                                           radio_system_protocol_nvs_value_type_t type) {
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
 #endif

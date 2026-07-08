@@ -69,7 +69,6 @@
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #include "bsp/tanmatsu.h"
-#include "radio_system_protocol_client.h"
 #include "tanmatsu_coprocessor.h"
 #endif
 
