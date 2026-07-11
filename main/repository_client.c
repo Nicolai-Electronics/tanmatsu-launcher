@@ -48,6 +48,24 @@ static bool download_and_parse(const char* url, repository_json_data_t* out_data
 
 // Helper functions for API
 
+static void url_append(char* destination, char* source, size_t buffer_length) {
+    if (buffer_length == 0) {
+        return;
+    }
+    size_t dest_len = strlen(destination);
+    for (size_t i = 0; source[i] != '\0'; i++) {
+        if (source[i] == ' ') {
+            if (dest_len + 3 >= buffer_length) break;
+            memcpy(&destination[dest_len], "%20", 3);
+            dest_len += 3;
+        } else {
+            if (dest_len + 1 >= buffer_length) break;
+            destination[dest_len++] = source[i];
+        }
+    }
+    destination[dest_len] = '\0';
+}
+
 bool load_information(const char* base_url, repository_json_data_t* out_data) {
     char base_uri[64] = {0};
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
@@ -67,7 +85,8 @@ bool load_categories(const char* base_url, repository_json_data_t* out_data) {
     }
 
     char url[256];
-    sprintf(url, "%s%s/categories?device=%s", base_url, base_uri, device_name);
+    sprintf(url, "%s%s/categories?device=", base_url, base_uri);
+    url_append(url, device_name, sizeof(url));
     return download_and_parse(url, out_data);
 }
 
@@ -83,10 +102,12 @@ bool load_projects(const char* base_url, repository_json_data_t* out_data, const
     }
 
     if (category != NULL) {
-        sprintf(url, "%s%s/projects?device=%s&category=%s", base_url, base_uri, device_name, category);
+        sprintf(url, "%s%s/projects?category=%s&device=", base_url, base_uri, category);
     } else {
-        sprintf(url, "%s%s/projects?device=%s", base_url, base_uri, device_name);
+        sprintf(url, "%s%s/projects?device=", base_url, base_uri);
     }
+
+    url_append(url, device_name, sizeof(url));
     return download_and_parse(url, out_data);
 }
 
@@ -103,12 +124,12 @@ bool load_projects_paginated(const char* base_url, repository_json_data_t* out_d
 
     char url[256];
     if (category != NULL) {
-        sprintf(url, "%s%s/projects?device=%s&category=%s&offset=%" PRIu32 "&amount=%" PRIu32, base_url, base_uri,
-                device_name, category, offset, amount);
+        sprintf(url, "%s%s/projects?category=%s&offset=%" PRIu32 "&amount=%" PRIu32 "&device=", base_url, base_uri,
+                category, offset, amount);
     } else {
-        sprintf(url, "%s%s/projects?device=%s&offset=%" PRIu32 "&amount=%" PRIu32, base_url, base_uri, device_name,
-                offset, amount);
+        sprintf(url, "%s%s/projects?offset=%" PRIu32 "&amount=%" PRIu32 "&device=", base_url, base_uri, offset, amount);
     }
+    url_append(url, device_name, sizeof(url));
     return download_and_parse(url, out_data);
 }
 
