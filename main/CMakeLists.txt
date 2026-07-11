@@ -113,7 +113,6 @@ idf_component_register(
 		${extra_sources}
 
 	PRIV_REQUIRES
-		esp_lcd
 		fatfs
 		nvs_flash
 		badge-bsp
