@@ -14,6 +14,7 @@
 #include "bsp/power.h"
 #include "bsp/rtc.h"
 #include "chakrapetchmedium.h"
+#include "common/device.h"
 #include "common/display.h"
 #include "common/theme.h"
 #include "coprocessor_management.h"
@@ -207,57 +208,59 @@ static void wifi_task(void* pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(2000));
     }*/
 
-    lora_protocol_status_params_t status;
-    esp_err_t                     res = lora_get_status(&lora_handle, &status);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to read LoRa radio status: %s", esp_err_to_name(res));
-        vTaskDelete(NULL);
-    }
+    if (device_has_lora()) {
+        lora_protocol_status_params_t status = {0};
+        esp_err_t                     res    = lora_get_status(&lora_handle, &status);
+        if (res != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to read LoRa radio status: %s", esp_err_to_name(res));
+            vTaskDelete(NULL);
+        }
 
-    ESP_LOGI(TAG, "LoRa radio version string: %s", status.version_string);
+        ESP_LOGI(TAG, "LoRa radio version string: %s", status.version_string);
 
-    lora_protocol_mode_t mode;
-    res = lora_get_mode(&lora_handle, &mode);
-    if (res != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
-        vTaskDelete(NULL);
-    }
-    ESP_LOGI(TAG, "LoRa mode: %d", (int)mode);
+        lora_protocol_mode_t mode;
+        res = lora_get_mode(&lora_handle, &mode);
+        if (res != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
+            vTaskDelete(NULL);
+        }
+        ESP_LOGI(TAG, "LoRa mode: %d", (int)mode);
 
-    if (status.chip_type == LORA_PROTOCOL_CHIP_SX1268) {
-        ESP_LOGW(TAG, "SX1268 LoRa radio detected");
-    } else {
-        ESP_LOGW(TAG, "SX1262 LoRa radio detected");
-    }
+        if (status.chip_type == LORA_PROTOCOL_CHIP_SX1268) {
+            ESP_LOGW(TAG, "SX1268 LoRa radio detected");
+        } else {
+            ESP_LOGW(TAG, "SX1262 LoRa radio detected");
+        }
 
-    res = lora_set_mode(&lora_handle, LORA_PROTOCOL_MODE_STANDBY_RC);
-    if (res == ESP_OK) {
-        ESP_LOGI(TAG, "LoRa set to standby mode");
-    } else {
-        ESP_LOGE(TAG, "Failed to set LoRa mode: %s", esp_err_to_name(res));
-    }
+        res = lora_set_mode(&lora_handle, LORA_PROTOCOL_MODE_STANDBY_RC);
+        if (res == ESP_OK) {
+            ESP_LOGI(TAG, "LoRa set to standby mode");
+        } else {
+            ESP_LOGE(TAG, "Failed to set LoRa mode: %s", esp_err_to_name(res));
+        }
 
-    res = lora_apply_settings();
-    if (res == ESP_OK) {
-        ESP_LOGI(TAG, "LoRa configuration set");
-    } else {
-        ESP_LOGE(TAG, "Failed to set LoRa configuration: %s", esp_err_to_name(res));
-    }
+        res = lora_apply_settings();
+        if (res == ESP_OK) {
+            ESP_LOGI(TAG, "LoRa configuration set");
+        } else {
+            ESP_LOGE(TAG, "Failed to set LoRa configuration: %s", esp_err_to_name(res));
+        }
 
-    res = lora_set_mode(&lora_handle, LORA_PROTOCOL_MODE_RX);
-    if (res == ESP_OK) {
-        ESP_LOGI(TAG, "LoRa set to RX mode");
-    } else {
-        ESP_LOGE(TAG, "Failed to set LoRa mode: %s", esp_err_to_name(res));
-    }
+        res = lora_set_mode(&lora_handle, LORA_PROTOCOL_MODE_RX);
+        if (res == ESP_OK) {
+            ESP_LOGI(TAG, "LoRa set to RX mode");
+        } else {
+            ESP_LOGE(TAG, "Failed to set LoRa mode: %s", esp_err_to_name(res));
+        }
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(1000));
 
-    res = lora_get_mode(&lora_handle, &mode);
-    if (res == ESP_OK) {
-        ESP_LOGI(TAG, "LoRa mode (after setting to RX): %d", (int)mode);
-    } else {
-        ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
+        res = lora_get_mode(&lora_handle, &mode);
+        if (res == ESP_OK) {
+            ESP_LOGI(TAG, "LoRa mode (after setting to RX): %d", (int)mode);
+        } else {
+            ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
+        }
     }
 
     vTaskDelete(NULL);
@@ -518,8 +521,10 @@ void app_main(void) {
     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_APPLICATION);
 
     startup_dialog("Initializing radio...");
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     ESP_ERROR_CHECK(lora_init_remote(&lora_handle, 32));
     radio_system_protocol_init();  // Return value ignored
+#endif
 
     if (wifi_remote_initialize() == ESP_OK) {
         res = wifi_connection_init_stack();

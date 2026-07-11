@@ -198,8 +198,8 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                           "Radio communication error!\r\nPlease flash the radio firmware using the recovery website.");
         } else {
             lora_protocol_status_params_t status = {0};
-            esp_err_t                     res    = lora_get_status(lora_get_handle(), &status);
-            if (device_has_lora() && (res != ESP_OK || status.errors > 0)) {
+            esp_err_t res = device_has_lora() ? lora_get_status(lora_get_handle(), &status) : ESP_OK;
+            if (res != ESP_OK || status.errors > 0) {
                 pax_draw_text(
                     buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
                     pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
