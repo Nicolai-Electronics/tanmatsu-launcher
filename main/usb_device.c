@@ -347,15 +347,19 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
 
 void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize) {
     (void)itf;
+    (void)buffer;
+    (void)bufsize;
 
-    badgelink_rxdata_cb(buffer, bufsize);
-    // tud_vendor_write(buffer, bufsize);
-    // tud_vendor_write_flush();
+    // Vendor class is configured in buffered FIFO mode (CFG_TUD_VENDOR_RX_BUFSIZE > 0),
+    // so the buffer/bufsize arguments above are always NULL/0; the received data must be
+    // pulled out of the RX FIFO instead.
 
-// if using RX buffered is enabled, we need to flush the buffer to make room for new data
-#if CFG_TUD_VENDOR_RX_BUFSIZE > 0
-    tud_vendor_read_flush();
-#endif
+    uint8_t  rx_buf[64];
+    uint32_t available;
+    while ((available = tud_vendor_available()) > 0) {
+        uint32_t read = tud_vendor_read(rx_buf, sizeof(rx_buf));
+        badgelink_rxdata_cb(rx_buf, read);
+    }
 }
 
 void usb_send_data(uint8_t const* data, size_t len) {
