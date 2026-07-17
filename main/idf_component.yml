@@ -9,7 +9,7 @@ dependencies:
   nicolaielectronics/tanmatsu-wifi: "^1.2.0"
   badgeteam/terminal-emulator: "^0.0.4"
   badgeteam/badgelink: "^0.2.0"
-  nicolaielectronics/tanmatsu-lora: "^0.3.0"
+  nicolaielectronics/tanmatsu-lora: "^0.4.3"
   nicolaielectronics/tanmatsu-addon: "^0.0.1"
   nicolaielectronics/tanmatsu-settings: "^1.1.0"
   nicolaielectronics/scd4x: "^0.0.1"

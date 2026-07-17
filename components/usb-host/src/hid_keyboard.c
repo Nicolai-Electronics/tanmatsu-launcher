@@ -382,11 +382,11 @@ static void inject_keyboard_event_inner(char ascii, char ascii_shift, char const
                                         ? ((modifiers & BSP_INPUT_MODIFIER_SHIFT) ? utf8_shift_alt : utf8_alt)
                                         : ((modifiers & BSP_INPUT_MODIFIER_SHIFT) ? utf8_shift : utf8);
     bsp_input_event_t event       = {
-              .type                    = INPUT_EVENT_TYPE_KEYBOARD,
-              .args_keyboard.ascii     = value_ascii,
-              .args_keyboard.utf8      = value_utf8,
-              .args_keyboard.modifiers = modifiers,
+        .type                    = INPUT_EVENT_TYPE_KEYBOARD,
+        .args_keyboard.ascii     = value_ascii,
+        .args_keyboard.modifiers = modifiers,
     };
+    strlcpy(event.args_keyboard.utf8, value_utf8, sizeof(event.args_keyboard.utf8));
     bsp_input_inject_event(&event);
     printf("Keyboard %02x with modifiers %02" PRIx32 "\r\n", value_ascii, modifiers);
 }

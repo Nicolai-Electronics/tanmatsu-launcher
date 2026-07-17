@@ -1,4 +1,5 @@
 #include "lora_information.h"
+#include <math.h>
 #include <string.h>
 #include "bsp/device.h"
 #include "bsp/input.h"
@@ -36,7 +37,8 @@ extern lora_handle_t* lora_get_handle(void);
 #define TEXT_SIZE    9
 #endif
 
-static void render(bool partial, bool icons, size_t num_packets, lora_protocol_lora_packet_t* packets) {
+static void render(bool partial, bool icons, size_t num_packets, lora_protocol_lora_packet_t* packets,
+                   float frequency_error, float frequency_error_avg) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
 
@@ -136,6 +138,10 @@ static void render(bool partial, bool icons, size_t num_packets, lora_protocol_l
                  config.low_data_rate_optimization ? "Yes" : "No");
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
+        snprintf(text_buffer, sizeof(text_buffer), "Frequency error    :  %0.2f Hz (avg. %0.2f Hz)", frequency_error,
+                 frequency_error_avg);
+        pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
+                      position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
 
         if (status.errors & SX126X_ERROR_RC64K_CALIB_ERR)
             pax_draw_text(buffer, 0xFFFF0000, TEXT_FONT, TEXT_SIZE, position.x0,
@@ -206,7 +212,11 @@ void menu_lora_information(void) {
 
     lora_protocol_lora_packet_t lora_packets[10] = {0};
 
-    render(false, true, (sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t)) - 1, lora_packets);
+    render(false, true, (sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t)) - 1, lora_packets, 0, 0);
+
+    float    frequency_error             = 0;
+    double   frequency_error_accumulator = 0;
+    uint32_t frequency_error_count       = 0;
 
     while (1) {
         bool received = false;
@@ -216,8 +226,12 @@ void menu_lora_information(void) {
             for (size_t i = 1; i < sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t); i++) {
                 memcpy(&lora_packets[i - 1], &lora_packets[i], sizeof(lora_protocol_lora_packet_t));
             }
-            printf("Received LoRa packet: length: %d, data: ",
-                   lora_packets[sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t) - 1].length);
+            lora_get_frequency_error(lora_get_handle(), &frequency_error);
+            frequency_error_accumulator += frequency_error;
+            frequency_error_count++;
+            printf("Received LoRa packet: length: %d, frequency error: %0.2f, data: ",
+                   lora_packets[sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t) - 1].length,
+                   frequency_error);
             for (size_t j = 0;
                  j < lora_packets[sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t) - 1].length &&
                  j < sizeof(lora_packets[sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t) - 1].data);
@@ -238,6 +252,10 @@ void menu_lora_information(void) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 return;
+                            case BSP_INPUT_NAVIGATION_KEY_F5:
+                                frequency_error_accumulator = 0;
+                                frequency_error_count       = 0;
+                                break;
                             case BSP_INPUT_NAVIGATION_KEY_F6:
                                 test_tx();
                                 break;
@@ -252,6 +270,10 @@ void menu_lora_information(void) {
             }
         }
 
-        render(true, true, (sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t)) - 1, lora_packets);
+        double frequency_error_avg =
+            frequency_error_count > 0 ? (float)(frequency_error_accumulator / (double)(frequency_error_count)) : NAN;
+
+        render(true, true, (sizeof(lora_packets) / sizeof(lora_protocol_lora_packet_t)) - 1, lora_packets,
+               frequency_error, frequency_error_avg);
     }
 }
