@@ -346,19 +346,24 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
 }
 
 void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize) {
-    (void)itf;
-    (void)buffer;
-    (void)bufsize;
+    if (itf != 0) {
+        ESP_LOGE(TAG, "Received tud_vendor_rx_cb on unexpected interface");
+        return;
+    }
 
-    // Vendor class is configured in buffered FIFO mode (CFG_TUD_VENDOR_RX_BUFSIZE > 0),
-    // so the buffer/bufsize arguments above are always NULL/0; the received data must be
-    // pulled out of the RX FIFO instead.
-
-    uint8_t  rx_buf[64];
-    uint32_t available;
-    while ((available = tud_vendor_available()) > 0) {
-        uint32_t read = tud_vendor_read(rx_buf, sizeof(rx_buf));
-        badgelink_rxdata_cb(rx_buf, read);
+    if (bufsize > 0) {
+        badgelink_rxdata_cb(buffer, bufsize);
+#if CFG_TUD_VENDOR_RX_BUFSIZE > 0
+        tud_vendor_read_flush();
+#endif
+    } else {
+        // Read from FIFO
+        uint8_t  rx_buf[64];
+        uint32_t available;
+        while ((available = tud_vendor_available()) > 0) {
+            uint32_t read = tud_vendor_read(rx_buf, sizeof(rx_buf));
+            badgelink_rxdata_cb(rx_buf, read);
+        }
     }
 }
 
