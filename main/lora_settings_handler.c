@@ -37,9 +37,12 @@ esp_err_t lora_apply_settings(void) {
     nvs_settings_get_lora_automatic_offset(&config.use_automatic_correction);
     nvs_settings_get_lora_low_data_rate_optimization(&config.low_data_rate_optimization);
 
+    esp_err_t res = lora_set_config(lora_get_handle(), &config);
+    if (res != ESP_OK) {
+        return res;
+    }
+
     int32_t offset = 0;
     nvs_settings_get_lora_offset(&offset);
-    lora_set_frequency_offset(lora_get_handle(), offset);
-
-    return lora_set_config(lora_get_handle(), &config);
+    return lora_set_frequency_offset(lora_get_handle(), offset);
 }
