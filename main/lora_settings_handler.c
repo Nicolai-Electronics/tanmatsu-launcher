@@ -20,6 +20,9 @@ esp_err_t lora_apply_settings(void) {
         .crc_enabled                = true,       // CRC enabled
         .invert_iq                  = false,      // normal IQ
         .low_data_rate_optimization = false,      // disabled
+        .rx_boost                   = true,       // enabled
+        .use_dcdc                   = true,       // enabled
+        .use_automatic_correction   = false,      // disabled
     };
 
     uint32_t frequency = 0;
@@ -31,6 +34,17 @@ esp_err_t lora_apply_settings(void) {
     config.bandwidth = bandwidth;
     nvs_settings_get_lora_coding_rate(&config.coding_rate);
     nvs_settings_get_lora_power(&config.power);
+    nvs_settings_get_lora_automatic_offset(&config.use_automatic_correction);
+    nvs_settings_get_lora_low_data_rate_optimization(&config.low_data_rate_optimization);
 
-    return lora_set_config(lora_get_handle(), &config);
+    esp_err_t res = lora_set_config(lora_get_handle(), &config);
+    if (res != ESP_OK) {
+        return res;
+    }
+
+    return res;
+
+    int32_t offset = 0;
+    nvs_settings_get_lora_offset(&offset);
+    return lora_set_frequency_offset(lora_get_handle(), offset);
 }

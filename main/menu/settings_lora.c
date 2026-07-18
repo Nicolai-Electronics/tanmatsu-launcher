@@ -30,6 +30,9 @@ typedef enum {
     SETTING_BANDWIDTH,
     SETTING_CODING_RATE,
     SETTING_POWER,
+    SETTING_OFFSET,
+    SETTING_AUTOMATIC_OFFSET,
+    SETTING_LOW_DATA_RATE_OPTIMIZATION,
 } menu_setting_t;
 
 static void render(menu_t* menu, bool partial, bool icons) {
@@ -45,8 +48,9 @@ static void render(menu_t* menu, bool partial, bool icons) {
             buffer, theme, !partial, !partial || icons, !partial,
             ((gui_element_icontext_t[]){{get_icon(ICON_CHAT), "LoRa radio"}}), 1,
             ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2,
-            (setting == SETTING_FREQUENCY) ? ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Edit"}})
-                                           : ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ← / → Edit"}}),
+            (setting == SETTING_FREQUENCY || setting == SETTING_OFFSET)
+                ? ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Edit"}})
+                : ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ← / → Edit"}}),
             1);
     }
 
@@ -68,6 +72,12 @@ static void render(menu_t* menu, bool partial, bool icons) {
     nvs_settings_get_lora_coding_rate(&coding_rate);
     uint8_t power = 0;
     nvs_settings_get_lora_power(&power);
+    int32_t offset = 0;
+    nvs_settings_get_lora_offset(&offset);
+    bool automatic_offset = false;
+    nvs_settings_get_lora_automatic_offset(&automatic_offset);
+    bool low_data_rate_optimization = false;
+    nvs_settings_get_lora_low_data_rate_optimization(&low_data_rate_optimization);
 
     size_t position_index = 0;
     char   value_buffer[16];
@@ -80,6 +90,10 @@ static void render(menu_t* menu, bool partial, bool icons) {
     snprintf(value_buffer, sizeof(value_buffer), "%u", coding_rate);
     menu_set_value(menu, position_index++, value_buffer);
     snprintf(value_buffer, sizeof(value_buffer), "%u dBm", power);
+    menu_set_value(menu, position_index++, value_buffer);
+    menu_set_value(menu, position_index++, low_data_rate_optimization ? "Enabled" : "Disabled");
+    menu_set_value(menu, position_index++, automatic_offset ? "Enabled" : "Disabled");
+    snprintf(value_buffer, sizeof(value_buffer), "%" PRId32 " Hz", offset);
     menu_set_value(menu, position_index++, value_buffer);
 
     menu_render(buffer, menu, position, theme, partial);
@@ -106,11 +120,31 @@ void edit_frequency(menu_t* menu) {
     }
 }
 
+void edit_offset(menu_t* menu) {
+    pax_buf_t*   buffer   = display_get_buffer();
+    gui_theme_t* theme    = get_theme();
+    char         temp[16] = {0};
+    bool         accepted = false;
+    int32_t      offset   = 0;
+    nvs_settings_get_lora_offset(&offset);
+    snprintf(temp, sizeof(temp), "%" PRId32, offset);
+    menu_textedit(buffer, theme, "Offset (Hz)", temp, sizeof(temp) + sizeof('\0'), true, &accepted);
+    if (accepted) {
+        int32_t new_offset = strtol(temp, NULL, 10);
+        nvs_settings_set_lora_offset(new_offset);
+        snprintf(temp, sizeof(temp), "%" PRId32, new_offset);
+        menu_set_value(menu, 5, temp);
+    }
+}
+
 static void edit(menu_t* menu) {
     menu_setting_t setting = (menu_setting_t)menu_get_callback_args(menu, menu_get_position(menu));
     switch (setting) {
         case SETTING_FREQUENCY:
             edit_frequency(menu);
+            break;
+        case SETTING_OFFSET:
+            edit_offset(menu);
             break;
         default:
             break;
@@ -191,6 +225,20 @@ static void edit_updown(menu_t* menu, bool up) {
             nvs_settings_set_lora_power(power);
             break;
         }
+        case SETTING_OFFSET:
+            break;
+        case SETTING_AUTOMATIC_OFFSET: {
+            bool automatic_offset = false;
+            nvs_settings_get_lora_automatic_offset(&automatic_offset);
+            nvs_settings_set_lora_automatic_offset(!automatic_offset);
+            break;
+        }
+        case SETTING_LOW_DATA_RATE_OPTIMIZATION: {
+            bool low_data_rate_optimization = false;
+            nvs_settings_get_lora_low_data_rate_optimization(&low_data_rate_optimization);
+            nvs_settings_set_lora_low_data_rate_optimization(!low_data_rate_optimization);
+            break;
+        }
         default:
             break;
     }
@@ -231,6 +279,10 @@ void menu_settings_lora(void) {
     menu_insert_item_value(&menu, "Bandwidth", "", NULL, (void*)SETTING_BANDWIDTH, -1);
     menu_insert_item_value(&menu, "Coding rate", "", NULL, (void*)SETTING_CODING_RATE, -1);
     menu_insert_item_value(&menu, "Transmit power", "", NULL, (void*)SETTING_POWER, -1);
+    menu_insert_item_value(&menu, "Low data rate optimization", "", NULL, (void*)SETTING_LOW_DATA_RATE_OPTIMIZATION,
+                           -1);
+    menu_insert_item_value(&menu, "Automatic frequency offset", "", NULL, (void*)SETTING_AUTOMATIC_OFFSET, -1);
+    menu_insert_item_value(&menu, "Manual frequency offset", "", NULL, (void*)SETTING_OFFSET, -1);
 
     render(&menu, false, true);
     while (1) {
