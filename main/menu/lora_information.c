@@ -11,6 +11,7 @@
 #include "lora.h"
 #include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
+#include "nvs_settings_lora.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_text.h"
@@ -21,7 +22,10 @@ static const char TAG[] = "LoRa information menu";
 extern lora_handle_t* lora_get_handle(void);
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-#define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
+#define FOOTER_LEFT                                                                                    \
+    ((gui_element_icontext_t[]){                                                                       \
+        {get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}, {get_icon(ICON_F4), "Store offset"}}), \
+        3
 #define FOOTER_RIGHT NULL, 0
 #define TEXT_FONT    pax_font_sky_mono
 #define TEXT_SIZE    18
@@ -45,7 +49,7 @@ static void render(bool partial, bool icons, size_t num_packets, lora_protocol_l
     pax_vec2_t position = menu_calc_position(buffer, theme);
 
     render_base_screen_statusbar(buffer, theme, true, true, true,
-                                 ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "LoRa information"}}), 1,
+                                 ((gui_element_icontext_t[]){{get_icon(ICON_WORKSPACES), "LoRa information"}}), 1,
                                  FOOTER_LEFT, FOOTER_RIGHT);
 
     char text_buffer[256];
@@ -209,6 +213,13 @@ void test_tx(void) {
     }
 }
 
+static void store_offset(void) {
+    float applied_frequency_offset = 0;
+    lora_get_frequency_offset(lora_get_handle(), NULL, NULL, &applied_frequency_offset);
+    nvs_settings_set_lora_offset(applied_frequency_offset);
+    message_dialog(get_icon(ICON_WORKSPACES), "LoRa information", "Frequency offset stored", "OK");
+}
+
 void menu_lora_information(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
@@ -257,6 +268,9 @@ void menu_lora_information(void) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 return;
+                            case BSP_INPUT_NAVIGATION_KEY_F4:
+                                store_offset();
+                                break;
                             case BSP_INPUT_NAVIGATION_KEY_F6:
                                 test_tx();
                                 break;
