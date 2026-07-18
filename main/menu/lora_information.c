@@ -221,6 +221,8 @@ void menu_lora_information(void) {
     float frequency_error_avg      = 0;
     float applied_frequency_offset = 0;
 
+    lora_get_frequency_offset(lora_get_handle(), &frequency_error, &frequency_error_avg, &applied_frequency_offset);
+
     while (1) {
         bool received = false;
         if (lora_receive_packet(lora_get_handle(),
