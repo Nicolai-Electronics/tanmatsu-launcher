@@ -42,7 +42,6 @@
 #include "lora_settings_handler.h"
 #include "menu/apps.h"
 #include "menu/home.h"
-#include "menu/message.h"
 #include "menu/message_dialog.h"
 #include "ntp.h"
 #include "nvs_flash.h"
@@ -625,9 +624,10 @@ void app_main(void) {
         snprintf(title_buffer, sizeof(title_buffer), "Welcome to Tanmatsu launcher %s", app_description->version);
         device_identity_t identity = {0};
         read_device_identity(&identity);
-        message_screen(get_icon(ICON_HELP), title_buffer,
+        message_dialog(get_icon(ICON_HELP), title_buffer,
                        "This release fixes multiple issues in the LoRa driver\n"
-                       "that is part of the radio firmware.\n");
+                       "that is part of the radio firmware.\n",
+                       "Close");
         nvs_settings_set_welcome_message_state(welcome_target);
     }
 #endif
