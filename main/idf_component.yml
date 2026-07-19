@@ -1,7 +1,7 @@
 dependencies:
   idf: ">=5.5.1"
   badgeteam/badge-bsp: "^1.0.3"
-  robotman2412/pax-gfx: "^2.2.0"
+  robotman2412/pax-gfx: "^2.2.1"
   robotman2412/pax-codecs: "^1.0.1"
   badgeteam/appfs: "^1.2.0"
   badgeteam/custom-certificates: "^1.1.0"
