@@ -192,7 +192,7 @@ void test_keyboard(void) {
 
     while (1) {
         bsp_input_event_t event;
-
+        draw_keyboard();
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(100)) == pdTRUE) {
             if (event.type == INPUT_EVENT_TYPE_SCANCODE) {
                 bsp_input_scancode_t scancode = event.args_scancode.scancode & ~BSP_INPUT_SCANCODE_RELEASE_MODIFIER;
