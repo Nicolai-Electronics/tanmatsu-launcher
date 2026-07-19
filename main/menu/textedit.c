@@ -20,9 +20,9 @@
 #define FOOTER_RIGHT NULL, 0
 #endif
 
-void render(pax_buf_t* buffer, gui_theme_t* theme, bool partial, bool icons, char* title) {
+void render(pax_buf_t* buffer, gui_theme_t* theme, bool partial, bool icons, const char* title) {
     render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                 ((gui_element_icontext_t[]){{get_icon(ICON_EXTENSION), title}}), 1, FOOTER_LEFT,
+                                 ((gui_element_icontext_t[]){{get_icon(ICON_EXTENSION), (char*)title}}), 1, FOOTER_LEFT,
                                  FOOTER_RIGHT);
 }
 
@@ -56,6 +56,7 @@ void menu_textedit(pax_buf_t* buffer, gui_theme_t* theme, const char* title, cha
                                     gui_osk_edit_destroy(&kb_ctx, out_accepted, text, size);
                                     return;
                                 }
+                                break;
                             }
                             case BSP_INPUT_NAVIGATION_KEY_F2:
                             case BSP_INPUT_NAVIGATION_KEY_SELECT:
@@ -143,6 +144,7 @@ void menu_textedit(pax_buf_t* buffer, gui_theme_t* theme, const char* title, cha
                                     *out_accepted = false;
                                     return;
                                 }
+                                break;
                             }
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
@@ -151,6 +153,7 @@ void menu_textedit(pax_buf_t* buffer, gui_theme_t* theme, const char* title, cha
                                     *out_accepted = true;
                                     return;
                                 }
+                                break;
                             default:
                                 gui_edit_handle_navigation_event(&context, event.args_navigation);
                                 break;
