@@ -38,6 +38,8 @@ typedef struct {
     uint32_t executable_on_fs_revision;
     int      executable_on_fs_filesize;
     char*    executable_on_fs_filename;
+
+    bool favorite;
 } app_t;
 
 appfs_handle_t find_appfs_handle_for_slug(const char* search_slug);

@@ -248,6 +248,7 @@ typedef enum {
 } app_menu_footer_type_t;
 
 static app_menu_footer_type_t previous_footer_type = APP_MENU_FOOTER_TYPE_COUNT;
+static bool                   previous_favorite    = false;
 
 // Helper to load an app into AppFS on-demand, with auto-cleanup support.
 // Returns ESP_OK on success, error otherwise. Shows dialogs.
@@ -290,7 +291,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
         }
     };
 
-    if (previous_footer_type != footer_type) {
+    if (previous_footer_type != footer_type || previous_favorite != app->favorite) {
         previous_footer_type = footer_type;
         partial              = false;
     }
@@ -313,7 +314,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                 action_text = "⏎ Start app";
                 break;
         }
-        snprintf(footer_right_text, sizeof(footer_right_text), "AppFS: %u%% | %s", free_kb * 100 / total_kb,
+        snprintf(footer_right_text, sizeof(footer_right_text), "AppFS: %u%% | %s", (100 - (free_kb * 100 / total_kb)),
                  action_text);
         gui_element_icontext_t footer_right[] = {{NULL, footer_right_text}};
 
@@ -347,9 +348,10 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                 break;
         }
 
-        if (0) {
+        if (app->favorite) {
             footer_left[3].text = "Unfavorite";
         }
+        previous_favorite = app->favorite;
 
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
                                      ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, footer_left,
@@ -506,6 +508,12 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     render(buffer, theme, &menu, position, false, true);
                                     break;
                                 }
+                                case BSP_INPUT_NAVIGATION_KEY_F3:
+                                    void*  arg    = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                    app_t* app    = (app_t*)arg;
+                                    app->favorite = !app->favorite;
+                                    render(buffer, theme, &menu, position, false, true);
+                                    break;
                                 case BSP_INPUT_NAVIGATION_KEY_SELECT:
                                 case BSP_INPUT_NAVIGATION_KEY_F5:
                                 case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_Y: {
