@@ -238,49 +238,6 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
     }
 }
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
-#define FOOTER_LEFT_CACHE                                        \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},       \
-                                {get_icon(ICON_F1), "Back"},     \
-                                {get_icon(ICON_F2), "Details"},  \
-                                {get_icon(ICON_F4), "Cache"},    \
-                                {get_icon(ICON_F5), "Remove"}}), \
-        5
-#define FOOTER_LEFT_UNCACHE                                      \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},       \
-                                {get_icon(ICON_F1), "Back"},     \
-                                {get_icon(ICON_F2), "Details"},  \
-                                {get_icon(ICON_F4), "Uncache"},  \
-                                {get_icon(ICON_F5), "Remove"}}), \
-        5
-#define FOOTER_LEFT_PLAIN                                        \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},       \
-                                {get_icon(ICON_F1), "Back"},     \
-                                {get_icon(ICON_F2), "Details"},  \
-                                {get_icon(ICON_F5), "Remove"}}), \
-        4
-#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT_CACHE   NULL, 0
-#define FOOTER_LEFT_UNCACHE NULL, 0
-#define FOOTER_LEFT_PLAIN   NULL, 0
-#else
-#define FOOTER_LEFT_CACHE                                                                                              \
-    ((gui_element_icontext_t[]){                                                                                       \
-        {get_icon(ICON_ESC), "/"}, {NULL, "F1 Back"}, {NULL, "F2 Details"}, {NULL, "F4 Cache"}, {NULL, "F5 Remove"}}), \
-        5
-#define FOOTER_LEFT_UNCACHE                                \
-    ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, \
-                                {NULL, "F1 Back"},         \
-                                {NULL, "F2 Details"},      \
-                                {NULL, "F4 Uncache"},      \
-                                {NULL, "F5 Remove"}}),     \
-        5
-#define FOOTER_LEFT_PLAIN                                                                          \
-    ((gui_element_icontext_t[]){                                                                   \
-        {get_icon(ICON_ESC), "/"}, {NULL, "F1 Back"}, {NULL, "F2 Details"}, {NULL, "F5 Remove"}}), \
-        4
-#endif
-
 typedef enum {
     APP_MENU_FOOTER_TYPE_NORMAL_CACHED = 0,  // In appfs, has install dir → F4 "Uncache"
     APP_MENU_FOOTER_TYPE_NORMAL_UNCACHED,    // Not in appfs, has install dir → F4 "Cache"
@@ -356,38 +313,47 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                 action_text = "⏎ Start app";
                 break;
         }
-        snprintf(footer_right_text, sizeof(footer_right_text), "AppFS: %u/%uKB | %s", free_kb, total_kb, action_text);
+        snprintf(footer_right_text, sizeof(footer_right_text), "AppFS: %u%% | %s", free_kb * 100 / total_kb,
+                 action_text);
         gui_element_icontext_t footer_right[] = {{NULL, footer_right_text}};
+
+        gui_element_icontext_t footer_left[6] = {
+            {get_icon(ICON_ESC), "/"},       {get_icon(ICON_F1), "Back"},   {get_icon(ICON_F2), "Details"},
+            {get_icon(ICON_F3), "Favorite"}, {get_icon(ICON_F5), "Remove"}, {NULL, ""},
+        };
+
+        size_t footer_left_length = 5;
 
         switch (footer_type) {
             case APP_MENU_FOOTER_TYPE_NORMAL_CACHED:
-                render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                             ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
-                                             FOOTER_LEFT_UNCACHE, footer_right, 1);
+                memcpy(&footer_left[5], &footer_left[4], sizeof(gui_element_icontext_t));  // Move remove option
+                footer_left_length  = 6;
+                footer_left[4].icon = get_icon(ICON_F4);
+                footer_left[4].text = "Uncache";
                 break;
             case APP_MENU_FOOTER_TYPE_NORMAL_UNCACHED:
-                render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                             ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
-                                             FOOTER_LEFT_CACHE, footer_right, 1);
-                break;
-            case APP_MENU_FOOTER_TYPE_NORMAL_PLAIN:
-                render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                             ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
-                                             FOOTER_LEFT_PLAIN, footer_right, 1);
+                memcpy(&footer_left[5], &footer_left[4], sizeof(gui_element_icontext_t));  // Move remove option
+                footer_left_length  = 6;
+                footer_left[4].icon = get_icon(ICON_F4);
+                footer_left[4].text = "Cache";
                 break;
             case APP_MENU_FOOTER_TYPE_INSTALL:
-                render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                             ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
-                                             FOOTER_LEFT_CACHE, footer_right, 1);
-                break;
-            case APP_MENU_FOOTER_TYPE_UNAVAILABLE:
-                render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                             ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1,
-                                             FOOTER_LEFT_PLAIN, footer_right, 1);
+                memcpy(&footer_left[5], &footer_left[4], sizeof(gui_element_icontext_t));  // Move remove option
+                footer_left_length  = 6;
+                footer_left[4].icon = get_icon(ICON_F4);
+                footer_left[4].text = "Install";
                 break;
             default:
                 break;
         }
+
+        if (0) {
+            footer_left[3].text = "Unfavorite";
+        }
+
+        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, footer_left,
+                                     footer_left_length, footer_right, 1);
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
