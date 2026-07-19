@@ -29,13 +29,11 @@ static void wifi_scan_done_handler(void* handler_arg, esp_event_base_t base, int
 }
 
 static inline void wifi_desc_record(wifi_ap_record_t* record) {
-    // Make a string representation of BSSID.
     char* bssid_str = malloc(3 * 6);
     if (!bssid_str) return;
     snprintf(bssid_str, 3 * 6, "%02X:%02X:%02X:%02X:%02X:%02X", record->bssid[0], record->bssid[1], record->bssid[2],
              record->bssid[3], record->bssid[4], record->bssid[5]);
 
-    // Make a string representation of 11b/g/n modes.
     char* phy_str = malloc(9);
     if (!phy_str) {
         free(bssid_str);
@@ -209,7 +207,24 @@ void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
                  ap->bssid[3], ap->bssid[4], ap->bssid[5]);
         snprintf(label_buffer, sizeof(label_buffer), "%s (%d dBm, %s network) [%s]", ap->ssid, ap->rssi, type,
                  bssid_str);
+#if 0
         menu_insert_item(&menu, label_buffer, NULL, (void*)ap, -1);
+#else
+        bool found = false;
+        for (size_t position = 0; position < menu_get_length(&menu); position++) {
+            const char* label = menu_get_label(&menu, position);
+            if (label == NULL) {
+                break;
+            }
+            if ((strlen(label) == strlen((char*)ap->ssid)) && (strncmp(label, (char*)ap->ssid, strlen(label)) == 0)) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            menu_insert_item(&menu, (char*)ap->ssid, NULL, (void*)ap, -1);
+        }
+#endif
     }
 
     // populate_menu_from_wifi_entries(&menu);
