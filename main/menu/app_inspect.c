@@ -1,6 +1,7 @@
 
 #include "app_inspect.h"
 #include <string.h>
+#include "app_favorite.h"
 #include "app_management.h"
 #include "app_metadata_parser.h"
 #include "appfs.h"
@@ -299,6 +300,7 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                 message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
                                     get_icon(ICON_HELP), "Delete App", "Do you really want to delete the app?");
                                 if (msg_ret == MSG_DIALOG_RETURN_OK) {
+                                    app_favorite_set(app->slug, false);
                                     esp_err_t res_int = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_INTERNAL);
                                     esp_err_t res_sd  = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_SD);
                                     if (res_int != ESP_OK && res_sd != ESP_OK) {
