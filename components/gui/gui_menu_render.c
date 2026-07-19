@@ -45,21 +45,25 @@ void menu_render_item(pax_buf_t* pax_buffer, menu_item_t* item, gui_theme_t* the
                             current_position_y, (width)-2, theme->menu.list_entry_height);
             pax_outline_rect(pax_buffer, theme->menu.palette.color_highlight_primary, position.x0 + 1,
                              current_position_y + 1, (width)-3, theme->menu.list_entry_height - 1);
-            // pax_clip(pax_buffer, position.x0 + 1, current_position_y + text_offset, (width) -
-            // 4, theme->menu.text_height);
             pax_draw_text(pax_buffer, theme->menu.palette.color_active_foreground, theme->menu.text_font,
                           theme->menu.text_height, position.x0 + horizontal_padding + icon_width,
                           current_position_y + text_offset, item->label);
-            // pax_noclip(pax_buffer);
+            if (item->right_aligned_text != NULL) {
+                pax_right_text(pax_buffer, theme->menu.palette.color_active_foreground, theme->menu.text_font,
+                               theme->menu.text_height, position.x1 - horizontal_padding,
+                               current_position_y + text_offset, item->right_aligned_text);
+            }
         } else {
             pax_simple_rect(pax_buffer, theme->menu.palette.color_background, position.x0 + 1, current_position_y,
                             (width)-2, theme->menu.list_entry_height);
-            // pax_clip(pax_buffer, position.x0 + 1, current_position_y + text_offset, (width) -
-            // 4, theme->menu.text_height);
             pax_draw_text(pax_buffer, theme->menu.palette.color_foreground, theme->menu.text_font,
                           theme->menu.text_height, position.x0 + horizontal_padding + icon_width,
                           current_position_y + text_offset, item->label);
-            // pax_noclip(pax_buffer);
+            if (item->right_aligned_text != NULL) {
+                pax_right_text(pax_buffer, theme->menu.palette.color_foreground, theme->menu.text_font,
+                               theme->menu.text_height, position.x1 - horizontal_padding,
+                               current_position_y + text_offset, item->right_aligned_text);
+            }
         }
     }
 

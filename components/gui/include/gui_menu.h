@@ -18,6 +18,7 @@ typedef struct _menu_item {
     void*           callback_arguments;
     pax_buf_t*      icon;
     char*           value;
+    char*           right_aligned_text;
 
     // Linked list
     struct _menu_item* previousItem;
@@ -36,13 +37,13 @@ void         menu_initialize(menu_t* menu);
 void         menu_free(menu_t* menu);
 menu_item_t* menu_find_item(menu_t* menu, size_t position);
 menu_item_t* menu_find_last_item(menu_t* menu);
-bool         menu_insert_item_value(menu_t* menu, const char* label, const char* value, menu_callback_t callback,
+ssize_t      menu_insert_item_value(menu_t* menu, const char* label, const char* value, menu_callback_t callback,
                                     void* callback_arguments, size_t position);
-bool         menu_insert_item(menu_t* menu, const char* label, menu_callback_t callback, void* callback_arguments,
+ssize_t      menu_insert_item(menu_t* menu, const char* label, menu_callback_t callback, void* callback_arguments,
                               size_t position);
-bool         menu_insert_item_icon(menu_t* menu, const char* label, menu_callback_t callback, void* callback_arguments,
+ssize_t      menu_insert_item_icon(menu_t* menu, const char* label, menu_callback_t callback, void* callback_arguments,
                                    size_t position, pax_buf_t* icon);
-bool         menu_insert_item_value_icon(menu_t* menu, const char* label, const char* value, menu_callback_t callback,
+ssize_t      menu_insert_item_value_icon(menu_t* menu, const char* label, const char* value, menu_callback_t callback,
                                          void* callback_arguments, size_t position, pax_buf_t* icon);
 bool         menu_remove_item(menu_t* menu, size_t position);
 bool         menu_navigate_to(menu_t* menu, size_t position);
@@ -57,6 +58,8 @@ void*        menu_get_callback_args(menu_t* menu, size_t position);
 pax_buf_t*   menu_get_icon(menu_t* menu, size_t position);
 const char*  menu_get_value(menu_t* menu, size_t position);
 void         menu_set_value(menu_t* menu, size_t position, const char* value);
+const char*  menu_get_right_aligned_text(menu_t* menu, size_t position);
+void         menu_set_right_aligned_text(menu_t* menu, size_t position, const char* value);
 const char*  menu_get_label(menu_t* menu, size_t position);
 
 void menu_render(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, gui_theme_t* theme, bool partial);

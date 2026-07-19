@@ -53,14 +53,14 @@ static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
     for (size_t i = 0; i < app_count; i++) {
         if (apps[i] != NULL && apps[i]->slug != NULL && apps[i]->name != NULL) {
             char        label[128];
-            const char* prefix = "   ";
+            const char* right_text = "";
             if (apps[i]->executable_type == EXECUTABLE_TYPE_SCRIPT) {
-                prefix = "[S]";
+                right_text = "[Script]";
             } else if (apps[i]->executable_type == EXECUTABLE_TYPE_APPFS &&
                        apps[i]->executable_appfs_fd != APPFS_INVALID_FD) {
                 if (!apps[i]->executable_on_fs_available && app_mgmt_is_int_only(apps[i]->slug)) {
                     // Int-installed: binary only in AppFS, cannot be uncached.
-                    prefix = "[I]";
+                    right_text = "[Internal]";
                 } else {
                     bool mismatch = false;
                     if (apps[i]->executable_on_fs_available) {
@@ -75,11 +75,14 @@ static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
                             mismatch = true;
                         }
                     }
-                    prefix = mismatch ? "[M]" : "[C]";
+                    right_text = mismatch ? "[Cache mismatch]" : "[Cached]";
                 }
             }
-            snprintf(label, sizeof(label), "%s %s", prefix, apps[i]->name);
-            menu_insert_item_icon(menu, label, NULL, (void*)apps[i], -1, apps[i]->icon);
+            snprintf(label, sizeof(label), "%s", apps[i]->name);
+            ssize_t position = menu_insert_item_icon(menu, label, NULL, (void*)apps[i], -1, apps[i]->icon);
+            if (position >= 0) {
+                menu_set_right_aligned_text(menu, position, right_text);
+            }
         }
     }
 }
