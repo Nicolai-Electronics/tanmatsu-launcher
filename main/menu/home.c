@@ -9,7 +9,6 @@
 #include "bsp/input.h"
 #include "bsp/power.h"
 #include "charging_mode.h"
-#include "chat/chat.h"
 #include "common/device.h"
 #include "common/display.h"
 #include "common/theme.h"
@@ -57,12 +56,8 @@ typedef enum {
     ACTION_NAMETAG,
     ACTION_REPOSITORY,
     ACTION_SETTINGS,
-#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
-    ACTION_PLUGINS,
-#endif
     ACTION_TOOLS,
     ACTION_INFORMATION,
-    ACTION_CHAT,
 } menu_home_action_t;
 
 static void execute_action(menu_home_action_t action) {
@@ -94,19 +89,11 @@ static void execute_action(menu_home_action_t action) {
         case ACTION_SETTINGS:
             menu_settings();
             break;
-#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
-        case ACTION_PLUGINS:
-            menu_plugins(fb, theme);
-            break;
-#endif
         case ACTION_TOOLS:
             menu_tools();
             break;
         case ACTION_INFORMATION:
             menu_information();
-            break;
-        case ACTION_CHAT:
-            menu_chat();
             break;
         default:
             break;
@@ -290,10 +277,6 @@ void menu_home(void) {
     }
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_STOREFRONT));
     menu_insert_item_icon(&menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_SETTINGS));
-#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
-    menu_insert_item_icon(&menu, "Plugins", NULL, (void*)ACTION_PLUGINS, -1, get_icon(ICON_EXTENSION));
-#endif
-    // menu_insert_item_icon(&menu, "Chat", NULL, (void*)ACTION_CHAT, -1, get_icon(ICON_GLOBE)); // Soon...
     if (wifi_stack_get_version_mismatch()) {
         menu_insert_item_icon(&menu, "Update radio", NULL, (void*)ACTION_RADIO_OTA, -1, get_icon(ICON_SYSTEM_UPDATE));
     }

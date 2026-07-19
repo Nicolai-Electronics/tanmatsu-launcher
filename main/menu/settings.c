@@ -17,6 +17,11 @@
 #include "settings_repository.h"
 #include "settings_theme.h"
 
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
+#include "menu/menu_plugins.h"
+#include "plugin_manager.h"
+#endif
+
 typedef enum {
     ACTION_NONE,
     ACTION_OWNER,
@@ -29,6 +34,9 @@ typedef enum {
     ACTION_TOOLS,
     ACTION_INFO,
     ACTION_THEME,
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
+    ACTION_PLUGINS,
+#endif
 } menu_home_action_t;
 
 static bool on_action(void* action_arg, void* user_ctx) {
@@ -64,6 +72,11 @@ static bool on_action(void* action_arg, void* user_ctx) {
         case ACTION_THEME:
             menu_settings_theme();
             break;
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
+        case ACTION_PLUGINS:
+            menu_plugins();
+            break;
+#endif
         default:
             break;
     }
@@ -85,8 +98,11 @@ void menu_settings(void) {
     menu_insert_item_icon(&menu, "Clock", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_STOREFRONT));
     if (device_has_lora()) {
-        menu_insert_item_icon(&menu, "LoRa radio", NULL, (void*)ACTION_LORA, -1, get_icon(ICON_CHAT));
+        menu_insert_item_icon(&menu, "LoRa radio", NULL, (void*)ACTION_LORA, -1, get_icon(ICON_WORKSPACES));
     }
+#ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
+    menu_insert_item_icon(&menu, "Plugins", NULL, (void*)ACTION_PLUGINS, -1, get_icon(ICON_EXTENSION));
+#endif
     menu_insert_item_icon(&menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_SETTINGS));
     menu_insert_item_icon(&menu, "Info", NULL, (void*)ACTION_INFO, -1, get_icon(ICON_INFO));
     menu_insert_item_icon(&menu, "Update firmware", NULL, (void*)ACTION_FIRMWARE_UPDATE, -1,

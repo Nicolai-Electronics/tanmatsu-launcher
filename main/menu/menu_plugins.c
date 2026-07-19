@@ -6,6 +6,7 @@
 #include <string.h>
 #include "bsp/input.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "esp_log.h"
 #include "fastopen.h"
 #include "freertos/FreeRTOS.h"
@@ -67,7 +68,10 @@ static void render_footer(pax_buf_t* buffer, gui_theme_t* theme, bool has_plugin
     gui_footer_draw(buffer, theme, footer_left, has_plugins ? 2 : 1, footer_right, has_plugins ? 1 : 0);
 }
 
-void menu_plugins(pax_buf_t* buffer, gui_theme_t* theme) {
+void menu_plugins(void) {
+    pax_buf_t*   buffer = display_get_buffer();
+    gui_theme_t* theme  = get_theme();
+
     ESP_LOGI(TAG, "Entering plugins menu");
 
     QueueHandle_t input_event_queue = NULL;
