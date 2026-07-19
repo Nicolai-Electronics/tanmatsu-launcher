@@ -99,6 +99,7 @@ idf_component_register(
 		"device_settings.c"
 		"appfs_settings.c"
 		"app_usage.c"
+		"app_favorite.c"
 		"fastopen.c"
 		"global_event_handler.c"
 		"bootloader_update.c"

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/stat.h>
+#include "app_favorite.h"
 #include "bsp/device.h"
 #include "cJSON.h"
 #include "esp_log.h"
@@ -464,6 +465,13 @@ size_t create_list_of_apps(app_t** out_list, size_t list_size) {
     count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/int/apps", out_list, list_size);
     count += create_list_of_apps_from_directory(&out_list[count], list_size - count, "/sd/apps", out_list, list_size);
     count += create_list_of_apps_from_other_appfs_entries(&out_list[count], list_size - count, out_list, list_size);
+
+    for (size_t position = 0; position < count; position++) {
+        if (app_favorite_get(out_list[position]->slug)) {
+            out_list[position]->favorite = true;
+        }
+    }
+
     return count;
 }
 

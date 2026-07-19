@@ -16,6 +16,7 @@
 #if CONFIG_ENABLE_LAUNCHERPLUGINS
 #include "badge_elf.h"
 #endif
+#include "app_favorite.h"
 #include "bsp/input.h"
 #include "bsp/power.h"
 #include "common/display.h"
@@ -52,15 +53,18 @@ static int compare_apps_by_name(const void* a, const void* b) {
 static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
     for (size_t i = 0; i < app_count; i++) {
         if (apps[i] != NULL && apps[i]->slug != NULL && apps[i]->name != NULL) {
-            char        label[128];
-            const char* right_text = "";
+            char label[128];
+            char right_text[128] = "";
+            snprintf(&right_text[strlen(right_text)], sizeof(right_text) - strlen(right_text),
+                     apps[i]->favorite ? "[Favorite] " : "");
+
             if (apps[i]->executable_type == EXECUTABLE_TYPE_SCRIPT) {
-                right_text = "[Script]";
+                snprintf(&right_text[strlen(right_text)], sizeof(right_text) - strlen(right_text), "[Script]");
             } else if (apps[i]->executable_type == EXECUTABLE_TYPE_APPFS &&
                        apps[i]->executable_appfs_fd != APPFS_INVALID_FD) {
                 if (!apps[i]->executable_on_fs_available && app_mgmt_is_int_only(apps[i]->slug)) {
                     // Int-installed: binary only in AppFS, cannot be uncached.
-                    right_text = "[Internal]";
+                    snprintf(&right_text[strlen(right_text)], sizeof(right_text) - strlen(right_text), "[Internal]");
                 } else {
                     bool mismatch = false;
                     if (apps[i]->executable_on_fs_available) {
@@ -75,7 +79,8 @@ static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
                             mismatch = true;
                         }
                     }
-                    right_text = mismatch ? "[Cache mismatch]" : "[Cached]";
+                    snprintf(&right_text[strlen(right_text)], sizeof(right_text) - strlen(right_text),
+                             mismatch ? "[Mismatch]" : "[Cached]");
                 }
             }
             snprintf(label, sizeof(label), "%s", apps[i]->name);
@@ -515,7 +520,8 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     void*  arg    = menu_get_callback_args(&menu, menu_get_position(&menu));
                                     app_t* app    = (app_t*)arg;
                                     app->favorite = !app->favorite;
-                                    render(buffer, theme, &menu, position, false, true);
+                                    app_favorite_set(app->slug, app->favorite);
+                                    refresh = true;
                                     break;
                                 case BSP_INPUT_NAVIGATION_KEY_SELECT:
                                 case BSP_INPUT_NAVIGATION_KEY_F5:
