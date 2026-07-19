@@ -135,7 +135,6 @@ void menu_settings_brightness(void) {
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
-                                void* arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                 render(&menu, false, true);
                                 break;
                             }

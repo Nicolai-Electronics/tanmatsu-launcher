@@ -196,7 +196,7 @@ void unload_icons(void) {
         if (pax_buf_get_width(&icons[i]) == 0 || pax_buf_get_height(&icons[i]) == 0) {
             continue;  // Not loaded, skip
         }
-        uint8_t* buffer = pax_buf_get_pixels(&icons[i]);
+        uint8_t* buffer = (uint8_t*)pax_buf_get_pixels(&icons[i]);
         pax_buf_destroy(&icons[i]);
         free(buffer);
         memset(&icons[i], 0, sizeof(pax_buf_t));

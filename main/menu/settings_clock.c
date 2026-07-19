@@ -22,8 +22,6 @@
 #include "settings_clock_timezone.h"
 #include "timezone.h"
 
-static const char* TAG = "clock";
-
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT                                                  \
     ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},           \
