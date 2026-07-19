@@ -16,7 +16,7 @@
 
 #ifdef CONFIG_BSP_TARGET_TANMATSU
 
-#define BASE_URL "https://ota.tanmatsu.cloud/radio-v3.3.2"
+#define BASE_URL "https://ota.tanmatsu.cloud/radio-v3.4.0"
 
 #include "esptoolsquared.h"
 

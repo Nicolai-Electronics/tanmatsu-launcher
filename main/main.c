@@ -147,10 +147,10 @@ static void wifi_task(void* pvParameters) {
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     radio_system_protocol_information_t radio_information = {0};
     if (radio_system_protocol_get_information(&radio_information) == ESP_OK) {
-        wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.3.2") != 0);
+        wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.4.0") != 0);
     } else {
         wifi_firmware_version_mismatch = true;
-        ESP_LOGW(TAG, "Radio version mismatch (expected 'v3.3.2', found '%s')", radio_information.firmware_version);
+        ESP_LOGW(TAG, "Radio version mismatch (expected 'v3.4.0', found '%s')", radio_information.firmware_version);
     }
 
     device_identity_t identity = {0};
@@ -580,9 +580,9 @@ void app_main(void) {
             esp_restart();
         }
     }
-    if (patch < 6 && wifi_stack_get_version_mismatch()) {
-        // Patch level 2-6: new radio update, attempt updating radio
-        nvs_settings_set_firmware_patch_level(6);
+    if (patch < 7 && wifi_stack_get_version_mismatch()) {
+        // Patch level 2-7: new radio update, attempt updating radio
+        nvs_settings_set_firmware_patch_level(7);
         bsp_audio_set_amplifier(false);  // Disable amplifier to prevent noise on reboot
         radio_ota_update();
         bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
