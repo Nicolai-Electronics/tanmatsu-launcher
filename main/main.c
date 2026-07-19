@@ -377,6 +377,9 @@ void app_main(void) {
     }
 
     display_available = display_init() == ESP_OK;
+    if (display_available) {
+        pax_set_renderer_async(true);
+    }
 
     if (bsp_device_get_initialized_without_coprocessor()) {
         startup_dialog("Device started without coprocessor!");
