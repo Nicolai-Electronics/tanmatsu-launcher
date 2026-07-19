@@ -25,7 +25,6 @@
 #include "lora.h"
 #include "menu/menu_helpers.h"
 #include "menu/menu_repository_client_categories.h"
-#include "menu/menu_rftest.h"
 #include "menu/message_dialog.h"
 #include "menu/nametag.h"
 #ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
@@ -63,7 +62,6 @@ typedef enum {
 #endif
     ACTION_TOOLS,
     ACTION_INFORMATION,
-    ACTION_RFTEST,
     ACTION_CHAT,
 } menu_home_action_t;
 
@@ -106,9 +104,6 @@ static void execute_action(menu_home_action_t action) {
             break;
         case ACTION_INFORMATION:
             menu_information();
-            break;
-        case ACTION_RFTEST:
-            menu_rftest();
             break;
         case ACTION_CHAT:
             menu_chat();
@@ -298,9 +293,6 @@ void menu_home(void) {
 #ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
     menu_insert_item_icon(&menu, "Plugins", NULL, (void*)ACTION_PLUGINS, -1, get_icon(ICON_EXTENSION));
 #endif
-    if (access("/int/rftest_local.bin", F_OK) == 0) {
-        menu_insert_item_icon(&menu, "RF test", NULL, (void*)ACTION_RFTEST, -1, get_icon(ICON_BUG_REPORT));
-    }
     // menu_insert_item_icon(&menu, "Chat", NULL, (void*)ACTION_CHAT, -1, get_icon(ICON_GLOBE)); // Soon...
     if (wifi_stack_get_version_mismatch()) {
         menu_insert_item_icon(&menu, "Update radio", NULL, (void*)ACTION_RADIO_OTA, -1, get_icon(ICON_SYSTEM_UPDATE));
