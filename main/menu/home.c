@@ -30,6 +30,7 @@
 #include "menu/menu_plugins.h"
 #include "plugin_manager.h"
 #endif
+#include "esp_wifi.h"
 #include "menu_repository_client_categories.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
@@ -330,6 +331,12 @@ void menu_home(void) {
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F6:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
+                                    busy_dialog(get_icon(ICON_SYSTEM_UPDATE), "Coprocessor update", "Stopping WiFi...",
+                                                false);
+                                    esp_wifi_stop();
+                                    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+                                    busy_dialog(get_icon(ICON_SYSTEM_UPDATE), "Coprocessor update",
+                                                "Starting forced update...", false);
                                     coprocessor_flash(true);
                                 } else {
                                     toggle_usb_mode();
