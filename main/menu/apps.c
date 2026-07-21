@@ -356,10 +356,16 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                 break;
         }
 
-        if (app->favorite) {
-            footer_left[3].text = "Unfavorite";
+        if (app != NULL) {
+            if (app->favorite) {
+                footer_left[3].text = "Unfavorite";
+            }
+            previous_favorite = app->favorite;
+        } else {
+            previous_favorite   = false;
+            footer_left[3].icon = NULL;
+            footer_left[3].text = "";
         }
-        previous_favorite = app->favorite;
 
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
                                      ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, footer_left,
@@ -517,10 +523,12 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     break;
                                 }
                                 case BSP_INPUT_NAVIGATION_KEY_F3:
-                                    void*  arg    = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                    app_t* app    = (app_t*)arg;
-                                    app->favorite = !app->favorite;
-                                    app_favorite_set(app->slug, app->favorite);
+                                    void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                    app_t* app = (app_t*)arg;
+                                    if (app != NULL) {
+                                        app->favorite = !app->favorite;
+                                        app_favorite_set(app->slug, app->favorite);
+                                    }
                                     refresh = true;
                                     break;
                                 case BSP_INPUT_NAVIGATION_KEY_SELECT:
