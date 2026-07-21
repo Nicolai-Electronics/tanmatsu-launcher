@@ -100,6 +100,8 @@ menuconfig:
 clean:
 	rm -rf $(BUILD)
 	rm -f .submodules_update_done
+	rm -f sdkconfig_*
+	rm -rf managed_components
 
 .PHONY: fullclean
 fullclean: clean
