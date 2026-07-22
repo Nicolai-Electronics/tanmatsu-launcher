@@ -16,6 +16,9 @@ void _menu_free_item(menu_item_t* menu_item) {
     if (menu_item->value) {
         free(menu_item->value);
     }
+    if (menu_item->right_aligned_text) {
+        free(menu_item->right_aligned_text);
+    }
     free(menu_item);
 }
 
@@ -166,6 +169,9 @@ bool menu_remove_item(menu_t* menu, size_t position) {
     if (item->value) {
         free(item->value);
     }
+    if (item->right_aligned_text) {
+        free(item->right_aligned_text);
+    }
     free(item);
     menu->length--;
     if (menu->length < 1) {
@@ -267,7 +273,7 @@ void menu_set_value(menu_t* menu, size_t position, const char* value) {
     if (item == NULL) {
         return;
     }
-    if (item->value) {
+    if (item->value != NULL) {
         free(item->value);
         item->value = NULL;
     }
