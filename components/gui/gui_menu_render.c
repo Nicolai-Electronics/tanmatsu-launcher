@@ -139,12 +139,19 @@ void menu_render_grid(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, 
     int entry_count_x = theme->menu.grid_horizontal_count;
     int entry_count_y = theme->menu.grid_vertical_count;
 
-    float entry_width =
-        ((position.x1 - position.x0) - (theme->menu.horizontal_margin * (entry_count_x + 1))) / entry_count_x;
-    float entry_height =
-        ((position.y1 - position.y0) - (theme->menu.vertical_margin * (entry_count_y + 1))) / entry_count_y;
-
     size_t max_items = entry_count_x * entry_count_y;
+
+    pax_vec2_t position_grid = position;
+    if (menu->length > max_items) {
+        position_grid.x1 -= 8;
+    }
+
+    float entry_width =
+        ((position_grid.x1 - position_grid.x0) - (theme->menu.horizontal_margin * (entry_count_x + 1))) /
+        entry_count_x;
+    float entry_height =
+        ((position_grid.y1 - position_grid.y0) - (theme->menu.vertical_margin * (entry_count_y + 1))) /
+        entry_count_y;
 
     // pax_noclip(pax_buffer);
 
@@ -179,9 +186,9 @@ void menu_render_grid(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, 
 
         size_t item_position = index - item_offset;
 
-        float item_position_x = position.x0 + theme->menu.horizontal_margin +
+        float item_position_x = position_grid.x0 + theme->menu.horizontal_margin +
                                 ((item_position % entry_count_x) * (entry_width + theme->menu.horizontal_margin));
-        float item_position_y = position.y0 + theme->menu.vertical_margin +
+        float item_position_y = position_grid.y0 + theme->menu.vertical_margin +
                                 ((item_position / entry_count_x) * (entry_height + theme->menu.vertical_margin));
 
         float icon_size   = (item->icon != NULL) ? 33 : 0;
@@ -223,13 +230,26 @@ void menu_render_grid(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, 
 
         size_t item_position = index - item_offset;
 
-        float item_position_x = position.x0 + theme->menu.horizontal_margin +
+        float item_position_x = position_grid.x0 + theme->menu.horizontal_margin +
                                 ((item_position % entry_count_x) * (entry_width + theme->menu.horizontal_margin));
-        float item_position_y = position.y0 + theme->menu.vertical_margin +
+        float item_position_y = position_grid.y0 + theme->menu.vertical_margin +
                                 ((item_position / entry_count_x) * (entry_height + theme->menu.vertical_margin));
 
         pax_simple_rect(pax_buffer, theme->menu.palette.color_background, item_position_x, item_position_y,
                         entry_width, entry_height);
+    }
+
+    if (menu->length > max_items) {
+        float fractionStart = item_offset / (menu->length * 1.0);
+        float fractionEnd   = (item_offset + max_items) / (menu->length * 1.0);
+        if (fractionEnd > 1.0) fractionEnd = 1.0;
+        float scrollbarHeight = (position.y1 - position.y0) - 2;
+        float scrollbarStart  = scrollbarHeight * fractionStart;
+        float scrollbarEnd    = scrollbarHeight * fractionEnd;
+        pax_simple_rect(pax_buffer, theme->menu.palette.color_active_background, position.x1 - 5, position.y0 + 1, 4,
+                        scrollbarHeight);
+        pax_simple_rect(pax_buffer, theme->menu.palette.color_highlight_primary, position.x1 - 5,
+                        position.y0 + 1 + scrollbarStart, 4, scrollbarEnd - scrollbarStart);
     }
 
     // pax_noclip(pax_buffer);
