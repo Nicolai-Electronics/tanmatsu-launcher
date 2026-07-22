@@ -27,8 +27,6 @@ SDKCONFIG ?= sdkconfig_$(DEVICE)
 
 ifeq ($(DEVICE), tanmatsu)
 IDF_TARGET ?= esp32p4
-else ifeq ($(DEVICE), konsool)
-IDF_TARGET ?= esp32p4
 else ifeq ($(DEVICE), esp32-p4-function-ev-board)
 IDF_TARGET ?= esp32p4
 else ifeq ($(DEVICE), mch2022)
