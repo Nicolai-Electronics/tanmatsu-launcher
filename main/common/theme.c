@@ -215,7 +215,7 @@ void theme_initialize(void) {
 #endif
 
 #if defined(CONFIG_BSP_TARGET_HACKADAY2025)
-    theme.footer.height             = 24;
+    theme.footer.height             = 32;
     theme.footer.vertical_margin    = 0;
     theme.footer.horizontal_margin  = 0;
     theme.footer.text_height        = 18;
