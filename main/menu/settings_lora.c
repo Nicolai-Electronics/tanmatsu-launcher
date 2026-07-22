@@ -108,7 +108,7 @@ void edit_frequency(menu_t* menu) {
     uint32_t     frequency = 0;
     device_settings_get_lora_frequency(&frequency);
     snprintf(temp, sizeof(temp), "%" PRIu32, frequency);
-    menu_textedit(buffer, theme, "Frequency (Hz)", temp, sizeof(temp) + sizeof('\0'), true, &accepted);
+    menu_textedit(buffer, theme, "Frequency (Hz)", temp, sizeof(temp), true, &accepted);
     if (accepted) {
         uint32_t new_frequency = strtoul(temp, NULL, 10);
         if (new_frequency < 1) {
@@ -128,7 +128,7 @@ void edit_offset(menu_t* menu) {
     int32_t      offset   = 0;
     nvs_settings_get_lora_offset(&offset);
     snprintf(temp, sizeof(temp), "%" PRId32, offset);
-    menu_textedit(buffer, theme, "Offset (Hz)", temp, sizeof(temp) + sizeof('\0'), true, &accepted);
+    menu_textedit(buffer, theme, "Offset (Hz)", temp, sizeof(temp), true, &accepted);
     if (accepted) {
         int32_t new_offset = strtol(temp, NULL, 10);
         nvs_settings_set_lora_offset(new_offset);

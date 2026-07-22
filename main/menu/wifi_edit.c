@@ -162,7 +162,7 @@ static void edit_ssid(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, wifi_
     bool accepted  = false;
     memset(temp, 0, sizeof(temp));
     memcpy(temp, settings->ssid, sizeof(settings->ssid));
-    menu_textedit(buffer, theme, "SSID", temp, sizeof(settings->ssid) + sizeof('\0'), true, &accepted);
+    menu_textedit(buffer, theme, "SSID", temp, sizeof(settings->ssid), true, &accepted);
     if (accepted) {
         memcpy(settings->ssid, temp, sizeof(settings->ssid));
         menu_set_value(menu, 0, temp);
@@ -231,7 +231,7 @@ static void edit_password(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, w
     bool accepted  = false;
     memset(temp, 0, sizeof(temp));
     memcpy(temp, settings->password, sizeof(settings->password));
-    menu_textedit(buffer, theme, "Password", temp, sizeof(settings->password) + sizeof('\0'), true, &accepted);
+    menu_textedit(buffer, theme, "Password", temp, sizeof(settings->password), true, &accepted);
     if (accepted) {
         memcpy(settings->password, temp, sizeof(settings->password));
         menu_set_value(menu, 2, temp);
@@ -243,7 +243,7 @@ static void edit_identity(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, w
     bool accepted  = false;
     memset(temp, 0, sizeof(temp));
     memcpy(temp, settings->identity, sizeof(settings->identity));
-    menu_textedit(buffer, theme, "Identity", temp, sizeof(settings->identity) + sizeof('\0'), true, &accepted);
+    menu_textedit(buffer, theme, "Identity", temp, sizeof(settings->identity), true, &accepted);
     if (accepted) {
         memcpy(settings->identity, temp, sizeof(settings->identity));
         menu_set_value(menu, 3, temp);
@@ -255,7 +255,7 @@ static void edit_username(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, w
     bool accepted  = false;
     memset(temp, 0, sizeof(temp));
     memcpy(temp, settings->username, sizeof(settings->username));
-    menu_textedit(buffer, theme, "Username", temp, sizeof(settings->username) + sizeof('\0'), true, &accepted);
+    menu_textedit(buffer, theme, "Username", temp, sizeof(settings->username), true, &accepted);
     if (accepted) {
         memcpy(settings->username, temp, sizeof(settings->username));
         menu_set_value(menu, 4, temp);

@@ -29,7 +29,7 @@ static void edit_nickname(menu_t* menu) {
     bool         accepted  = false;
     memset(temp, 0, sizeof(temp));
     nvs_settings_get_owner_nickname(temp, sizeof(temp), "John Doe");
-    menu_textedit(buffer, theme, "Nickname", temp, sizeof(temp) + sizeof('\0'), true, &accepted);
+    menu_textedit(buffer, theme, "Nickname", temp, sizeof(temp), true, &accepted);
     if (accepted) {
         nvs_settings_set_owner_nickname(temp);
         menu_set_value(menu, 0, temp);

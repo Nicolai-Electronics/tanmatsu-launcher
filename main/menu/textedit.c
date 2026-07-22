@@ -9,16 +9,8 @@
 #include "pax_gfx.h"
 #include "pax_types.h"
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "⏎ Accept"}}), 1
-#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅰 Accept"}}), 1
-#else
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
-#endif
 
 void render(pax_buf_t* buffer, gui_theme_t* theme, bool partial, bool icons, const char* title) {
     render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
@@ -119,8 +111,8 @@ void menu_textedit(pax_buf_t* buffer, gui_theme_t* theme, const char* title, cha
             }
         }
     } else {
-        float w = 260;
-        float h = 180;
+        float w = pax_buf_get_width(buffer) - 64;
+        float h = pax_buf_get_height(buffer) - 64;
         float x = (pax_buf_get_width(buffer) - w) / 2;
         float y = (pax_buf_get_height(buffer) - h) / 2;
 
