@@ -43,9 +43,7 @@ static gui_element_icontext_t clock_indicator(void) {
 
 static char percentage_buffer[5] = {0};
 
-static gui_element_icontext_t battery_indicator(void) {
-    bsp_power_battery_information_t information = {0};
-    bsp_power_get_battery_information(&information);
+static gui_element_icontext_t battery_indicator(bsp_power_battery_information_t* information) {
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
     tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
@@ -54,10 +52,10 @@ static gui_element_icontext_t battery_indicator(void) {
     tanmatsu_coprocessor_get_pmic_faults(coprocessor_handle, &faults);
 #endif
 
-    if (!information.battery_available) {
+    if (!information->battery_available) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_UNKNOWN), ""};
     }
-    if (information.battery_charging) {
+    if (information->battery_charging) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_BOLT), ""};
     }
 
@@ -68,26 +66,26 @@ static gui_element_icontext_t battery_indicator(void) {
     }
 #endif
 
-    // snprintf(percentage_buffer, sizeof(percentage_buffer), "%3u%%", (uint8_t)information.remaining_percentage);
-    if (information.remaining_percentage >= 98) {
+    // snprintf(percentage_buffer, sizeof(percentage_buffer), "%3u%%", (uint8_t)information->remaining_percentage);
+    if (information->remaining_percentage >= 98) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_FULL), percentage_buffer};
     }
-    if (information.remaining_percentage >= 84) {
+    if (information->remaining_percentage >= 84) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_6), percentage_buffer};
     }
-    if (information.remaining_percentage >= 70) {
+    if (information->remaining_percentage >= 70) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_5), percentage_buffer};
     }
-    if (information.remaining_percentage >= 56) {
+    if (information->remaining_percentage >= 56) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_4), percentage_buffer};
     }
-    if (information.remaining_percentage >= 42) {
+    if (information->remaining_percentage >= 42) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_3), percentage_buffer};
     }
-    if (information.remaining_percentage >= 28) {
+    if (information->remaining_percentage >= 28) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_2), percentage_buffer};
     }
-    if (information.remaining_percentage >= 14) {
+    if (information->remaining_percentage >= 14) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_1), percentage_buffer};
     }
     return (gui_element_icontext_t){get_icon(ICON_BATTERY_0), percentage_buffer};
@@ -191,12 +189,15 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
     gui_element_icontext_t header_right[5]    = {0};
     size_t                 header_right_count = 0;
     if (header) {
-        header_right[0]    = clock_indicator();
-        header_right[1]    = battery_indicator();
-        header_right[2]    = usb_indicator();
-        header_right[3]    = wifi_indicator();
-        header_right[4]    = sdcard_indicator();
-        header_right_count = 5;
+        header_right[header_right_count++] = clock_indicator();
+
+        bsp_power_battery_information_t information = {0};
+        if (bsp_power_get_battery_information(&information) == ESP_OK) {
+            header_right[header_right_count++] = battery_indicator(&information);
+        }
+        header_right[header_right_count++] = usb_indicator();
+        header_right[header_right_count++] = wifi_indicator();
+        header_right[header_right_count++] = sdcard_indicator();
     } else {
         header_right_count = 0;
     }

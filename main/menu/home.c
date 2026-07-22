@@ -295,6 +295,8 @@ void menu_home(void) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                                 if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
                                     menu_sensors();  // Temporary
+                                } else if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_CTRL_L) {
+                                    toggle_usb_mode();
                                 }
                                 render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;

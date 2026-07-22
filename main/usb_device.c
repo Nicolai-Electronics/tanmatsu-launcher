@@ -5,7 +5,7 @@
 
 #include "usb_device.h"
 #include "sdkconfig.h"
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#if defined(CONFIG_IDF_TARGET_ESP32P4) || defined(CONFIG_IDF_TARGET_ESP32S3)
 
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +17,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "hal/usb_serial_jtag_ll.h"
+#include "hal/usb_wrap_ll.h"
 #include "tinyusb.h"
 
 static const char* TAG = "USB device";
@@ -191,6 +192,7 @@ const tusb_desc_webusb_url_t desc_url = {.bLength         = 3 + sizeof(URL) - 1,
                                          .url             = URL};
 
 void usb_mode_set(usb_mode_t mode) {
+#if defined(CONFIG_IDF_TARGET_ESP32P4)
     const usb_serial_jtag_pull_override_vals_t override_disable_usb = {
         .dm_pd = true, .dm_pu = false, .dp_pd = true, .dp_pu = false};
     const usb_serial_jtag_pull_override_vals_t override_enable_usb = {
@@ -219,6 +221,51 @@ void usb_mode_set(usb_mode_t mode) {
         usb_serial_jtag_ll_phy_disable_pull_override();
     }
     current_mode = mode;
+#endif
+
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+    const usb_serial_jtag_pull_override_vals_t debug_override_disable_usb = {
+        .dm_pd = true, .dm_pu = false, .dp_pd = true, .dp_pu = false};
+    const usb_serial_jtag_pull_override_vals_t debug_override_enable_usb = {
+        .dm_pd = false, .dm_pu = false, .dp_pd = false, .dp_pu = true};
+
+    const usb_wrap_pull_override_vals_t device_override_disable_usb = {
+        .dp_pu = false, .dp_pd = true, .dm_pu = false, .dm_pd = true};
+    const usb_wrap_pull_override_vals_t device_override_enable_usb = {
+        .dp_pu = true, .dp_pd = false, .dm_pu = false, .dm_pd = false};
+
+    usb_wrap_ll_phy_enable_pull_override(&USB_WRAP, &device_override_disable_usb);
+    usb_serial_jtag_ll_phy_enable_pull_override(&debug_override_disable_usb);
+
+    // Select USB mode by muxing the internal PHY to the appropriate controller
+    switch (mode) {
+        case USB_DEVICE:
+            vTaskDelay(pdMS_TO_TICKS(500));                     // Wait for disconnect before switching to device
+            usb_wrap_ll_phy_enable_external(&USB_WRAP, false);  // Internal PHY -> USB-OTG
+            usb_wrap_ll_phy_enable_pad(&USB_WRAP, true);
+            break;
+        case USB_DEBUG:
+        case USB_DISABLED:
+        default:
+            usb_serial_jtag_ll_phy_enable_external(false);  // Internal PHY -> USB-Serial-JTAG
+            usb_serial_jtag_ll_phy_enable_pad(true);
+            vTaskDelay(pdMS_TO_TICKS(500));  // Wait for disconnect after switching to debug
+            break;
+    }
+
+    if (mode != USB_DISABLED) {
+        // Put the device back onto the bus by re-enabling the pull-up on USB DP of the
+        // now-active controller
+        if (mode == USB_DEVICE) {
+            usb_wrap_ll_phy_enable_pull_override(&USB_WRAP, &device_override_enable_usb);
+            usb_wrap_ll_phy_disable_pull_override(&USB_WRAP);
+        } else {
+            usb_serial_jtag_ll_phy_enable_pull_override(&debug_override_enable_usb);
+            usb_serial_jtag_ll_phy_disable_pull_override();
+        }
+    }
+    current_mode = mode;
+#endif
 }
 
 usb_mode_t usb_mode_get(void) {
@@ -256,8 +303,10 @@ void usb_initialize(void) {
 
     ESP_LOGI(TAG, "USB initialization DONE");
 
-    // vTaskDelay(pdMS_TO_TICKS(10000));
-    // usb_serial_jtag_ll_phy_select(0);
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+    // Return to debug mode after initializing the USB stack
+    usb_mode_set(USB_DEBUG);
+#endif
 }
 
 uint16_t webusb_esp32_status                      = 0x0000;

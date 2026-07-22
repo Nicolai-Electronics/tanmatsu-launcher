@@ -1,4 +1,5 @@
 #include "test_keyboard.h"
+#include <math.h>
 #include "bsp/input.h"
 #include "common/display.h"
 #include "common/theme.h"
@@ -11,6 +12,9 @@
 #include "pax_text.h"
 #include "shapes/pax_misc.h"
 #include "shapes/pax_rects.h"
+
+#define KEYBOARD_LAYOUT_WIDTH  800.0f
+#define KEYBOARD_LAYOUT_HEIGHT 360.0f
 
 typedef struct {
     const char*          name;
@@ -136,19 +140,37 @@ key_t keys[] = {
      .changed     = true},
 };
 
+static float fit_font_size(pax_font_t const* font, char const* text, float max_width, float max_height) {
+    float const default_size = 12.0f;
+    pax_vec2f   size         = pax_text_size(font, default_size, text);
+    if (size.x <= max_width && size.y <= max_height) {
+        return default_size;
+    }
+    return default_size * fminf(max_width / size.x, max_height / size.y);
+}
+
 static void draw_keyboard(void) {
     pax_buf_t* buffer = display_get_buffer();
+
+    float scale =
+        fminf(pax_buf_get_width(buffer) / KEYBOARD_LAYOUT_WIDTH, pax_buf_get_height(buffer) / KEYBOARD_LAYOUT_HEIGHT);
+    float offset_x = (pax_buf_get_width(buffer) - KEYBOARD_LAYOUT_WIDTH * scale) / 2.0f;
+    float offset_y = (pax_buf_get_height(buffer) - KEYBOARD_LAYOUT_HEIGHT * scale) / 2.0f;
 
     for (int column = 0; column < 8; column++) {
         uint32_t index = column;
         if (keys[index].changed) {
             keys[index].changed = false;
             uint32_t color      = keys[index].pressed ? 0xFFFFFF00 : keys[index].was_pressed ? 0xFFFFFFFF : 0xFF000000;
-            float    x          = 10 + column * 95 + (column >= 4 ? 20 : 0);
-            pax_simple_rect(buffer, color, x, 0, 95, 60);
-            pax_outline_rect(buffer, 0xFF0000FF, x, 0, 95, 60);
+            float    x          = offset_x + (10 + column * 95 + (column >= 4 ? 20 : 0)) * scale;
+            float    y          = offset_y;
+            float    w          = 95 * scale;
+            float    h          = 60 * scale;
+            pax_simple_rect(buffer, color, x, y, w, h);
+            pax_outline_rect(buffer, 0xFF0000FF, x, y, w, h);
+            float font_size = fit_font_size(pax_font_sky_mono, keys[index].name, w, h);
             pax_center_text(buffer, (keys[index].pressed || keys[index].was_pressed) ? 0xFF000000 : 0xFFFFFFFF,
-                            pax_font_sky_mono, 12, x + (95.0f / 2.0f), 30, keys[index].name);
+                            pax_font_sky_mono, font_size, x + w / 2.0f, y + h / 2.0f, keys[index].name);
         }
     }
 
@@ -158,12 +180,15 @@ static void draw_keyboard(void) {
             if (keys[index].changed) {
                 keys[index].changed = false;
                 uint32_t color = keys[index].pressed ? 0xFFFFFF00 : keys[index].was_pressed ? 0xFFFFFFFF : 0xFF000000;
-                float    x     = 10 + column * 60;
-                float    y     = row * 60;
-                pax_simple_rect(buffer, color, x, y, 60, 60);
-                pax_outline_rect(buffer, 0xFF0000FF, x, y, 60, 60);
+                float    x     = offset_x + (10 + column * 60) * scale;
+                float    y     = offset_y + (row * 60) * scale;
+                float    w     = 60 * scale;
+                float    h     = 60 * scale;
+                pax_simple_rect(buffer, color, x, y, w, h);
+                pax_outline_rect(buffer, 0xFF0000FF, x, y, w, h);
+                float font_size = fit_font_size(pax_font_sky_mono, keys[index].name, w, h);
                 pax_center_text(buffer, (keys[index].pressed || keys[index].was_pressed) ? 0xFF000000 : 0xFFFFFFFF,
-                                pax_font_sky_mono, 12, x + (60.0f / 2.0f), y + 30, keys[index].name);
+                                pax_font_sky_mono, font_size, x + w / 2.0f, y + h / 2.0f, keys[index].name);
             }
         }
     }
@@ -196,13 +221,22 @@ void test_keyboard(void) {
         if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(100)) == pdTRUE) {
             if (event.type == INPUT_EVENT_TYPE_SCANCODE) {
                 bsp_input_scancode_t scancode = event.args_scancode.scancode & ~BSP_INPUT_SCANCODE_RELEASE_MODIFIER;
+                bool                 found    = false;
                 for (uint32_t i = 0; i < sizeof(keys) / sizeof(keys[0]); i++) {
                     if (keys[i].scancode == scancode) {
                         keys[i].was_pressed = keys[i].pressed;
                         keys[i].pressed     = !(event.args_scancode.scancode & BSP_INPUT_SCANCODE_RELEASE_MODIFIER);
                         keys[i].changed     = true;
+                        found               = true;
                     }
                 }
+
+                if (!found) {
+                    printf("Key not mapped in keyboard test: 0x%04x %s\r\n", scancode,
+                           (!(event.args_scancode.scancode & BSP_INPUT_SCANCODE_RELEASE_MODIFIER)) ? "pressed"
+                                                                                                   : "released");
+                }
+
                 if (scancode == BSP_INPUT_SCANCODE_ESC) {
                     esc_pressed = !(event.args_scancode.scancode & BSP_INPUT_SCANCODE_RELEASE_MODIFIER);
                 } else if (scancode == BSP_INPUT_SCANCODE_BACKSPACE) {

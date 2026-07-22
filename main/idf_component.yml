@@ -1,9 +1,9 @@
 dependencies:
   idf: ">=5.5.1"
-  badgeteam/badge-bsp: "^1.0.4"
+  badgeteam/badge-bsp: "=1.0.5"
   robotman2412/pax-gfx: "^2.2.1"
   robotman2412/pax-codecs: "^1.0.1"
-  badgeteam/appfs: "^1.2.0"
+  badgeteam/appfs: "=1.3.0"
   badgeteam/custom-certificates: "^1.1.0"
   nicolaielectronics/wifi-manager: "^0.3.0"
   nicolaielectronics/tanmatsu-wifi: "^1.2.0"
@@ -27,7 +27,7 @@ dependencies:
   espressif/esp_tinyusb:
     version: "^1.1"
     rules:
-      - if: target == esp32p4
+      - if: target == esp32p4 || target == esp32s3
   badgeteam/esptool:
     version: "^0.0.2"
     rules:
