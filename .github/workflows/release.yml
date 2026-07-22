@@ -31,5 +31,6 @@ jobs:
           gh release upload ${{ github.event.workflow_run.head_branch }} kami.zip
           gh release upload ${{ github.event.workflow_run.head_branch }} mch2022.zip
           gh release upload ${{ github.event.workflow_run.head_branch }} esp32-p4-function-ev-board.zip
+          gh release upload ${{ github.event.workflow_run.head_branch }} hackaday2025.zip
         env:
           GH_TOKEN: ${{ github.token }}
