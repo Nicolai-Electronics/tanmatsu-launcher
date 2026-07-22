@@ -148,13 +148,26 @@ void menu_render_grid(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, 
 
     // pax_noclip(pax_buffer);
 
-    size_t item_offset = 0;
-    if (menu->position >= max_items) {
-        item_offset = menu->position - max_items + 1;
+    size_t previous_navigation_position = menu->navigation_position;
+
+    size_t current_row       = menu->position / entry_count_x;
+    size_t first_visible_row = menu->navigation_position / entry_count_x;
+    size_t last_visible_row  = first_visible_row + entry_count_y - 1;
+
+    if (current_row < first_visible_row) {
+        first_visible_row = current_row;
+    }
+    if (current_row > last_visible_row) {
+        first_visible_row = current_row - entry_count_y + 1;
     }
 
+    menu->navigation_position = first_visible_row * entry_count_x;
+
+    size_t item_offset = menu->navigation_position;
+
     for (size_t index = item_offset; (index < item_offset + max_items) && (index < menu->length); index++) {
-        if (partial && index != menu->previous_position && index != menu->position) {
+        if (partial && index != menu->previous_position && index != menu->position &&
+            previous_navigation_position == menu->navigation_position) {
             continue;
         }
 
@@ -201,6 +214,22 @@ void menu_render_grid(pax_buf_t* pax_buffer, menu_t* menu, pax_vec2_t position, 
         }
 
         // pax_noclip(pax_buffer);
+    }
+
+    for (size_t index = menu->length; index < item_offset + max_items; index++) {
+        if (partial && previous_navigation_position == menu->navigation_position) {
+            continue;
+        }
+
+        size_t item_position = index - item_offset;
+
+        float item_position_x = position.x0 + theme->menu.horizontal_margin +
+                                ((item_position % entry_count_x) * (entry_width + theme->menu.horizontal_margin));
+        float item_position_y = position.y0 + theme->menu.vertical_margin +
+                                ((item_position / entry_count_x) * (entry_height + theme->menu.vertical_margin));
+
+        pax_simple_rect(pax_buffer, theme->menu.palette.color_background, item_position_x, item_position_y,
+                        entry_width, entry_height);
     }
 
     // pax_noclip(pax_buffer);
