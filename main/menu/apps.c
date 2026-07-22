@@ -299,7 +299,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
         }
     };
 
-    if (previous_footer_type != footer_type || previous_favorite != app->favorite) {
+    if (previous_footer_type != footer_type || (app && previous_favorite != app->favorite)) {
         previous_footer_type = footer_type;
         partial              = false;
     }
