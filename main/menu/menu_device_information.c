@@ -21,22 +21,10 @@
 #include "tanmatsu_coprocessor.h"
 #endif
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
 #define FOOTER_RIGHT NULL, 0
 #define TEXT_FONT    pax_font_sky_mono
 #define TEXT_SIZE    18
-#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT  ((gui_element_icontext_t[]){{NULL, "🅱 Back"}}), 1
-#define FOOTER_RIGHT NULL, 0
-#define TEXT_FONT    pax_font_sky_mono
-#define TEXT_SIZE    9
-#else
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
-#define TEXT_FONT    pax_font_sky_mono
-#define TEXT_SIZE    9
-#endif
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, bool partial, bool icons) {
     if (!partial || icons) {

@@ -31,16 +31,8 @@
 #include "repository_client.h"
 #include "wifi_connection.h"
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT  ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | ⏎ Select"}}), 1
-#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ | 🅱 Back 🅰 Select"}}), 1
-#else
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
-#endif
 
 extern bool wifi_stack_get_initialized(void);
 
@@ -571,7 +563,6 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
         char* header_title = "Repository";
 #endif
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
         {
             bool is_installed =
                 (current_status == INSTALL_STATUS_INSTALLED || current_status == INSTALL_STATUS_UPDATE_AVAILABLE);
@@ -594,11 +585,6 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, const ch
                                          footer_left, footer_left_count,
                                          ((gui_element_icontext_t[]){{NULL, footer_right_text}}), 1);
         }
-#else
-        render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_STOREFRONT), "Repository"}}), 1,
-                                     FOOTER_LEFT, ((gui_element_icontext_t[]){{NULL, footer_right_text}}), 1);
-#endif
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);

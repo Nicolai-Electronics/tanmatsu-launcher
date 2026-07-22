@@ -18,7 +18,6 @@
 #include "pax_text.h"
 #include "pax_types.h"
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT_CACHE_MOVE                                       \
     ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},           \
                                 {get_icon(ICON_F1), "Back"},         \
@@ -55,25 +54,8 @@
                                 {get_icon(ICON_F2), "Start"},        \
                                 {get_icon(ICON_F5), "Delete App"}}), \
         4
-#define TEXT_FONT pax_font_sky_mono
-#define TEXT_SIZE 18
-#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT_CACHE_MOVE   ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
-#define FOOTER_LEFT_UNCACHE_MOVE ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
-#define FOOTER_LEFT_CACHE        ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
-#define FOOTER_LEFT_UNCACHE      ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
-#define FOOTER_LEFT_PLAIN        ((gui_element_icontext_t[]){{NULL, "\xf0\x9f\x85\xb1 Back"}}), 1
-#define TEXT_FONT                pax_font_sky_mono
-#define TEXT_SIZE                9
-#else
-#define FOOTER_LEFT_CACHE_MOVE   NULL, 0
-#define FOOTER_LEFT_UNCACHE_MOVE NULL, 0
-#define FOOTER_LEFT_CACHE        NULL, 0
-#define FOOTER_LEFT_UNCACHE      NULL, 0
-#define FOOTER_LEFT_PLAIN        NULL, 0
-#define TEXT_FONT                pax_font_sky_mono
-#define TEXT_SIZE                9
-#endif
+#define TEXT_FONT    pax_font_sky_mono
+#define TEXT_SIZE    18
 #define FOOTER_RIGHT NULL, 0
 
 static bool app_is_on_sd(app_t* app) {

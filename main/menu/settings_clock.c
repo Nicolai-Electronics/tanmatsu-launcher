@@ -22,7 +22,6 @@
 #include "settings_clock_timezone.h"
 #include "timezone.h"
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT                                                  \
     ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},           \
                                 {get_icon(ICON_F1), "Back"},         \
@@ -32,17 +31,6 @@
 #define FOOTER_RIGHT   ((gui_element_icontext_t[]){{NULL, " ← / → Navigate ↑ / ↓ Modify value"}}), 1
 #define DATE_TEXT_SIZE 45
 #define TIME_TEXT_SIZE 90
-#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT    ((gui_element_icontext_t[]){{NULL, "🅱Back"}}), 1
-#define FOOTER_RIGHT   ((gui_element_icontext_t[]){{NULL, "🆂Set timezone"}, {NULL, "🅴Toggle NTP"}}), 2
-#define DATE_TEXT_SIZE 32
-#define TIME_TEXT_SIZE 32
-#else
-#define FOOTER_LEFT    NULL, 0
-#define FOOTER_RIGHT   NULL, 0
-#define DATE_TEXT_SIZE 32
-#define TIME_TEXT_SIZE 32
-#endif
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, const timezone_t* zone, bool ntp,
                    bool partial, bool icons, uint8_t selection) {

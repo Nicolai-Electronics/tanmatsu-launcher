@@ -101,7 +101,6 @@ static void execute_action(menu_home_action_t action) {
     }
 }
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT                                                 \
     ((gui_element_icontext_t[]){{get_icon(ICON_F2), "Tools"},       \
                                 {get_icon(ICON_F3), "Information"}, \
@@ -109,16 +108,6 @@ static void execute_action(menu_home_action_t action) {
                                 {get_icon(ICON_F6), "USB mode"}}),  \
         4
 #define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ / ← / → | ⏎ Select"}}), 1
-#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "🅼 Settings 🅰 Select"}}), 1
-#else
-#define FOOTER_LEFT                                                                                   \
-    ((gui_element_icontext_t[]){                                                                      \
-        {NULL, "F2 Tools"}, {NULL, "F3 Information"}, {NULL, "F5 Settings"}, {NULL, "F6 USB mode"}}), \
-        4
-#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ / ← / → | ⏎ Select"}}), 1
-#endif
 
 static void describe_addon(addon_location_t location, char* description, size_t description_size) {
     addon_descriptor_t* descriptor = NULL;

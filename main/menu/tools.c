@@ -71,15 +71,13 @@ void menu_tools(void) {
                           get_icon(ICON_SYSTEM_UPDATE));
     menu_insert_item_icon(&menu, "Start firmware update (experimental)", NULL,
                           (void*)ACTION_FIRMWARE_UPDATE_EXPERIMENTAL, -1, get_icon(ICON_SYSTEM_UPDATE));
-#if 0 && (defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL))
-    menu_insert_item_icon(&menu, "Install radio fiFirmware updatermware from SD card", NULL, (void*)ACTION_RADIO_UPDATE, -1,
-                          get_icon(ICON_RELEASE_ALERT));
-#endif
-    menu_insert_item_icon(&menu, "Hardware test", NULL, (void*)ACTION_HARDWARE_TEST, -1, get_icon(ICON_BUG_REPORT));
+    menu_insert_item_icon(&menu, "Hardware tests", NULL, (void*)ACTION_HARDWARE_TEST, -1, get_icon(ICON_BUG_REPORT));
+    /*
     menu_insert_item_icon(&menu, "Force icon update (only needed when icons are missing)", NULL,
                           (void*)ACTION_DOWNLOAD_ICONS, -1, get_icon(ICON_COLORS));
     menu_insert_item_icon(&menu, "Force radio update (only needed when radio firmware is mismatched)", NULL,
                           (void*)ACTION_RADIO_OTA, -1, get_icon(ICON_SYSTEM_UPDATE));
+    */
 
     menu_run_list(&menu, ((gui_element_icontext_t[]){{get_icon(ICON_EXTENSION), "Tools"}}), 1, MENU_FOOTER_BACK,
                   MENU_FOOTER_NAV_SELECT, on_action, NULL, true);

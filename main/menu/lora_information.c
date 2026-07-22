@@ -21,7 +21,6 @@ static const char TAG[] = "LoRa information menu";
 
 extern lora_handle_t* lora_get_handle(void);
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
 #define FOOTER_LEFT                                                                                    \
     ((gui_element_icontext_t[]){                                                                       \
         {get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}, {get_icon(ICON_F4), "Store offset"}}), \
@@ -29,17 +28,6 @@ extern lora_handle_t* lora_get_handle(void);
 #define FOOTER_RIGHT NULL, 0
 #define TEXT_FONT    pax_font_sky_mono
 #define TEXT_SIZE    18
-#elif defined(CONFIG_BSP_TARGET_MCH2022) || defined(CONFIG_BSP_TARGET_KAMI)
-#define FOOTER_LEFT  ((gui_element_icontext_t[]){{NULL, "🅱 Back"}}), 1
-#define FOOTER_RIGHT NULL, 0
-#define TEXT_FONT    pax_font_sky_mono
-#define TEXT_SIZE    9
-#else
-#define FOOTER_LEFT  NULL, 0
-#define FOOTER_RIGHT NULL, 0
-#define TEXT_FONT    pax_font_sky_mono
-#define TEXT_SIZE    9
-#endif
 
 static void render(bool partial, bool icons, size_t num_packets, lora_protocol_lora_packet_t* packets,
                    float frequency_error, float frequency_error_avg, float applied_frequency_offset) {
