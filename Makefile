@@ -35,10 +35,12 @@ else ifeq ($(DEVICE), mch2022)
 IDF_TARGET ?= esp32
 else ifeq ($(DEVICE), kami)
 IDF_TARGET ?= esp32
+else ifeq ($(DEVICE), hackaday2025)
+IDF_TARGET ?= esp32s3
 else ifeq ($(DEVICE), linux)
 IDF_TARGET ?= linux
 else
-$(warning "Unknown device, defaulting to ESP32 $(DEVICE)")
+$(warning "Unknown device, defaulting to ESP32")
 IDF_TARGET ?= esp32
 endif
 
@@ -100,7 +102,7 @@ menuconfig:
 clean:
 	rm -rf $(BUILD)
 	rm -f .submodules_update_done
-	rm -f sdkconfig_*
+	rm -f sdkconfig_$(DEVICE)
 	rm -rf managed_components
 
 .PHONY: fullclean

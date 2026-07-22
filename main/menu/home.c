@@ -167,44 +167,48 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
     menu_render_grid(buffer, menu, position, theme, partial);
 
     if (wifi_stack_get_task_done()) {
-        pax_simple_rect(buffer, theme->menu.palette.color_background, position.x0,
-                        pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                        pax_buf_get_width(buffer) - position.x0 * 2, 18 * 2);
-        if (wifi_stack_get_version_mismatch()) {
-            pax_draw_text(buffer, 0xFF999900, theme->footer.text_font, 16, position.x0,
-                          pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                          "Radio firmware version mismatch, WiFi still works but LoRa might not until you "
-                          "update.\r\nYou can update the radio using the 'Update radio' button.");
-        } else if (!wifi_stack_get_initialized()) {
-            pax_draw_text(buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
-                          pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                          "Radio communication error!\r\nPlease flash the radio firmware using the recovery website.");
-        } else {
-            lora_protocol_status_params_t status = {0};
-            esp_err_t res = device_has_lora() ? lora_get_status(lora_get_handle(), &status) : ESP_OK;
-            if (res != ESP_OK || status.errors > 0) {
+        if (pax_buf_get_height(buffer) >= 480) {
+            pax_simple_rect(buffer, theme->menu.palette.color_background, position.x0,
+                            pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                            pax_buf_get_width(buffer) - position.x0 * 2, 18 * 2);
+            if (wifi_stack_get_version_mismatch()) {
+                pax_draw_text(
+                    buffer, 0xFF999900, theme->footer.text_font, 16, position.x0,
+                    pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                    "Radio firmware version mismatch, WiFi still works but LoRa might not until you "
+                    "update.\r\nYou can update the radio using the 'Update radio' button.");
+            } else if (!wifi_stack_get_initialized()) {
                 pax_draw_text(
                     buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
                     pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                    "LoRa radio fault detected!");
-            } else if (device_has_provisioning() && !provisioned) {
-                pax_draw_text(
-                    buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
-                    pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                    "Device not provisioned!\r\nPlease contact the manufacturer.");
-            } else if (device_has_provisioning() && !name_match) {
-                pax_draw_text(
-                    buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
-                    pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                    "Device type mismatch!\r\nPlease contact the manufacturer.");
+                    "Radio communication error!\r\nPlease flash the radio firmware using the recovery website.");
             } else {
-                char description[256] = {0};
-                describe_addons(description, sizeof(description));
+                lora_protocol_status_params_t status = {0};
+                esp_err_t res = device_has_lora() ? lora_get_status(lora_get_handle(), &status) : ESP_OK;
+                if (res != ESP_OK || status.errors > 0) {
+                    pax_draw_text(
+                        buffer, 0xFFFF0000, theme->footer.text_font, 16, position.x0,
+                        pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                        "LoRa radio fault detected!");
+                } else if (device_has_provisioning() && !provisioned) {
+                    pax_draw_text(
+                        buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
+                        pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                        "Device not provisioned!\r\nPlease contact the manufacturer.");
+                } else if (device_has_provisioning() && !name_match) {
+                    pax_draw_text(
+                        buffer, 0xFF0000FF, theme->footer.text_font, 16, position.x0,
+                        pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                        "Device type mismatch!\r\nPlease contact the manufacturer.");
+                } else {
+                    char description[256] = {0};
+                    describe_addons(description, sizeof(description));
 
-                pax_draw_text(
-                    buffer, 0xFF000000, theme->footer.text_font, 16, position.x0,
-                    pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
-                    description);
+                    pax_draw_text(
+                        buffer, 0xFF000000, theme->footer.text_font, 16, position.x0,
+                        pax_buf_get_height(buffer) - theme->footer.height - theme->footer.vertical_margin - 18 * 3,
+                        description);
+                }
             }
         }
     }

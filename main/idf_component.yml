@@ -1,6 +1,6 @@
 dependencies:
   idf: ">=5.5.1"
-  badgeteam/badge-bsp: "^1.0.3"
+  badgeteam/badge-bsp: "^1.0.4"
   robotman2412/pax-gfx: "^2.2.1"
   robotman2412/pax-codecs: "^1.0.1"
   badgeteam/appfs: "^1.2.0"
@@ -8,7 +8,7 @@ dependencies:
   nicolaielectronics/wifi-manager: "^0.3.0"
   nicolaielectronics/tanmatsu-wifi: "^1.2.0"
   badgeteam/badgelink: "^0.2.0"
-  nicolaielectronics/tanmatsu-lora: "^0.5.5"
+  nicolaielectronics/tanmatsu-lora: "^0.5.7"
   nicolaielectronics/tanmatsu-addon: "^0.0.1"
   nicolaielectronics/tanmatsu-settings: "^1.2.0"
   nicolaielectronics/scd4x: "^0.0.1"
