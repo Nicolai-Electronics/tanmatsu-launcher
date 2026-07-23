@@ -81,6 +81,8 @@ typedef enum {
     ICON_COLORS,
     ICON_SEND,
     ICON_WORKSPACES,
+    ICON_MENU,
+    ICON_FAVORITE,
     ICON_LAST
 } icon_t;
 

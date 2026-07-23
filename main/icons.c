@@ -17,13 +17,13 @@ static char const TAG[] = "icons";
 #if defined(CONFIG_BSP_TARGET_KAMI)
 #define ICON_WIDTH        16
 #define ICON_HEIGHT       16
-#define ICON_BUFFER_SIZE  (ICON_WIDTH * ICON_HEIGHT * 4)  // 16x16 pixels, 2 bits per pixel
+#define ICON_BUFFER_SIZE  (ICON_WIDTH * ICON_HEIGHT * 4)  // 4 bytes per pixel (ARGB8888)
 #define ICON_COLOR_FORMAT PAX_BUF_32_8888ARGB
 // #define ICON_COLOR_FORMAT PAX_BUF_2_PAL
 #else
 #define ICON_WIDTH        32
 #define ICON_HEIGHT       32
-#define ICON_BUFFER_SIZE  (ICON_WIDTH * ICON_HEIGHT * 4)  // 32x32 pixels, 4 bytes per pixel (ARGB8888)
+#define ICON_BUFFER_SIZE  (ICON_WIDTH * ICON_HEIGHT * 4)  // 4 bytes per pixel (ARGB8888)
 #define ICON_COLOR_FORMAT PAX_BUF_32_8888ARGB
 #endif
 
@@ -114,6 +114,8 @@ static const char* icon_paths[] = {
     [ICON_COLORS]              = "colors",
     [ICON_SEND]                = "send",
     [ICON_WORKSPACES]          = "workspaces",
+    [ICON_MENU]                = "menu",
+    [ICON_FAVORITE]            = "favorite",
 };
 
 pax_buf_t EXT_RAM_BSS_ATTR icons[ICON_LAST] = {0};
