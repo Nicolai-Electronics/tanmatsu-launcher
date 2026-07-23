@@ -2,6 +2,9 @@
 #include <sys/time.h>
 #include <time.h>
 #include "addon.h"
+#include "app_favorite.h"
+#include "app_management.h"
+#include "app_metadata_parser.h"
 #include "appfs.h"
 #include "badgelink.h"
 #include "bootloader_update.h"
@@ -42,6 +45,7 @@
 #include "lora_settings_handler.h"
 #include "menu/apps.h"
 #include "menu/home.h"
+#include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "ntp.h"
 #include "nvs_flash.h"
@@ -449,7 +453,8 @@ void app_main(void) {
         bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_BOOTLOADER);
         ESP_LOGW(TAG, "Radio firmware update mode requested, starting radio in bootloader mode");
         printf(
-            "Volume up was held down while starting the device. The radio is\nhas been started in bootloader \r\n"
+            "Volume up was held down while starting the device. The radio is\nhas been started in bootloader "
+            "\r\n"
             "mode to allow firmware recovery.\n\nGo to https://recovery.tanmatsu.cloud for instructions.");
         if (display_available) {
             gui_theme_t* theme = get_theme();
@@ -465,7 +470,8 @@ void app_main(void) {
                     theme->menu.vertical_padding;
             pax_draw_text(
                 fb, theme->palette.color_foreground, theme->menu.text_font, 16, x, y + 18 * 0,
-                "Volume up was held down while starting the device. The radio is\nhas been started in bootloader "
+                "Volume up was held down while starting the device. The radio is\nhas been started in "
+                "bootloader "
                 "mode to allow firmware recovery.\n\nGo to https://recovery.tanmatsu.cloud for instructions.");
             display_blit_buffer(fb);
         }
@@ -483,6 +489,59 @@ void app_main(void) {
         pax_draw_text(buffer, 0xFFFFFFFF, pax_font_sky_mono, 16, 0, 0, "Failed to initialize app filesystem");
         display_blit_buffer(buffer);
         return;
+    }
+
+    // App autostart
+    char* autostart_slug = malloc(APP_MAX_SLUG_SIZE);
+    if (autostart_slug) {
+        if (app_autostart_get(autostart_slug) == ESP_OK && strlen(autostart_slug) > 0) {
+            app_t* apps[MAX_NUM_APPS] = {0};
+            size_t number_of_apps     = create_list_of_apps(apps, MAX_NUM_APPS);
+
+            app_t* app = NULL;
+            for (size_t i = 0; i < number_of_apps; i++) {
+                if (apps[i] != NULL && apps[i]->slug != NULL) {
+                    if (strncmp(apps[i]->slug, autostart_slug, APP_MAX_SLUG_SIZE) == 0) {
+                        app = apps[i];
+                    }
+                }
+            }
+
+            if (app == NULL) {
+                ESP_LOGE(TAG, "Could not find application '%s' to autostart, disabling autostart.", autostart_slug);
+                app_autostart_get(NULL);  // Reset autostart NVS entry when app can not be found
+            } else {
+                bool canceled = false;
+                for (uint8_t i = 3; i > 0; i--) {
+                    char text[128] = {0};
+                    snprintf(text, sizeof(text), "Starting %s in %u... Press X (F1) to cancel", autostart_slug, i);
+                    startup_dialog(text);
+                    bsp_input_event_t event;
+                    if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                        if (i < 3) i = 3;  // Reset counter on event
+                        if (event.type == INPUT_EVENT_TYPE_NAVIGATION &&
+                            event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_F1 && event.args_navigation.state) {
+                            canceled = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!canceled) {
+                    gui_theme_t* theme    = get_theme();
+                    pax_buf_t*   buffer   = display_get_buffer();
+                    pax_vec2_t   position = menu_calc_position(buffer, theme);
+                    wifi_stack_task_done  = true;  // Workaround
+                    execute_app(buffer, theme, position, app);
+                    wifi_stack_task_done = false;  // Workaround
+                    message_dialog(get_icon(ICON_ERROR), "Autostart failed",
+                                   "The configured autostart app could not be started.", "Close");
+                    reinit_startup_dialog();
+                    free_list_of_apps(apps, MAX_NUM_APPS);
+                }
+            }
+        }
+        free(autostart_slug);
     }
 
     startup_dialog("Initializing clock...");

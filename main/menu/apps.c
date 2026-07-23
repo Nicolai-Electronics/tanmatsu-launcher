@@ -64,6 +64,9 @@ static void populate_menu(menu_t* menu, app_t** apps, size_t app_count, bool fav
                          apps[i]->favorite ? "[Favorite] " : "");
             }
 
+            snprintf(&right_text[strlen(right_text)], sizeof(right_text) - strlen(right_text),
+                     apps[i]->autostart ? "[Autostart] " : "");
+
             if (apps[i]->executable_type == EXECUTABLE_TYPE_SCRIPT) {
                 snprintf(&right_text[strlen(right_text)], sizeof(right_text) - strlen(right_text), "[Script]");
             } else if (apps[i]->executable_type == EXECUTABLE_TYPE_APPFS &&
@@ -263,6 +266,7 @@ typedef enum {
 
 static app_menu_footer_type_t previous_footer_type = APP_MENU_FOOTER_TYPE_COUNT;
 static bool                   previous_favorite    = false;
+static bool                   previous_autostart   = false;
 
 // Helper to load an app into AppFS on-demand, with auto-cleanup support.
 // Returns ESP_OK on success, error otherwise. Shows dialogs.
@@ -306,7 +310,8 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
         }
     };
 
-    if (previous_footer_type != footer_type || (app && previous_favorite != app->favorite)) {
+    if (previous_footer_type != footer_type || (app && previous_favorite != app->favorite) ||
+        (app && previous_autostart != app->autostart)) {
         previous_footer_type = footer_type;
         partial              = false;
     }
@@ -539,8 +544,17 @@ void menu_apps(bool favorites_only) {
                                     void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                     app_t* app = (app_t*)arg;
                                     if (app != NULL) {
-                                        app->favorite = !app->favorite;
-                                        app_favorite_set(app->slug, app->favorite);
+                                        if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
+                                            app->autostart = !app->autostart;
+                                            if (app->autostart) {
+                                                app_autostart_set(app->slug);
+                                            } else {
+                                                app_autostart_set(NULL);
+                                            }
+                                        } else {
+                                            app->favorite = !app->favorite;
+                                            app_favorite_set(app->slug, app->favorite);
+                                        }
                                     }
                                     refresh = true;
                                     break;
