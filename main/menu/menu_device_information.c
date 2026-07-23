@@ -16,7 +16,7 @@
 #include "pax_types.h"
 #include "radio_system_protocol_client.h"
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
 #include "bsp/tanmatsu.h"
 #include "tanmatsu_coprocessor.h"
 #endif
@@ -50,7 +50,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
         uint16_t                      coprocessor_firmware_version;
         tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
         if (bsp_tanmatsu_coprocessor_get_handle(&coprocessor_handle) == ESP_OK) {

@@ -10,8 +10,7 @@
 #include "pax_types.h"
 #include "sdkconfig.h"
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
 #define DSI_PANEL
 #endif
 

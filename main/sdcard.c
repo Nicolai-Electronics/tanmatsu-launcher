@@ -24,7 +24,7 @@ static sdmmc_card_t*        card          = NULL;
 static const char           mount_point[] = "/sd";
 static sd_pwr_ctrl_handle_t sd_pwr_handle = NULL;
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
 static char const           TAG[] = "sdcard";
 static sd_pwr_ctrl_handle_t initialize_sd_ldo(void) {
     sd_pwr_ctrl_ldo_config_t ldo_config = {

@@ -25,7 +25,7 @@
 #ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
 #include "plugin_manager.h"
 #endif
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
 #include "bsp/tanmatsu.h"
 #include "synthwave.h"
 #include "tanmatsu_coprocessor.h"
@@ -45,7 +45,7 @@ static char percentage_buffer[5] = {0};
 
 static gui_element_icontext_t battery_indicator(bsp_power_battery_information_t* information) {
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
     tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
     bsp_tanmatsu_coprocessor_get_handle(&coprocessor_handle);
     tanmatsu_coprocessor_pmic_faults_t faults = {0};
@@ -59,7 +59,7 @@ static gui_element_icontext_t battery_indicator(bsp_power_battery_information_t*
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_BOLT), ""};
     }
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
     if (faults.watchdog || faults.chrg_input || faults.chrg_thermal || faults.chrg_safety || faults.batt_ovp ||
         faults.ntc_cold || faults.ntc_hot) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_ALERT), ""};
@@ -408,7 +408,7 @@ void startup_dialog(const char* message) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
 
     if (!startup_dialog_initialized) {
         synthwave(buffer);

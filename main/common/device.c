@@ -1,7 +1,7 @@
 #include "device.h"
 
 bool device_has_lora(void) {
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
     return true;
 #else
     return false;

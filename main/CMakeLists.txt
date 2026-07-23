@@ -1,4 +1,4 @@
-if (CONFIG_BSP_TARGET_TANMATSU OR CONFIG_BSP_TARGET_KONSOOL)
+if (CONFIG_BSP_TARGET_TANMATSU)
 list(APPEND files "tanmatsu_coprocessor.bin")
 list(APPEND files "p4_bootloader.bin")
 endif()
