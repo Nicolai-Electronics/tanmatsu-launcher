@@ -17,9 +17,8 @@
 #include "pax_gfx.h"
 #include "pax_types.h"
 
-#define REPO_SERVER_MAX_LEN     128
-#define REPO_BASE_URI_MAX_LEN   64
-#define HTTP_USER_AGENT_MAX_LEN 128
+#define REPO_SERVER_MAX_LEN   128
+#define REPO_BASE_URI_MAX_LEN 64
 
 #define DEFAULT_REPO_SERVER   "https://apps.tanmatsu.cloud"
 #define DEFAULT_REPO_BASE_URI "/v1"
@@ -28,7 +27,6 @@ typedef enum {
     ACTION_NONE,
     ACTION_SERVER,
     ACTION_BASE_URI,
-    ACTION_USER_AGENT,
     ACTION_AUTO_CLEANUP,
     ACTION_MISMATCH_REINSTALL,
     ACTION_DOWNLOAD_ICONS,
@@ -49,16 +47,11 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
 }
 
 static void menu_populate(menu_t* menu) {
-    char server[REPO_SERVER_MAX_LEN]         = {0};
-    char base_uri[REPO_BASE_URI_MAX_LEN]     = {0};
-    char user_agent[HTTP_USER_AGENT_MAX_LEN] = {0};
+    char server[REPO_SERVER_MAX_LEN]     = {0};
+    char base_uri[REPO_BASE_URI_MAX_LEN] = {0};
 
     nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
-    nvs_settings_get_http_user_agent(user_agent, sizeof(user_agent), "");
-    if (strlen(user_agent) < 1) {
-        device_settings_get_default_http_user_agent(user_agent, sizeof(user_agent));
-    }
 
     size_t previous_position = menu_get_position(menu);
     while (menu_get_length(menu) > 0) {
@@ -74,7 +67,6 @@ static void menu_populate(menu_t* menu) {
 
     menu_insert_item_value(menu, "Server", server, NULL, (void*)ACTION_SERVER, -1);
     menu_insert_item_value(menu, "Base URI", base_uri, NULL, (void*)ACTION_BASE_URI, -1);
-    menu_insert_item_value(menu, "User Agent", user_agent, NULL, (void*)ACTION_USER_AGENT, -1);
 #if !defined(CONFIG_BSP_TARGET_MCH2022)
     menu_insert_item_value(menu, "Download icons", download_icons ? "Enabled" : "Disabled", NULL,
                            (void*)ACTION_DOWNLOAD_ICONS, -1);
@@ -114,28 +106,9 @@ static void edit_base_uri(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu) {
     }
 }
 
-static void edit_user_agent(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu) {
-    char user_agent[HTTP_USER_AGENT_MAX_LEN] = {0};
-    bool accepted                            = false;
-
-    nvs_settings_get_http_user_agent(user_agent, sizeof(user_agent), "");
-    if (strlen(user_agent) < 1) {
-        device_settings_get_default_http_user_agent(user_agent, sizeof(user_agent));
-    }
-    menu_textedit(buffer, theme, "User Agent", user_agent, sizeof(user_agent), false, &accepted);
-    if (accepted) {
-        nvs_settings_set_http_user_agent(user_agent);
-        menu_populate(menu);
-    }
-}
-
 static void reset_defaults(menu_t* menu) {
-    char default_ua[HTTP_USER_AGENT_MAX_LEN] = {0};
-    device_settings_get_default_http_user_agent(default_ua, sizeof(default_ua));
-
     nvs_settings_set_repo_server(DEFAULT_REPO_SERVER);
     nvs_settings_set_repo_base_uri(DEFAULT_REPO_BASE_URI);
-    nvs_settings_set_http_user_agent(default_ua);
     appfs_settings_set_auto_cleanup(DEFAULT_APPFS_AUTO_CLEANUP);
     appfs_settings_set_mismatch_reinstall(DEFAULT_APPFS_MISMATCH_REINSTALL);
     nvs_settings_set_u8(NVS_KEY_REPO_DOWNLOAD_ICONS, DEFAULT_REPO_DOWNLOAD_ICONS);
@@ -191,9 +164,6 @@ void menu_settings_repository(void) {
                                         break;
                                     case ACTION_BASE_URI:
                                         edit_base_uri(buffer, theme, &menu);
-                                        break;
-                                    case ACTION_USER_AGENT:
-                                        edit_user_agent(buffer, theme, &menu);
                                         break;
                                     case ACTION_AUTO_CLEANUP: {
                                         uint8_t current = 0;
