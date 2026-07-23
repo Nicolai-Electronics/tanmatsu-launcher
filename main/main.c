@@ -546,7 +546,11 @@ void app_main(void) {
                             if (i < 3) i = 3;  // Reset counter on event
                             if (event.type == INPUT_EVENT_TYPE_NAVIGATION &&
                                 (event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_F1 ||
-                                 event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_HOME) &&
+                                 event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_HOME ||
+                                 event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_ESC ||
+                                 event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_SPACE_L ||
+                                 event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_SPACE_M ||
+                                 event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_SPACE_R) &&
                                 event.args_navigation.state) {
                                 canceled = true;
                                 break;
