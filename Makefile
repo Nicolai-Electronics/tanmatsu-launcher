@@ -99,13 +99,15 @@ menuconfig:
 .PHONY: clean
 clean:
 	rm -rf $(BUILD)
-	rm -f .submodules_update_done
 	rm -f sdkconfig_$(DEVICE)
-	rm -rf managed_components
 
 .PHONY: fullclean
-fullclean: clean
+fullclean:
+	rm -rf managed_components
+	rm -rf build
+	rm -f .submodules_update_done
 	rm -f sdkconfig
+	rm -f sdkconfig_*
 	rm -f sdkconfig.old
 	rm -f sdkconfig.ci
 	rm -f sdkconfig.defaults
