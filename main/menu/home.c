@@ -54,12 +54,26 @@ typedef enum {
     ACTION_RADIO_OTA,
     ACTION_DOWNLOAD_ICONS,
     ACTION_APPS,
+    ACTION_FAVORITES,
     ACTION_NAMETAG,
     ACTION_REPOSITORY,
     ACTION_SETTINGS,
     ACTION_TOOLS,
     ACTION_INFORMATION,
+    ACTION_USB_MODE,
 } menu_home_action_t;
+
+static void toggle_usb_mode(void) {
+    if (usb_mode_get() == USB_DEVICE) {
+        busy_dialog(get_icon(ICON_USB), "USB mode", "Debug mode", true);
+        usb_mode_set(USB_DEBUG);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    } else {
+        busy_dialog(get_icon(ICON_USB), "USB mode", "BadgeLink mode", true);
+        usb_mode_set(USB_DEVICE);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
 
 static void execute_action(menu_home_action_t action) {
     pax_buf_t*   fb    = display_get_buffer();
@@ -79,7 +93,10 @@ static void execute_action(menu_home_action_t action) {
 #endif
             esp_restart();
         case ACTION_APPS:
-            menu_apps(fb, theme);
+            menu_apps(false);
+            break;
+        case ACTION_FAVORITES:
+            menu_apps(true);
             break;
         case ACTION_NAMETAG:
             menu_nametag(fb, theme);
@@ -96,18 +113,13 @@ static void execute_action(menu_home_action_t action) {
         case ACTION_INFORMATION:
             menu_information();
             break;
+        case ACTION_USB_MODE:
+            toggle_usb_mode();
+            break;
         default:
             break;
     }
 }
-
-#define FOOTER_LEFT                                                 \
-    ((gui_element_icontext_t[]){{get_icon(ICON_F2), "Tools"},       \
-                                {get_icon(ICON_F3), "Information"}, \
-                                {get_icon(ICON_F5), "Settings"},    \
-                                {get_icon(ICON_F6), "USB mode"}}),  \
-        4
-#define FOOTER_RIGHT ((gui_element_icontext_t[]){{NULL, "↑ / ↓ / ← / → | ⏎ Select"}}), 1
 
 static void describe_addon(addon_location_t location, char* description, size_t description_size) {
     addon_descriptor_t* descriptor = NULL;
@@ -149,9 +161,17 @@ static void describe_addons(char* description, size_t description_size) {
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons,
                    bool provisioned, bool name_match) {
     if (!partial || icons) {
+
+        gui_element_icontext_t footer_left[] = {{get_icon(ICON_F2), "Tools"},
+                                                {get_icon(ICON_F3), "Information"},
+                                                {get_icon(ICON_F5), "Settings"},
+                                                {get_icon(ICON_F6), "USB mode"}};
+
+        gui_element_icontext_t footer_right[] = {{NULL, "↑ / ↓ / ← / → | ⏎ Select"}};
+
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_HOME), "Home"}}), 1, FOOTER_LEFT,
-                                     FOOTER_RIGHT);
+                                     ((gui_element_icontext_t[]){{get_icon(ICON_HOME), "Home"}}), 1, footer_left, 4,
+                                     footer_right, 1);
     }
     menu_render_grid(buffer, menu, position, theme, partial);
 
@@ -227,18 +247,6 @@ static void display_backlight(void) {
     bsp_display_set_backlight_brightness(brightness);
 }
 
-static void toggle_usb_mode(void) {
-    if (usb_mode_get() == USB_DEVICE) {
-        busy_dialog(get_icon(ICON_USB), "USB mode", "Debug USB-serial & JTAG peripheral", true);
-        usb_mode_set(USB_DEBUG);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    } else {
-        busy_dialog(get_icon(ICON_USB), "USB mode", "BadgeLink mode", true);
-        usb_mode_set(USB_DEVICE);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-}
-
 static void is_provisioned(bool* out_provisioned, bool* out_name_match) {
     device_identity_t identity = {0};
     esp_err_t         res      = read_device_identity(&identity);
@@ -265,6 +273,7 @@ void menu_home(void) {
 
     menu_t menu = {0};
     menu_initialize(&menu);
+    menu_insert_item_icon(&menu, "Favorites", NULL, (void*)ACTION_FAVORITES, -1, get_icon(ICON_FAVORITE));
     menu_insert_item_icon(&menu, "Apps", NULL, (void*)ACTION_APPS, -1, get_icon(ICON_APPS));
     if (access("/sd/nametag.png", F_OK) == 0 || access("/int/nametag.png", F_OK) == 0) {
         menu_insert_item_icon(&menu, "Nametag", NULL, (void*)ACTION_NAMETAG, -1, get_icon(ICON_BADGE));
@@ -278,6 +287,13 @@ void menu_home(void) {
         menu_insert_item_icon(&menu, "Download icons", NULL, (void*)ACTION_DOWNLOAD_ICONS, -1,
                               get_icon(ICON_DOWNLOADING));
     }
+
+    /*menu_t footer_menu = {0};
+    menu_initialize(&footer_menu);
+    menu_insert_item_icon(&footer_menu, "Tools", NULL, (void*)ACTION_TOOLS, -1, get_icon(ICON_F2));
+    menu_insert_item_icon(&footer_menu, "Information", NULL, (void*)ACTION_INFORMATION, -1, get_icon(ICON_F3));
+    menu_insert_item_icon(&footer_menu, "Settings", NULL, (void*)ACTION_SETTINGS, -1, get_icon(ICON_F5));
+    menu_insert_item_icon(&footer_menu, "Toggle USB mode", NULL, (void*)ACTION_USB_MODE, -1, get_icon(ICON_F6));*/
 
     pax_vec2_t position = menu_calc_position(buffer, theme);
 
@@ -334,7 +350,7 @@ void menu_home(void) {
                                                 "Starting forced update...", false);
                                     coprocessor_flash(true);
                                 } else {
-                                    toggle_usb_mode();
+                                    execute_action(ACTION_USB_MODE);
                                 }
                                 render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                                 break;

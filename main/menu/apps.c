@@ -20,6 +20,7 @@
 #include "bsp/input.h"
 #include "bsp/power.h"
 #include "common/display.h"
+#include "common/theme.h"
 #include "esp_wifi.h"
 #include "filesystem_utils.h"
 #include "freertos/idf_additions.h"
@@ -50,13 +51,18 @@ static int compare_apps_by_name(const void* a, const void* b) {
     return strcasecmp(app_a->name, app_b->name);
 }
 
-static void populate_menu(menu_t* menu, app_t** apps, size_t app_count) {
+static void populate_menu(menu_t* menu, app_t** apps, size_t app_count, bool favorites_only) {
     for (size_t i = 0; i < app_count; i++) {
         if (apps[i] != NULL && apps[i]->slug != NULL && apps[i]->name != NULL) {
+            if (favorites_only && !apps[i]->favorite) {
+                continue;
+            }
             char label[128];
             char right_text[128] = "";
-            snprintf(&right_text[strlen(right_text)], sizeof(right_text) - strlen(right_text),
-                     apps[i]->favorite ? "[Favorite] " : "");
+            if (!favorites_only) {
+                snprintf(&right_text[strlen(right_text)], sizeof(right_text) - strlen(right_text),
+                         apps[i]->favorite ? "[Favorite] " : "");
+            }
 
             if (apps[i]->executable_type == EXECUTABLE_TYPE_SCRIPT) {
                 snprintf(&right_text[strlen(right_text)], sizeof(right_text) - strlen(right_text), "[Script]");
@@ -272,7 +278,8 @@ static esp_err_t load_app_to_appfs(app_t* app, const char* firmware_path, const 
     return res;
 }
 
-static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons) {
+static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons,
+                   bool favorites_only) {
     void*  arg = menu_get_callback_args(menu, menu_get_position(menu));
     app_t* app = (app_t*)arg;
 
@@ -367,15 +374,21 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
             footer_left[3].text = "";
         }
 
+        gui_element_icontext_t header_left_favorites[] = {{get_icon(ICON_FAVORITE), "Favorite apps"}};
+        gui_element_icontext_t header_left[]           = {{get_icon(ICON_APPS), "Apps"}};
+
         render_base_screen_statusbar(buffer, theme, !partial, !partial || icons, !partial,
-                                     ((gui_element_icontext_t[]){{get_icon(ICON_APPS), "Apps"}}), 1, footer_left,
+                                     favorites_only ? header_left_favorites : header_left, 1, footer_left,
                                      footer_left_length, footer_right, 1);
     }
     menu_render(buffer, menu, position, theme, partial);
     display_blit_buffer(buffer);
 }
 
-void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
+void menu_apps(bool favorites_only) {
+    gui_theme_t* theme  = get_theme();
+    pax_buf_t*   buffer = display_get_buffer();
+
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
@@ -389,7 +402,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
 
         menu_t menu = {0};
         menu_initialize(&menu);
-        populate_menu(&menu, apps, number_of_apps);
+        populate_menu(&menu, apps, number_of_apps, favorites_only);
 
         // Restore previous position (clamped to list bounds)
         if (saved_position >= menu_get_length(&menu) && menu_get_length(&menu) > 0) {
@@ -399,7 +412,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
 
         pax_vec2_t position = menu_calc_position(buffer, theme);
 
-        render(buffer, theme, &menu, position, false, true);
+        render(buffer, theme, &menu, position, false, true, favorites_only);
         bool refresh = false;
         while (!refresh) {
             bsp_input_event_t event;
@@ -417,11 +430,11 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                     return;
                                 case BSP_INPUT_NAVIGATION_KEY_UP:
                                     menu_navigate_previous(&menu);
-                                    render(buffer, theme, &menu, position, true, false);
+                                    render(buffer, theme, &menu, position, true, false, favorites_only);
                                     break;
                                 case BSP_INPUT_NAVIGATION_KEY_DOWN:
                                     menu_navigate_next(&menu);
-                                    render(buffer, theme, &menu, position, true, false);
+                                    render(buffer, theme, &menu, position, true, false, favorites_only);
                                     break;
                                 case BSP_INPUT_NAVIGATION_KEY_RETURN:
                                 case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
@@ -434,7 +447,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                         char* firmware_path = app_mgmt_find_firmware_path(app->slug);
                                         if (firmware_path == NULL) {
                                             message_dialog(get_icon(ICON_ERROR), "Error", "App binary not found", "OK");
-                                            render(buffer, theme, &menu, position, false, false);
+                                            render(buffer, theme, &menu, position, false, false, favorites_only);
                                             break;
                                         }
                                         esp_err_t res = load_app_to_appfs(app, firmware_path, "Loading");
@@ -472,7 +485,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                         }
                                     }
                                     execute_app(buffer, theme, position, app);
-                                    render(buffer, theme, &menu, position, false, false);
+                                    render(buffer, theme, &menu, position, false, false, favorites_only);
                                     break;
                                 }
                                 case BSP_INPUT_NAVIGATION_KEY_F4: {
@@ -495,7 +508,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                             }
                                             refresh = true;
                                         } else {
-                                            render(buffer, theme, &menu, position, false, true);
+                                            render(buffer, theme, &menu, position, false, true, favorites_only);
                                         }
                                     } else if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
                                                app->executable_appfs_fd == APPFS_INVALID_FD) {
@@ -519,7 +532,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                         refresh = true;
                                         break;
                                     }
-                                    render(buffer, theme, &menu, position, false, true);
+                                    render(buffer, theme, &menu, position, false, true, favorites_only);
                                     break;
                                 }
                                 case BSP_INPUT_NAVIGATION_KEY_F3:
@@ -548,7 +561,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                                         }
                                         refresh = true;
                                     } else {
-                                        render(buffer, theme, &menu, position, false, true);
+                                        render(buffer, theme, &menu, position, false, true, favorites_only);
                                     }
                                     break;
                                 }
@@ -562,7 +575,7 @@ void menu_apps(pax_buf_t* buffer, gui_theme_t* theme) {
                         break;
                 }
             } else {
-                render(buffer, theme, &menu, position, true, true);
+                render(buffer, theme, &menu, position, true, true, favorites_only);
             }
         }
         saved_position = menu_get_position(&menu);
