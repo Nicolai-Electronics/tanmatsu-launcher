@@ -364,6 +364,16 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                 footer_left[4].icon = get_icon(ICON_F4);
                 footer_left[4].text = "Install";
                 break;
+            case APP_MENU_FOOTER_TYPE_UNAVAILABLE:
+                footer_left[2].icon = NULL;
+                footer_left[2].text = "";
+                footer_left[3].icon = NULL;
+                footer_left[3].text = "";
+                footer_left[4].icon = NULL;
+                footer_left[4].text = "";
+                snprintf(footer_right_text, sizeof(footer_right_text), "AppFS: %u%%",
+                         (100 - (free_kb * 100 / total_kb)));
+                break;
             default:
                 break;
         }
@@ -387,6 +397,11 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                                      footer_left_length, footer_right, 1);
     }
     menu_render(buffer, menu, position, theme, partial);
+
+    if (app == NULL) {
+        pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, theme->footer.text_height,
+                      position.x0, position.y0, favorites_only ? "No favorite apps" : "No apps installed");
+    }
     display_blit_buffer(buffer);
 }
 
@@ -446,86 +461,93 @@ void menu_apps(bool favorites_only) {
                                 case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                     void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                     app_t* app = (app_t*)arg;
-                                    // On-demand AppFS loading for appfs-type apps
-                                    if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
-                                        app->executable_appfs_fd == APPFS_INVALID_FD) {
-                                        char* firmware_path = app_mgmt_find_firmware_path(app->slug);
-                                        if (firmware_path == NULL) {
-                                            message_dialog(get_icon(ICON_ERROR), "Error", "App binary not found", "OK");
-                                            render(buffer, theme, &menu, position, false, false, favorites_only);
-                                            break;
-                                        }
-                                        esp_err_t res = load_app_to_appfs(app, firmware_path, "Loading");
-                                        free(firmware_path);
-                                        if (res != ESP_OK) {
-                                            refresh = true;
-                                            break;
-                                        }
-                                        app->executable_appfs_fd = find_appfs_handle_for_slug(app->slug);
-                                    } else if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
-                                               app->executable_appfs_fd != APPFS_INVALID_FD &&
-                                               app->executable_on_fs_available) {
-                                        // Check for mismatch reinstall
-                                        uint8_t mismatch_reinstall = 0;
-                                        appfs_settings_get_mismatch_reinstall(&mismatch_reinstall);
-                                        if (mismatch_reinstall) {
-                                            int appfs_size = 0;
-                                            appfsEntryInfoExt(app->executable_appfs_fd, NULL, NULL, NULL, &appfs_size);
-                                            bool mismatch =
-                                                (app->executable_on_fs_revision != app->executable_revision) ||
-                                                (appfs_size != app->executable_on_fs_filesize);
-                                            if (mismatch) {
-                                                busy_dialog(get_icon(ICON_APPS), "Loading", "Reinstalling to AppFS...",
-                                                            true);
-                                                appfsDeleteFile(app->slug);
-                                                char* firmware_path = app_mgmt_find_firmware_path(app->slug);
-                                                if (firmware_path != NULL) {
-                                                    app_mgmt_cache_to_appfs(app->slug, app->name,
-                                                                            app->executable_on_fs_revision,
-                                                                            firmware_path);
-                                                    free(firmware_path);
+                                    if (app) {
+                                        // On-demand AppFS loading for appfs-type apps
+                                        if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
+                                            app->executable_appfs_fd == APPFS_INVALID_FD) {
+                                            char* firmware_path = app_mgmt_find_firmware_path(app->slug);
+                                            if (firmware_path == NULL) {
+                                                message_dialog(get_icon(ICON_ERROR), "Error", "App binary not found",
+                                                               "OK");
+                                                render(buffer, theme, &menu, position, false, false, favorites_only);
+                                                break;
+                                            }
+                                            esp_err_t res = load_app_to_appfs(app, firmware_path, "Loading");
+                                            free(firmware_path);
+                                            if (res != ESP_OK) {
+                                                refresh = true;
+                                                break;
+                                            }
+                                            app->executable_appfs_fd = find_appfs_handle_for_slug(app->slug);
+                                        } else if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
+                                                   app->executable_appfs_fd != APPFS_INVALID_FD &&
+                                                   app->executable_on_fs_available) {
+                                            // Check for mismatch reinstall
+                                            uint8_t mismatch_reinstall = 0;
+                                            appfs_settings_get_mismatch_reinstall(&mismatch_reinstall);
+                                            if (mismatch_reinstall) {
+                                                int appfs_size = 0;
+                                                appfsEntryInfoExt(app->executable_appfs_fd, NULL, NULL, NULL,
+                                                                  &appfs_size);
+                                                bool mismatch =
+                                                    (app->executable_on_fs_revision != app->executable_revision) ||
+                                                    (appfs_size != app->executable_on_fs_filesize);
+                                                if (mismatch) {
+                                                    busy_dialog(get_icon(ICON_APPS), "Loading",
+                                                                "Reinstalling to AppFS...", true);
+                                                    appfsDeleteFile(app->slug);
+                                                    char* firmware_path = app_mgmt_find_firmware_path(app->slug);
+                                                    if (firmware_path != NULL) {
+                                                        app_mgmt_cache_to_appfs(app->slug, app->name,
+                                                                                app->executable_on_fs_revision,
+                                                                                firmware_path);
+                                                        free(firmware_path);
+                                                    }
+                                                    app->executable_appfs_fd = find_appfs_handle_for_slug(app->slug);
                                                 }
-                                                app->executable_appfs_fd = find_appfs_handle_for_slug(app->slug);
                                             }
                                         }
+                                        execute_app(buffer, theme, position, app);
                                     }
-                                    execute_app(buffer, theme, position, app);
                                     render(buffer, theme, &menu, position, false, false, favorites_only);
                                     break;
                                 }
                                 case BSP_INPUT_NAVIGATION_KEY_F4: {
                                     void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                     app_t* app = (app_t*)arg;
-                                    if (app->executable_type != EXECUTABLE_TYPE_APPFS) break;
-                                    if (app->executable_appfs_fd != APPFS_INVALID_FD &&
-                                        app_mgmt_can_uncache(app->slug)) {
-                                        // Cached → uncache
-                                        message_dialog_return_type_t msg_ret =
-                                            adv_dialog_yes_no(get_icon(ICON_HELP), "Remove from cache",
-                                                              "Remove app binary from AppFS cache?");
-                                        if (msg_ret == MSG_DIALOG_RETURN_OK) {
-                                            busy_dialog(get_icon(ICON_APPS), "Removing", "Removing from AppFS...",
-                                                        true);
-                                            esp_err_t res = app_mgmt_remove_from_appfs(app->slug);
-                                            if (res != ESP_OK) {
-                                                message_dialog(get_icon(ICON_ERROR), "Failed",
-                                                               "Failed to remove from AppFS", "OK");
+                                    if (app) {
+                                        if (app->executable_type != EXECUTABLE_TYPE_APPFS) break;
+                                        if (app->executable_appfs_fd != APPFS_INVALID_FD &&
+                                            app_mgmt_can_uncache(app->slug)) {
+                                            // Cached → uncache
+                                            message_dialog_return_type_t msg_ret =
+                                                adv_dialog_yes_no(get_icon(ICON_HELP), "Remove from cache",
+                                                                  "Remove app binary from AppFS cache?");
+                                            if (msg_ret == MSG_DIALOG_RETURN_OK) {
+                                                busy_dialog(get_icon(ICON_APPS), "Removing", "Removing from AppFS...",
+                                                            true);
+                                                esp_err_t res = app_mgmt_remove_from_appfs(app->slug);
+                                                if (res != ESP_OK) {
+                                                    message_dialog(get_icon(ICON_ERROR), "Failed",
+                                                                   "Failed to remove from AppFS", "OK");
+                                                }
+                                                refresh = true;
+                                            } else {
+                                                render(buffer, theme, &menu, position, false, true, favorites_only);
+                                            }
+                                        } else if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
+                                                   app->executable_appfs_fd == APPFS_INVALID_FD) {
+                                            // Not cached → cache (pre-cache without launching)
+                                            char* firmware_path = app_mgmt_find_firmware_path(app->slug);
+                                            if (firmware_path == NULL) {
+                                                message_dialog(get_icon(ICON_ERROR), "Error", "App binary not found",
+                                                               "OK");
+                                            } else {
+                                                load_app_to_appfs(app, firmware_path, "Caching");
+                                                free(firmware_path);
                                             }
                                             refresh = true;
-                                        } else {
-                                            render(buffer, theme, &menu, position, false, true, favorites_only);
                                         }
-                                    } else if (app->executable_type == EXECUTABLE_TYPE_APPFS &&
-                                               app->executable_appfs_fd == APPFS_INVALID_FD) {
-                                        // Not cached → cache (pre-cache without launching)
-                                        char* firmware_path = app_mgmt_find_firmware_path(app->slug);
-                                        if (firmware_path == NULL) {
-                                            message_dialog(get_icon(ICON_ERROR), "Error", "App binary not found", "OK");
-                                        } else {
-                                            load_app_to_appfs(app, firmware_path, "Caching");
-                                            free(firmware_path);
-                                        }
-                                        refresh = true;
                                     }
                                     break;
                                 }
@@ -533,9 +555,11 @@ void menu_apps(bool favorites_only) {
                                 case BSP_INPUT_NAVIGATION_KEY_F2: {
                                     void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                     app_t* app = (app_t*)arg;
-                                    if (menu_app_inspect(buffer, theme, app)) {
-                                        refresh = true;
-                                        break;
+                                    if (app) {
+                                        if (menu_app_inspect(buffer, theme, app)) {
+                                            refresh = true;
+                                            break;
+                                        }
                                     }
                                     render(buffer, theme, &menu, position, false, true, favorites_only);
                                     break;
