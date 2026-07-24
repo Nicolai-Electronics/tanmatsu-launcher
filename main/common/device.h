@@ -5,4 +5,7 @@
 #include "esp_err.h"
 
 bool device_has_lora(void);
+bool device_has_rtc(void);
+bool device_has_usb_switching(void);
 bool device_has_provisioning(void);
+bool device_has_sdcard(void);

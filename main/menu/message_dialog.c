@@ -5,6 +5,7 @@
 #include "bsp/power.h"
 #include "common/display.h"
 #include "common/theme.h"
+#include "common/device.h"
 #include "esp_wifi.h"
 #include "esp_wifi_types_generic.h"
 #include "freertos/idf_additions.h"
@@ -189,15 +190,24 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
     gui_element_icontext_t header_right[5]    = {0};
     size_t                 header_right_count = 0;
     if (header) {
-        header_right[header_right_count++] = clock_indicator();
+        if (device_has_rtc()) {
+            header_right[header_right_count++] = clock_indicator();
+        }
 
         bsp_power_battery_information_t information = {0};
         if (bsp_power_get_battery_information(&information) == ESP_OK) {
             header_right[header_right_count++] = battery_indicator(&information);
         }
-        header_right[header_right_count++] = usb_indicator();
+
+        if (device_has_usb_switching()) {
+            header_right[header_right_count++] = usb_indicator();
+        }
+
         header_right[header_right_count++] = wifi_indicator();
-        header_right[header_right_count++] = sdcard_indicator();
+
+        if (device_has_sdcard()) {
+            header_right[header_right_count++] = sdcard_indicator();
+        }
     } else {
         header_right_count = 0;
     }

@@ -95,7 +95,9 @@ void menu_settings(void) {
         menu_insert_item_icon(&menu, "Theme", NULL, (void*)ACTION_THEME, -1, get_icon(ICON_COLORS));
     }
     menu_insert_item_icon(&menu, "WiFi", NULL, (void*)ACTION_WIFI, -1, get_icon(ICON_WIFI));
-    menu_insert_item_icon(&menu, "Clock", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
+    if (device_has_rtc()) {
+        menu_insert_item_icon(&menu, "Clock", NULL, (void*)ACTION_CLOCK, -1, get_icon(ICON_CLOCK));
+    }
     menu_insert_item_icon(&menu, "Repository", NULL, (void*)ACTION_REPOSITORY, -1, get_icon(ICON_STOREFRONT));
     if (device_has_lora()) {
         menu_insert_item_icon(&menu, "LoRa radio", NULL, (void*)ACTION_LORA, -1, get_icon(ICON_WORKSPACES));

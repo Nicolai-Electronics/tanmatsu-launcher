@@ -208,7 +208,7 @@ void theme_initialize(void) {
     theme.menu.horizontal_padding    = 0;
     theme.menu.text_font             = pax_font_saira_regular;
     theme.menu.list_entry_height     = 32;
-    theme.menu.grid_horizontal_count = 5;
+    theme.menu.grid_horizontal_count = 4;
     theme.menu.grid_vertical_count   = 2;
 
     theme.show_clock = false;
