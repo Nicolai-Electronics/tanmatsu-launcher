@@ -2,6 +2,9 @@
 #include <sys/time.h>
 #include <time.h>
 #include "addon.h"
+#include "app_favorite.h"
+#include "app_management.h"
+#include "app_metadata_parser.h"
 #include "appfs.h"
 #include "badgelink.h"
 #include "bootloader_update.h"
@@ -42,6 +45,7 @@
 #include "lora_settings_handler.h"
 #include "menu/apps.h"
 #include "menu/home.h"
+#include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "ntp.h"
 #include "nvs_flash.h"
@@ -67,7 +71,7 @@
 #include "plugin_manager.h"
 #endif
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
 #include "bsp/tanmatsu.h"
 #include "tanmatsu_coprocessor.h"
 #endif
@@ -120,7 +124,7 @@ static void fix_rtc_out_of_bounds(void) {
 }
 
 bool wifi_stack_get_initialized(void) {
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
     bsp_radio_state_t state;
     bsp_power_get_radio_state(&state);
     return wifi_stack_initialized && state == BSP_POWER_RADIO_STATE_APPLICATION;
@@ -144,7 +148,7 @@ static void wifi_task(void* pvParameters) {
 
     ESP_LOGI(TAG, "WiFi task started");
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
     radio_system_protocol_information_t radio_information = {0};
     if (radio_system_protocol_get_information(&radio_information) == ESP_OK) {
         wifi_firmware_version_mismatch = (strcmp(radio_information.firmware_version, "v3.4.0") != 0);
@@ -267,7 +271,7 @@ static void wifi_task(void* pvParameters) {
 
 esp_err_t check_i2c_bus(void) {
     i2c_master_bus_handle_t i2c_bus_handle_internal;
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
     ESP_ERROR_CHECK(bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal));
     esp_err_t ret_codec  = i2c_master_probe(i2c_bus_handle_internal, 0x08, 50);
     esp_err_t ret_bmi270 = i2c_master_probe(i2c_bus_handle_internal, 0x68, 50);
@@ -449,7 +453,8 @@ void app_main(void) {
         bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_BOOTLOADER);
         ESP_LOGW(TAG, "Radio firmware update mode requested, starting radio in bootloader mode");
         printf(
-            "Volume up was held down while starting the device. The radio is\nhas been started in bootloader \r\n"
+            "Volume up was held down while starting the device. The radio is\nhas been started in bootloader "
+            "\r\n"
             "mode to allow firmware recovery.\n\nGo to https://recovery.tanmatsu.cloud for instructions.");
         if (display_available) {
             gui_theme_t* theme = get_theme();
@@ -465,7 +470,8 @@ void app_main(void) {
                     theme->menu.vertical_padding;
             pax_draw_text(
                 fb, theme->palette.color_foreground, theme->menu.text_font, 16, x, y + 18 * 0,
-                "Volume up was held down while starting the device. The radio is\nhas been started in bootloader "
+                "Volume up was held down while starting the device. The radio is\nhas been started in "
+                "bootloader "
                 "mode to allow firmware recovery.\n\nGo to https://recovery.tanmatsu.cloud for instructions.");
             display_blit_buffer(fb);
         }
@@ -508,6 +514,68 @@ void app_main(void) {
     startup_dialog("Initializing event handler...");
     global_event_handler_initialize();
 
+    // App autostart
+    esp_reset_reason_t reset_reason = esp_reset_reason();
+    if (reset_reason == ESP_RST_POWERON || reset_reason == ESP_RST_JTAG) {
+        char* autostart_slug = malloc(APP_MAX_SLUG_SIZE);
+        if (autostart_slug) {
+            if (app_autostart_get(autostart_slug) == ESP_OK && strlen(autostart_slug) > 0) {
+                app_t* apps[MAX_NUM_APPS] = {0};
+                size_t number_of_apps     = create_list_of_apps(apps, MAX_NUM_APPS);
+
+                app_t* app = NULL;
+                for (size_t i = 0; i < number_of_apps; i++) {
+                    if (apps[i] != NULL && apps[i]->slug != NULL) {
+                        if (strncmp(apps[i]->slug, autostart_slug, APP_MAX_SLUG_SIZE) == 0) {
+                            app = apps[i];
+                        }
+                    }
+                }
+
+                if (app == NULL) {
+                    ESP_LOGE(TAG, "Could not find application '%s' to autostart, disabling autostart.", autostart_slug);
+                    app_autostart_get(NULL);  // Reset autostart NVS entry when app can not be found
+                } else {
+                    bool canceled = false;
+                    for (uint8_t i = 4; i >= 1; i--) {
+                        char text[128] = {0};
+                        snprintf(text, sizeof(text), "Starting %s in %u... Press X (F1) to cancel", autostart_slug, i);
+                        startup_dialog(text);
+                        bsp_input_event_t event;
+                        if (xQueueReceive(input_event_queue, &event, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                            if (i < 3) i = 3;  // Reset counter on event
+                            if (event.type == INPUT_EVENT_TYPE_NAVIGATION &&
+                                (event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_F1 ||
+                                 event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_HOME ||
+                                 event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_ESC ||
+                                 event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_SPACE_L ||
+                                 event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_SPACE_M ||
+                                 event.args_navigation.key == BSP_INPUT_NAVIGATION_KEY_SPACE_R) &&
+                                event.args_navigation.state) {
+                                canceled = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!canceled) {
+                        gui_theme_t* theme    = get_theme();
+                        pax_buf_t*   buffer   = display_get_buffer();
+                        pax_vec2_t   position = menu_calc_position(buffer, theme);
+                        wifi_stack_task_done  = true;  // Workaround
+                        execute_app(buffer, theme, position, app);
+                        wifi_stack_task_done = false;  // Workaround
+                        message_dialog(get_icon(ICON_ERROR), "Autostart failed",
+                                       "The configured autostart app could not be started.", "Close");
+                        reinit_startup_dialog();
+                        free_list_of_apps(apps, MAX_NUM_APPS);
+                    }
+                }
+            }
+            free(autostart_slug);
+        }
+    }
+
     startup_dialog("Initializing certificate store...");
     ESP_ERROR_CHECK(initialize_custom_ca_store());
 
@@ -523,7 +591,7 @@ void app_main(void) {
     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_APPLICATION);
 
     startup_dialog("Initializing radio...");
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL)
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
     ESP_ERROR_CHECK(lora_init_remote(&lora_handle, 32));
     radio_system_protocol_init();  // Return value ignored
 #endif
@@ -560,31 +628,17 @@ void app_main(void) {
 
     uint8_t patch = 0;
     nvs_settings_get_firmware_patch_level(&patch);
-    if (patch < 1) {
-        // Patch level 0: attempt updating radio
-        nvs_settings_set_firmware_patch_level(1);
-        if (wifi_stack_get_version_mismatch()) {
-            radio_ota_update();
-            bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
-            vTaskDelay(pdMS_TO_TICKS(100));
-            esp_restart();
-        }
-    }
-    if (patch < 2) {
-        // Patch level 1: icons missing, attempt to download icons
-        nvs_settings_set_firmware_patch_level(2);
-        if (get_icons_missing()) {
-            download_icons(true);
-            bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
-            vTaskDelay(pdMS_TO_TICKS(100));
-            esp_restart();
-        }
-    }
-    if (patch < 7 && wifi_stack_get_version_mismatch()) {
-        // Patch level 2-7: new radio update, attempt updating radio
-        nvs_settings_set_firmware_patch_level(7);
+    if (patch < 8 && wifi_stack_get_version_mismatch()) {
+        nvs_settings_set_firmware_patch_level(8);
         bsp_audio_set_amplifier(false);  // Disable amplifier to prevent noise on reboot
         radio_ota_update();
+        bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        esp_restart();
+    }
+    if (patch < 9 && get_icons_missing()) {
+        nvs_settings_set_firmware_patch_level(9);
+        download_icons(true);
         bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
         vTaskDelay(pdMS_TO_TICKS(100));
         esp_restart();
@@ -594,8 +648,7 @@ void app_main(void) {
 
     bsp_power_set_usb_host_boost_enabled(true);
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_KONSOOL) || \
-    defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
     res = hid_kbd_init();
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize USB HID keyboard support");

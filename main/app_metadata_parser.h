@@ -3,6 +3,7 @@
 #include "appfs.h"
 #include "pax_types.h"
 
+#define APP_MAX_SLUG_SIZE      48
 #define APP_MAX_NUM_CATEGORIES 16
 
 typedef enum {
@@ -40,6 +41,7 @@ typedef struct {
     char*    executable_on_fs_filename;
 
     bool favorite;
+    bool autostart;
 } app_t;
 
 appfs_handle_t find_appfs_handle_for_slug(const char* search_slug);

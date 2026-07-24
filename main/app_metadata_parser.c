@@ -472,6 +472,16 @@ size_t create_list_of_apps(app_t** out_list, size_t list_size) {
         }
     }
 
+    char autostart_slug[APP_MAX_SLUG_SIZE] = {0};
+    if (app_autostart_get(autostart_slug) == ESP_OK && strlen(autostart_slug) > 0) {
+        for (size_t position = 0; position < count; position++) {
+            if (strncmp(out_list[position]->slug, autostart_slug, APP_MAX_SLUG_SIZE) == 0) {
+                out_list[position]->autostart = true;
+                break;
+            }
+        }
+    }
+
     return count;
 }
 

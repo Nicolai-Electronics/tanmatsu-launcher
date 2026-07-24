@@ -1,5 +1,6 @@
 #include "wifi_ota.h"
 #include <sys/socket.h>
+#include "device_settings.h"
 #include "esp_event.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
@@ -141,8 +142,16 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
 
     ESP_LOGI(TAG, "Starting OTA update");
 
+    char user_agent[128] = {0};
+    device_settings_get_default_http_user_agent(user_agent, sizeof(user_agent));
+
     esp_http_client_config_t config = {
-        .url = ota_url, .use_global_ca_store = true, .event_handler = _http_event_handler, .keep_alive_enable = true};
+        .url                 = ota_url,
+        .use_global_ca_store = true,
+        .event_handler       = _http_event_handler,
+        .keep_alive_enable   = true,
+        .user_agent          = user_agent,
+    };
 
     esp_https_ota_config_t ota_config = {
         .http_config = &config,
