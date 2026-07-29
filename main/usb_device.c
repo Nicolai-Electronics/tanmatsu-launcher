@@ -19,6 +19,7 @@
 #include "hal/usb_serial_jtag_ll.h"
 #include "hal/usb_wrap_ll.h"
 #include "tinyusb.h"
+#include "tinyusb_default_config.h"
 
 static const char* TAG = "USB device";
 
@@ -107,20 +108,6 @@ static const uint8_t s_cfg_desc[] = {
     TUD_VENDOR_DESCRIPTOR(ITF_NUM_VENDOR, STRING_DESC_VENDOR, EPNUM_VENDOR, (0x80 | EPNUM_VENDOR), 32),
 };
 
-#if (TUD_OPT_HIGH_SPEED)
-/**
- * @brief High Speed configuration descriptor
- *
- * This is a simple configuration descriptor that defines 1 configuration and a MIDI interface
- */
-static const uint8_t s_hs_cfg_desc[] = {
-    // Configuration number, interface count, string index, total length, attribute, power in mA
-    TUD_CONFIG_DESCRIPTOR(1, ITF_COUNT, 0, TUSB_DESCRIPTOR_TOTAL_LEN, 0, 100),
-
-    // Interface number, string index, EP Out & EP In address, EP size
-    TUD_VENDOR_DESCRIPTOR(ITF_NUM_VENDOR, STRING_DESC_VENDOR, EPNUM_VENDOR, (0x80 | EPNUM_VENDOR), 512),
-};
-#endif  // TUD_OPT_HIGH_SPEED
 
 //--------------------------------------------------------------------+
 // BOS Descriptor
@@ -285,20 +272,11 @@ void usb_initialize(void) {
     snprintf(usb_serial, USB_STRING_LENGTH, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4],
              mac[5]);
 
-    tinyusb_config_t const tusb_cfg = {
-        .device_descriptor       = &desc_device,
-        .string_descriptor       = s_str_desc,
-        .string_descriptor_count = sizeof(s_str_desc) / sizeof(s_str_desc[0]),
-        .external_phy            = false,
-#if (TUD_OPT_HIGH_SPEED)
-        .fs_configuration_descriptor =
-            s_cfg_desc,  // HID configuration descriptor for full-speed and high-speed are the same
-        .hs_configuration_descriptor = s_hs_cfg_desc,
-        .qualifier_descriptor        = &desc_qualifier,
-#else
-        .configuration_descriptor = s_cfg_desc,
-#endif  // TUD_OPT_HIGH_SPEED
-    };
+    tinyusb_config_t tusb_cfg          = TINYUSB_CONFIG_FULL_SPEED(NULL, NULL);
+    tusb_cfg.descriptor.device         = &desc_device;
+    tusb_cfg.descriptor.string         = s_str_desc;
+    tusb_cfg.descriptor.string_count   = sizeof(s_str_desc) / sizeof(s_str_desc[0]);
+    tusb_cfg.descriptor.full_speed_config = s_cfg_desc;
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
 
     ESP_LOGI(TAG, "USB initialization DONE");

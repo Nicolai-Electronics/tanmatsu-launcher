@@ -6,7 +6,7 @@
 #include <sys/unistd.h>
 #include "esp_err.h"
 #include "fastopen.h"
-#include "sys/dirent.h"
+#include <dirent.h>
 
 bool fs_utils_exists(const char* path) {
     struct stat stat_path;

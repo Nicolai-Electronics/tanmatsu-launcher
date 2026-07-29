@@ -1,3 +1,5 @@
+# Device parameters
+DEVICE ?= tanmatsu
 PORT ?= /dev/ttyACM0
 BADGELINKPORT ?= $(PORT)
 
@@ -6,20 +8,24 @@ BADGELINKPORT ?= $(PORT)
 # badgelink.py falls back to its default libusb scan.
 BADGELINK_CONN := $(if $(BADGELINKPORT),$(if $(findstring :,$(BADGELINKPORT)),--tcp $(BADGELINKPORT),--port $(BADGELINKPORT)),)
 
-IDF_PATH ?= $(shell cat .IDF_PATH 2>/dev/null || echo `pwd`/esp-idf)
-IDF_TOOLS_PATH ?= $(shell cat .IDF_TOOLS_PATH 2>/dev/null || echo `pwd`/esp-idf-tools)
-IDF_BRANCH ?= v5.5.2
-IDF_EXPORT_QUIET ?= 1
-IDF_GITHUB_ASSETS ?= dl.espressif.com/github_assets
-MAKEFLAGS += --silent
-
-SHELL := /usr/bin/env bash
-
-DEVICE ?= tanmatsu
+# Build parameters
+IDF_VERSION ?= v6.0.2
 BUILD ?= build/$(DEVICE)
 FAT ?= 0
 SDKCONFIG_DEFAULTS ?= sdkconfigs/general;sdkconfigs/$(DEVICE)
 SDKCONFIG ?= sdkconfig_$(DEVICE)
+
+# SDK
+IDF_PATH ?= $(shell cat .IDF_PATH 2>/dev/null || test -d `pwd`/esp-idf && echo `pwd`/esp-idf || echo '$(HOME)/.espressif/$(IDF_VERSION)/esp-idf')
+IDF_TOOLS_PATH ?= $(shell cat .IDF_TOOLS_PATH 2>/dev/null || test -d `pwd`/esp-idf-tools && echo `pwd`/esp-idf-tools || echo '$(HOME)/.espressif/tools')
+IDF_SOURCE ?= $(shell cat .IDF_PATH 2>/dev/null && echo '$(IDF_PATH)/export.sh' || test -d `pwd`/esp-idf && echo '$(IDF_PATH)/export.sh' || echo '$(HOME)/.espressif/tools/activate_idf_$(IDF_VERSION).sh')
+IDF_EXPORT_QUIET ?= 1
+IDF_GITHUB_ASSETS ?= dl.espressif.com/github_assets
+IDF_INSTALL_PATH ?= $(shell echo `pwd`/esp-idf)
+IDF_INSTALL_TOOLS_PATH ?= $(shell echo `pwd`/esp-idf-tools)
+
+MAKEFLAGS += --silent
+SHELL := /usr/bin/env bash
 
 ####
 
@@ -42,7 +48,7 @@ $(warning "Unknown device, defaulting to ESP32")
 IDF_TARGET ?= esp32
 endif
 
-IDF_PARAMS := -B $(BUILD) build -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET) -DFAT=$(FAT)
+IDF_PARAMS := -B $(BUILD) -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET) -DFAT=$(FAT)
 
 #####
 
@@ -72,11 +78,32 @@ submodules:
 
 .PHONY: sdk
 sdk:
-	if test -d "$(IDF_PATH)"; then echo -e "ESP-IDF target folder exists!\r\nPlease remove the folder or un-set the environment variable."; exit 1; fi
-	if test -d "$(IDF_TOOLS_PATH)"; then echo -e "ESP-IDF tools target folder exists!\r\nPlease remove the folder or un-set the environment variable."; exit 1; fi
-	git clone --recursive --branch "$(IDF_BRANCH)" https://github.com/espressif/esp-idf.git "$(IDF_PATH)" --depth=1 --shallow-submodules
-	cd "$(IDF_PATH)"; git submodule update --init --recursive
-	cd "$(IDF_PATH)"; bash install.sh all
+	if test -d "$(IDF_INSTALL_PATH)"; then echo -e "ESP-IDF target folder exists!\r\nPlease remove the folder or un-set the environment variable."; exit 1; fi
+	if test -d "$(IDF_INSTALL_TOOLS_PATH)"; then echo -e "ESP-IDF tools target folder exists!\r\nPlease remove the folder or un-set the environment variable."; exit 1; fi
+	git clone --recursive --branch "$(IDF_VERSION)" https://github.com/espressif/esp-idf.git "$(IDF_INSTALL_PATH)" --depth=1 --shallow-submodules
+	cd "$(IDF_INSTALL_PATH)"; git submodule update --init --recursive
+	cd "$(IDF_INSTALL_PATH)"; bash install.sh all
+
+.PHONY: eim-sdk
+eim-sdk:
+	eim install --do-not-track true -i $(IDF_VERSION)
+
+.PHONY: check-sdk
+check-sdk:
+	@if test -d $(IDF_PATH); then \
+		printf '%s\n' "ESP-IDF $(IDF_VERSION) found!"; \
+	else \
+		printf 'ESP-IDF SDK not found. %s\n' "Please install ESP-IDF $(IDF_VERSION), either by running 'make prepare' (installs to this folder) or 'make eim-sdk' (installs using Espressif installation manager) or if manually installed set the IDF_PATH and IDF_TOOLS_PATH environment variables or create files .IDF_PATH and .IDF_TOOLS_PATH in this folder containing the paths." >&2; \
+		exit 1; \
+	fi
+
+.PHONY: print-sdk
+print-sdk:
+	echo "ESP-IDF path:               $(IDF_PATH)"
+	echo "ESP-IDF tools:              $(IDF_TOOLS_PATH)"
+	echo "ESP-IDF source command:     $(IDF_SOURCE)"
+	echo "ESP-IDF installation path:  $(IDF_INSTALL_PATH)"
+	echo "ESP-IDF installation tools: $(IDF_INSTALL_TOOLS_PATH)"
 
 .PHONY: reinstallsdk
 reinstallsdk:
@@ -92,22 +119,22 @@ refreshsdk: removesdk sdk
 
 .PHONY: menuconfig
 menuconfig:
-	source "$(IDF_PATH)/export.sh" && idf.py menuconfig -DDEVICE=$(DEVICE) -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS)" -DSDKCONFIG=$(SDKCONFIG) -DIDF_TARGET=$(IDF_TARGET)
-	
+	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) menuconfig
+
 # Cleaning
 
 .PHONY: clean
 clean:
 	rm -rf $(BUILD)
-	rm -f sdkconfig_$(DEVICE)
+	rm -f .submodules_update_done
+	rm -rf managed_components
+	rm -f sdkconfig_*
 
 .PHONY: fullclean
-fullclean:
-	rm -rf managed_components
+fullclean: clean
 	rm -rf build
-	rm -f .submodules_update_done
-	rm -f sdkconfig
 	rm -f sdkconfig_*
+	rm -f sdkconfig
 	rm -f sdkconfig.old
 	rm -f sdkconfig.ci
 	rm -f sdkconfig.defaults
@@ -121,23 +148,27 @@ checkbuildenv:
 # Building
 
 .PHONY: build
-build: icons checkbuildenv submodules
-	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py $(IDF_PARAMS)
+build: check-sdk icons checkbuildenv submodules
+	source "$(IDF_SOURCE)" >/dev/null && idf.py $(IDF_PARAMS) build
+
+.PHONY: reconfigure
+reconfigure: check-sdk checkbuildenv
+	source "$(IDF_SOURCE)" >/dev/null && idf.py $(IDF_PARAMS) reconfigure
 
 .PHONY: merge
 merge: build
-	source "$(IDF_PATH)/export.sh" >/dev/null && idf.py $(IDF_PARAMS) merge-bin
+	source "$(IDF_SOURCE)" >/dev/null && idf.py $(IDF_PARAMS) merge-bin
 
 # Hardware
 
 .PHONY: flash
 flash: build
-	source "$(IDF_PATH)/export.sh" && \
+	source "$(IDF_SOURCE)" && \
 	idf.py $(IDF_PARAMS) flash -p $(PORT)
 
 .PHONY: flashmonitor
 flashmonitor: build
-	source "$(IDF_PATH)/export.sh" && \
+	source "$(IDF_SOURCE)" && \
 	idf.py $(IDF_PARAMS) flash -p $(PORT) monitor
 
 .PHONY: quickflash
@@ -146,14 +177,14 @@ quickflash: build
 
 .PHONY: prepappfs
 prepappfs:
-	source "$(IDF_PATH)/export.sh" && \
+	source "$(IDF_SOURCE)" && \
 	python3 managed_components/badgeteam__appfs/tools/appfs_generate.py \
 	8192000 \
 	appfs.bin
 
 .PHONY: appfs
 appfs:
-	source "$(IDF_PATH)/export.sh" && \
+	source "$(IDF_SOURCE)" && \
 	esptool.py \
 		-b 921600 --port $(PORT) \
 		write_flash --flash_mode dio --flash_freq 80m --flash_size 16MB \
@@ -161,11 +192,11 @@ appfs:
 
 .PHONY: erase
 erase:
-	source "$(IDF_PATH)/export.sh" && idf.py $(IDF_PARAMS) erase-flash -p $(PORT)
+	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) erase-flash -p $(PORT)
 
 .PHONY: monitor
 monitor:
-	source "$(IDF_PATH)/export.sh" && idf.py $(IDF_PARAMS) monitor -p $(PORT)
+	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) monitor -p $(PORT)
 
 # Ask the launcher (running in USB_DEBUG / flash-monitor mode) to switch its
 # USB into BadgeLink (USB_DEVICE) mode. The listener in main/usb_debug_listener.c
@@ -176,7 +207,7 @@ monitor:
 # is being forwarded over the network.
 .PHONY: mode_badgelink
 mode_badgelink:
-	source "$(IDF_PATH)/export.sh" >/dev/null && \
+	source "$(IDF_SOURCE)" >/dev/null && \
 	python3 -c "import serial, sys; s=serial.serial_for_url('$(PORT)', timeout=1); s.write(b'BADGELINK\n'); s.flush(); sys.stdout.write(s.read(128).decode(errors='replace')); s.close()"
 
 # Ask the launcher (running in USB_DEVICE / BadgeLink mode) to switch its
@@ -203,37 +234,37 @@ mode_debug:
 
 .PHONY: openocd
 openocd:
-	source "$(IDF_PATH)/export.sh" && idf.py $(IDF_PARAMS) openocd
+	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) openocd
 
 .PHONY: openocdftdi
 openocdftdi:
-	source "$(IDF_PATH)/export.sh" && idf.py $(IDF_PARAMS) openocd --openocd-commands "-f board/esp32p4-ftdi.cfg"
+	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) openocd --openocd-commands "-f board/esp32p4-ftdi.cfg"
 
 .PHONY: gdb
 gdb:
-	source "$(IDF_PATH)/export.sh" && idf.py $(IDF_PARAMS) gdb
+	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) gdb
 
 .PHONY: gdbgui
 gdbgui:
-	source "$(IDF_PATH)/export.sh" && idf.py $(IDF_PARAMS) gdbgui
+	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) gdbgui
 
 .PHONY: gdbtui
 gdbtui:
-	source "$(IDF_PATH)/export.sh" && idf.py $(IDF_PARAMS) gdbtui
+	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) gdbtui
 
 # Tools
 
 .PHONY: size
 size:
-	source "$(IDF_PATH)/export.sh" && idf.py $(IDF_PARAMS) size
+	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) size
 
 .PHONY: size-components
 size-components:
-	source "$(IDF_PATH)/export.sh" && idf.py $(IDF_PARAMS) size-components
+	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) size-components
 
 .PHONY: size-files
 size-files:
-	source "$(IDF_PATH)/export.sh" && idf.py $(IDF_PARAMS) size-files
+	source "$(IDF_SOURCE)" && idf.py $(IDF_PARAMS) size-files
 
 .PHONY: efuse
 efuse:

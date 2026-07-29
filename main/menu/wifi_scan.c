@@ -194,7 +194,7 @@ void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
     for (uint16_t i = 0; i < num_aps; i++) {
         wifi_ap_record_t* ap = &aps[i];
         char              label_buffer[128];
-        char              type[5] = "other";
+        char              type[6] = "other";
         char              bssid_str[18];
         if (ap->phy_11a) snprintf(type, sizeof(type), "11a");
         if (ap->phy_11ac) snprintf(type, sizeof(type), "11ac");

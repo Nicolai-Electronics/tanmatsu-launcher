@@ -62,6 +62,10 @@ static esp_err_t _event_handler(esp_http_client_event_t* evt) {
             }
             break;
         }
+        case HTTP_EVENT_ON_HEADERS_COMPLETE:
+            break;
+        case HTTP_EVENT_ON_STATUS_CODE:
+            break;
         case HTTP_EVENT_ON_DATA:
             if (info->callback != NULL) {
                 info->callback(info->received + evt->data_len, info->size, info->callback_text);

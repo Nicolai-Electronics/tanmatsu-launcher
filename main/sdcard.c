@@ -7,6 +7,7 @@
 #include "driver/sdmmc_host.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
+#include "esp_idf_version.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_vfs.h"
@@ -25,7 +26,24 @@ static const char           mount_point[] = "/sd";
 static sd_pwr_ctrl_handle_t sd_pwr_handle = NULL;
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU)
-static char const           TAG[] = "sdcard";
+static char const TAG[] = "sdcard";
+
+#if defined(CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE) && (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0))
+#define SDCARD_WORKAROUND_HOSTED_DOES_SDMMC_HOST_INIT 1
+#else
+#define SDCARD_WORKAROUND_HOSTED_DOES_SDMMC_HOST_INIT 0
+#endif
+
+#if SDCARD_WORKAROUND_HOSTED_DOES_SDMMC_HOST_INIT
+static esp_err_t sdmmc_host_init_noop(void) {
+    return ESP_OK;
+}
+
+static esp_err_t sdmmc_host_deinit_noop(void) {
+    return ESP_OK;
+}
+#endif
+
 static sd_pwr_ctrl_handle_t initialize_sd_ldo(void) {
     sd_pwr_ctrl_ldo_config_t ldo_config = {
         .ldo_chan_id = 4,
@@ -105,9 +123,21 @@ esp_err_t sd_mount(void) {
     host.slot            = SDMMC_HOST_SLOT_0;     // Use SLOT0 for native IOMUX pins
     host.max_freq_khz    = SDMMC_FREQ_HIGHSPEED;  // 40MHz
     host.pwr_ctrl_handle = sd_pwr_handle;
+#if SDCARD_WORKAROUND_HOSTED_DOES_SDMMC_HOST_INIT
+    // ESP-Hosted already owns the shared SDMMC host controller.
+    host.init   = &sdmmc_host_init_noop;
+    host.deinit = &sdmmc_host_deinit_noop;
+#endif
 
-    // Allocate DMA buffer in internal RAM to avoid PSRAM cache sync overhead
-    static DRAM_DMA_ALIGNED_ATTR uint8_t dma_buf[512 * 4];  // 2KB aligned buffer
+    static uint8_t* dma_buf = NULL;  // 2KB aligned buffer, allocated once and reused
+    if (dma_buf == NULL) {
+        dma_buf = heap_caps_malloc(512 * 4, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+        if (dma_buf == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate DMA buffer for SD card");
+            status = SD_STATUS_ERROR;
+            return ESP_ERR_NO_MEM;
+        }
+    }
     host.dma_aligned_buffer = dma_buf;
 
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();

@@ -1,7 +1,28 @@
-export IDF_PATH=$(pwd)/esp-idf
-export IDF_TOOLS_PATH=$(pwd)/esp-idf-tools
+IDF_VERSION=v6.0.2
+
+if [ -f .IDF_PATH ]; then
+    export IDF_PATH=$(cat .IDF_PATH)
+elif [ -d "$(pwd)/esp-idf" ]; then
+    export IDF_PATH="$(pwd)/esp-idf"
+else
+    export IDF_PATH="$HOME/.espressif/$IDF_VERSION/esp-idf"
+fi
+
+if [ -f .IDF_TOOLS_PATH ]; then
+    export IDF_TOOLS_PATH=$(cat .IDF_TOOLS_PATH)
+elif [ -d "$(pwd)/esp-idf-tools" ]; then
+    export IDF_TOOLS_PATH="$(pwd)/esp-idf-tools"
+else
+    export IDF_TOOLS_PATH="$HOME/.espressif/tools"
+fi
+
+if [ -f .IDF_PATH ] || [ -d "$(pwd)/esp-idf" ]; then
+    IDF_SOURCE="$IDF_PATH/export.sh"
+else
+    IDF_SOURCE="$HOME/.espressif/tools/activate_idf_$IDF_VERSION.sh"
+fi
 
 echo "ESP-IDF: $IDF_PATH"
 echo "TOOLS:   $IDF_TOOLS_PATH"
 
-source esp-idf/export.sh
+source "$IDF_SOURCE"

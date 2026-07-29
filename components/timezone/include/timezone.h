@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include "esp_err.h"
 
-#define TIMEZONE_NAME_LEN 32
+#define TIMEZONE_NAME_LEN 40
 #define TIMEZONE_TZ_LEN   64
 
 typedef struct {

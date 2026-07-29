@@ -123,7 +123,6 @@ idf_component_register(
 		pax-codecs
 		efuse
 		timezone
-		json
 		freertos
 		badgelink
 		tanmatsu-wifi
@@ -133,6 +132,8 @@ idf_component_register(
 		tanmatsu-lora
 		tanmatsu-settings
 		scd4x
+		esp_driver_tsens
+		esp_driver_usb_serial_jtag
 		${extra_requires}
 	INCLUDE_DIRS
 		"."
@@ -142,7 +143,7 @@ idf_component_register(
 		${files}
 )
 
-if(CONFIG_ENABLE_LAUNCHERPLUGINS)
+if(CONFIG_ENABLE_LAUNCHERPLUGINS AND "${idf_target}" STREQUAL "esp32p4")
 # idf_component_optional_requires runs after Kconfig is processed, so CONFIG_*
 # values are available here. The early-scan REQUIRES list above can't depend
 # on CONFIG_* values, so plugin-only deps must be added through this hook.
