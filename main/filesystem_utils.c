@@ -1,4 +1,5 @@
 #include "filesystem_utils.h"
+#include <dirent.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,7 +7,6 @@
 #include <sys/unistd.h>
 #include "esp_err.h"
 #include "fastopen.h"
-#include <dirent.h>
 
 bool fs_utils_exists(const char* path) {
     struct stat stat_path;

@@ -3,9 +3,9 @@
 #include <time.h>
 #include "bsp/input.h"
 #include "bsp/power.h"
+#include "common/device.h"
 #include "common/display.h"
 #include "common/theme.h"
-#include "common/device.h"
 #include "esp_wifi.h"
 #include "esp_wifi_types_generic.h"
 #include "freertos/idf_additions.h"

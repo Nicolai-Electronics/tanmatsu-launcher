@@ -108,7 +108,6 @@ static const uint8_t s_cfg_desc[] = {
     TUD_VENDOR_DESCRIPTOR(ITF_NUM_VENDOR, STRING_DESC_VENDOR, EPNUM_VENDOR, (0x80 | EPNUM_VENDOR), 32),
 };
 
-
 //--------------------------------------------------------------------+
 // BOS Descriptor
 //--------------------------------------------------------------------+
@@ -272,10 +271,10 @@ void usb_initialize(void) {
     snprintf(usb_serial, USB_STRING_LENGTH, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4],
              mac[5]);
 
-    tinyusb_config_t tusb_cfg          = TINYUSB_CONFIG_FULL_SPEED(NULL, NULL);
-    tusb_cfg.descriptor.device         = &desc_device;
-    tusb_cfg.descriptor.string         = s_str_desc;
-    tusb_cfg.descriptor.string_count   = sizeof(s_str_desc) / sizeof(s_str_desc[0]);
+    tinyusb_config_t tusb_cfg             = TINYUSB_CONFIG_FULL_SPEED(NULL, NULL);
+    tusb_cfg.descriptor.device            = &desc_device;
+    tusb_cfg.descriptor.string            = s_str_desc;
+    tusb_cfg.descriptor.string_count      = sizeof(s_str_desc) / sizeof(s_str_desc[0]);
     tusb_cfg.descriptor.full_speed_config = s_cfg_desc;
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
 
