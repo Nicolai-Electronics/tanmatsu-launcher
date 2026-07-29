@@ -661,6 +661,11 @@ void app_main(void) {
     startup_dialog("Detecting Add-On boards...");
     addon_initialize();
 
+    if (!display_available) {
+        ESP_LOGE(TAG, "Started without display");
+        return;
+    }
+
     // Check patch level and apply patches if needed
     // Note: this explicitly checks the patch level once
     // if the patch fails we can at least try to show the menu,

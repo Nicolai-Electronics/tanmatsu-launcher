@@ -16,12 +16,14 @@
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU)
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/tanmatsu-"
-#elif defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
-#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/p4-function-ev-board-"
-#elif defined(CONFIG_BSP_TARGET_MCH2022)
-#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/mch2022-"
 #elif defined(CONFIG_BSP_TARGET_KAMI)
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/kami-"
+#elif defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
+#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/p4-function-ev-board-"
+#elif defined(CONFIG_BSP_TARGET_ESP32_S31_KORVO_1)
+#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/esp32-s31-korvo-1-"
+#elif defined(CONFIG_BSP_TARGET_MCH2022)
+#define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/mch2022-"
 #elif defined(CONFIG_BSP_TARGET_HACKADAY2025)
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/hackaday2025-"
 #else
