@@ -32,6 +32,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_types.h"
 #include "esp_log.h"
+#include "esp_pm.h"
 #include "esp_system.h"
 #include "esp_vfs_fat.h"
 #include "global_event_handler.h"
@@ -197,19 +198,13 @@ static void wifi_task(void* pvParameters) {
         }
     }
 
-#if 0
-    while (1) {
-        printf("free:%lu min-free:%lu lfb-dma:%u lfb-def:%u lfb-8bit:%u\n", esp_get_free_heap_size(),
-               esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DMA),
-               heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
-        vTaskDelay(pdMS_TO_TICKS(2000));
-    }
-#endif
+    vTaskDelete(NULL);
+}
 
-    /*while (1) {
-        esp_hosted_send_custom(3, (uint8_t*)"Hello from Tanmatsu!", 20);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-    }*/
+static void lora_task(void* pvParameters) {
+    while (!wifi_stack_get_initialized()) {
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
 
     if (device_has_lora()) {
         lora_protocol_status_params_t status = {0};
@@ -264,6 +259,47 @@ static void wifi_task(void* pvParameters) {
         } else {
             ESP_LOGE(TAG, "Failed to get LoRa mode: %s", esp_err_to_name(res));
         }
+    }
+
+    vTaskDelete(NULL);
+}
+
+static void monitor_task(void* pvParameters) {
+    while (1) {
+        ESP_LOGI(TAG, "free:%lu min-free:%lu lfb-dma:%u lfb-def:%u lfb-8bit:%u\n", esp_get_free_heap_size(),
+                 esp_get_minimum_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_DMA),
+                 heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT),
+                 heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+
+#if CONFIG_PM_ENABLE
+        esp_pm_config_t pm_config = {0};
+        esp_err_t       res       = esp_pm_get_configuration(&pm_config);
+        if (res == ESP_OK) {
+            ESP_LOGI(TAG, "PM config: max_freq_mhz=%d min_freq_mhz=%d light_sleep_enable=%d", pm_config.max_freq_mhz,
+                     pm_config.min_freq_mhz, pm_config.light_sleep_enable);
+        } else {
+            ESP_LOGE(TAG, "Failed to get PM configuration: %s", esp_err_to_name(res));
+        }
+
+        esp_pm_lock_stats_t lock_stats[ESP_PM_LOCK_MAX] = {0};
+        res                                             = esp_pm_get_lock_stats_all(lock_stats);
+        if (res == ESP_OK) {
+            static const char* lock_type_names[ESP_PM_LOCK_MAX] = {
+                [ESP_PM_CPU_FREQ_MAX]   = "CPU_FREQ_MAX",
+                [ESP_PM_APB_FREQ_MAX]   = "APB_FREQ_MAX",
+                [ESP_PM_NO_LIGHT_SLEEP] = "NO_LIGHT_SLEEP",
+            };
+            for (int i = 0; i < ESP_PM_LOCK_MAX; i++) {
+                ESP_LOGI(TAG, "PM lock %-14s: created=%u acquired=%u", lock_type_names[i],
+                         (unsigned int)lock_stats[i].created, (unsigned int)lock_stats[i].acquired);
+            }
+        } else {
+            ESP_LOGE(TAG, "Failed to get PM lock statistics: %s", esp_err_to_name(res));
+        }
+
+        esp_pm_dump_locks(stdout);
+#endif
+        vTaskDelay(pdMS_TO_TICKS(5000));
     }
 
     vTaskDelete(NULL);
@@ -609,6 +645,10 @@ void app_main(void) {
     wifi_stack_task_done = true;
 
     xTaskCreatePinnedToCore(wifi_task, TAG, 4096, NULL, 10, NULL, CONFIG_SOC_CPU_CORES_NUM - 1);
+    if (device_has_lora()) {
+        xTaskCreatePinnedToCore(lora_task, TAG, 4096, NULL, 10, NULL, CONFIG_SOC_CPU_CORES_NUM - 1);
+    }
+    // xTaskCreatePinnedToCore(monitor_task, TAG, 4096, NULL, 10, NULL, CONFIG_SOC_CPU_CORES_NUM - 1);
 
     startup_dialog("Initializing BadgeLink...");
     badgelink_init();
@@ -685,6 +725,18 @@ void app_main(void) {
                        "that is part of the radio firmware.\n",
                        "Close");
         nvs_settings_set_welcome_message_state(welcome_target);
+    }
+#endif
+
+#if CONFIG_PM_ENABLE
+    esp_pm_config_t pm_config = {
+        .max_freq_mhz       = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
+        .min_freq_mhz       = CONFIG_XTAL_FREQ,
+        .light_sleep_enable = true,
+    };
+    res = esp_pm_configure(&pm_config);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to enable light sleep: %s", esp_err_to_name(res));
     }
 #endif
 
