@@ -155,6 +155,10 @@ build: check-sdk icons checkbuildenv submodules
 reconfigure: check-sdk checkbuildenv
 	source "$(IDF_SOURCE)" >/dev/null && idf.py $(IDF_PARAMS) reconfigure
 
+.PHONY: defconfig
+defconfig: check-sdk checkbuildenv
+	source "$(IDF_SOURCE)" >/dev/null && idf.py $(IDF_PARAMS) save-defconfig
+
 .PHONY: merge
 merge: build
 	source "$(IDF_SOURCE)" >/dev/null && idf.py $(IDF_PARAMS) merge-bin
