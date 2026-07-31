@@ -5,4 +5,4 @@ dependencies:
   usb_host_hid:
     version: "^1.0.1"
     rules:
-      - if: target == esp32p4
+      - if: target == esp32p4 || target == esp32s31

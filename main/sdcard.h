@@ -15,7 +15,4 @@ typedef enum {
 
 esp_err_t   sd_mount(void);
 esp_err_t   sd_unmount(void);
-esp_err_t   sd_mount_spi(void);
-void        test_sd(void);
-void        sd_speedtest(void);
 sd_status_t sd_status(void);

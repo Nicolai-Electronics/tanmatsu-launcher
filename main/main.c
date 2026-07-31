@@ -64,11 +64,11 @@
 #include "usb_device.h"
 #include "wifi_connection.h"
 #include "wifi_remote.h"
+
 #ifdef CONFIG_ENABLE_AUDIOMIXER
 #include "audio_mixer.h"
 #endif
 #ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
-#include "hid_keyboard.h"
 #include "plugin_manager.h"
 #endif
 
@@ -79,6 +79,11 @@
 
 #if defined(CONFIG_IDF_TARGET_ESP32P4)
 #include "esp_hosted.h"
+#endif
+
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD) || defined(CONFIG_BSP_TARGET_ESP32_S31_KORVO_1)
+#include "hid_keyboard.h"
 #endif
 
 // Constants
@@ -693,7 +698,7 @@ void app_main(void) {
 
     bsp_power_set_usb_host_boost_enabled(true);
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD) || defined(CONFIG_BSP_TARGET_ESP32_S31_KORVO_1)
     res = hid_kbd_init();
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize USB HID keyboard support");

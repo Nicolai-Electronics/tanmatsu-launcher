@@ -11,6 +11,12 @@ list(APPEND extra_requires
 )
 endif()
 
+if("${idf_target}" STREQUAL "esp32s31")
+list(APPEND extra_requires
+	usb-host
+)
+endif()
+
 if(CONFIG_ENABLE_LAUNCHERPLUGINS)
 list(APPEND extra_sources
 	# Plugin system

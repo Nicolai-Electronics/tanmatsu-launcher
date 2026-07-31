@@ -399,18 +399,6 @@ void menu_home(void) {
                                 render(buffer, theme, &menu, position, false, true, provisioned, name_match);
                             }
                             break;
-                        case BSP_INPUT_ACTION_TYPE_SD_CARD:
-                            if (event.args_action.state) {
-                                ESP_LOGI(TAG, "SD card inserted");
-                                sd_mount();
-                            } else {
-                                ESP_LOGI(TAG, "SD card removed");
-                                sd_unmount();
-                            }
-                            break;
-                        case BSP_INPUT_ACTION_TYPE_AUDIO_JACK:
-                            ESP_LOGI(TAG, "Unhandled: audio jack event (%u)\r\n", event.args_action.state);
-                            break;
                         default:
                             break;
                     }

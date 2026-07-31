@@ -86,7 +86,7 @@ esp_err_t app_mgmt_install(const char* repository_url, const char* slug, app_mgm
     char* repository_data_url = repository_data_url_obj->valuestring;
 
     // Find name of the device
-    char device_name[32] = {0};
+    char device_name[64] = {0};
     bsp_device_get_name(device_name, sizeof(device_name));
     size_t device_name_len = strlen(device_name);
 
