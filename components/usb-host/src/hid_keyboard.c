@@ -4,9 +4,9 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "hid_report.h"
 #include "usb/hid_host.h"
 #include "usb/hid_usage_keyboard.h"
-#include "usb/hid_usage_mouse.h"
 #include "usb/usb_host.h"
 
 static const char* TAG = "hid_kbd";
@@ -235,26 +235,6 @@ static inline bool key_found(const uint8_t* const src, uint8_t key, unsigned int
         }
     }
     return false;
-}
-
-/**
- * @brief Makes new line depending on report output protocol type
- *
- * @param[in] proto Current protocol to output
- */
-static void hid_print_new_device_report_header(hid_protocol_t proto) {
-    static hid_protocol_t prev_proto_output = -1;
-
-    if (prev_proto_output != proto) {
-        prev_proto_output = proto;
-        if (proto == HID_PROTOCOL_MOUSE) {
-            ESP_LOGI(TAG, "Mouse");
-        } else if (proto == HID_PROTOCOL_KEYBOARD) {
-            ESP_LOGI(TAG, "Keyboard");
-        } else {
-            ESP_LOGI(TAG, "Generic");
-        }
-    }
 }
 
 static void inject_navigation_event(uint8_t hid_scancode, bool state) {
@@ -597,48 +577,6 @@ static void hid_host_keyboard_report_callback(const uint8_t* const data, const i
 }
 
 /**
- * @brief USB HID Host Mouse Interface report callback handler
- *
- * @param[in] data    Pointer to input report data buffer
- * @param[in] length  Length of input report data buffer
- */
-static void hid_host_mouse_report_callback(const uint8_t* const data, const int length) {
-    hid_mouse_input_report_boot_t* mouse_report = (hid_mouse_input_report_boot_t*)data;
-
-    if (length < sizeof(hid_mouse_input_report_boot_t)) {
-        return;
-    }
-
-    static int x_pos = 0;
-    static int y_pos = 0;
-
-    // Calculate absolute position from displacement
-    x_pos += mouse_report->x_displacement;
-    y_pos += mouse_report->y_displacement;
-
-    hid_print_new_device_report_header(HID_PROTOCOL_MOUSE);
-
-    ESP_LOGI(TAG, "X: %06d\tY: %06d\t|%c|%c|", x_pos, y_pos, (mouse_report->buttons.button1 ? 'o' : ' '),
-             (mouse_report->buttons.button2 ? 'o' : ' '));
-}
-
-/**
- * @brief USB HID Host Generic Interface report callback handler
- *
- * 'generic' means anything else than mouse or keyboard
- *
- * @param[in] data    Pointer to input report data buffer
- * @param[in] length  Length of input report data buffer
- */
-static void hid_host_generic_report_callback(const uint8_t* const data, const int length) {
-    hid_print_new_device_report_header(HID_PROTOCOL_NONE);
-    for (int i = 0; i < length; i++) {
-        // printf("%02X", data[i]);
-    }
-    // putchar('\r');
-}
-
-/**
  * @brief USB HID Host interface callback
  *
  * @param[in] hid_device_handle  HID Device handle
@@ -656,14 +594,16 @@ void hid_host_interface_callback(hid_host_device_handle_t hid_device_handle, con
         case HID_HOST_INTERFACE_EVENT_INPUT_REPORT:
             ESP_ERROR_CHECK(hid_host_device_get_raw_input_report_data(hid_device_handle, data, 64, &data_length));
 
-            if (HID_SUBCLASS_BOOT_INTERFACE == dev_params.sub_class) {
-                if (HID_PROTOCOL_KEYBOARD == dev_params.proto) {
+            if (HID_PROTOCOL_KEYBOARD == dev_params.proto) {
+                // The keyboard parser expects boot protocol reports
+                if (HID_SUBCLASS_BOOT_INTERFACE == dev_params.sub_class) {
                     hid_host_keyboard_report_callback(data, data_length);
-                } else if (HID_PROTOCOL_MOUSE == dev_params.proto) {
-                    hid_host_mouse_report_callback(data, data_length);
                 }
+            } else if (HID_PROTOCOL_MOUSE == dev_params.proto) {
+                hid_mouse_handle_report(data, data_length);
             } else {
-                hid_host_generic_report_callback(data, data_length);
+                // Anything that is neither a keyboard nor a mouse is assumed to be a gamepad
+                hid_gamepad_handle_report(data, data_length);
             }
 
             break;
@@ -698,16 +638,17 @@ void hid_host_device_event(hid_host_device_handle_t hid_device_handle, const hid
 
             const hid_host_device_config_t dev_config = {.callback = hid_host_interface_callback, .callback_arg = NULL};
 
-            if (dev_params.proto != HID_PROTOCOL_NONE) {
-                ESP_ERROR_CHECK(hid_host_device_open(hid_device_handle, &dev_config));
-                if (HID_SUBCLASS_BOOT_INTERFACE == dev_params.sub_class) {
+            ESP_ERROR_CHECK(hid_host_device_open(hid_device_handle, &dev_config));
+            if (HID_SUBCLASS_BOOT_INTERFACE == dev_params.sub_class) {
+                if (HID_PROTOCOL_KEYBOARD == dev_params.proto) {
                     ESP_ERROR_CHECK(hid_class_request_set_protocol(hid_device_handle, HID_REPORT_PROTOCOL_BOOT));
-                    if (HID_PROTOCOL_KEYBOARD == dev_params.proto) {
-                        ESP_ERROR_CHECK(hid_class_request_set_idle(hid_device_handle, 0, 0));
-                    }
+                    ESP_ERROR_CHECK(hid_class_request_set_idle(hid_device_handle, 0, 0));
+                } else if (HID_PROTOCOL_MOUSE == dev_params.proto) {
+                    // Report protocol so mice report their scroll wheel as well
+                    hid_class_request_set_protocol(hid_device_handle, HID_REPORT_PROTOCOL_REPORT);
                 }
-                ESP_ERROR_CHECK(hid_host_device_start(hid_device_handle));
             }
+            ESP_ERROR_CHECK(hid_host_device_start(hid_device_handle));
             break;
         default:
             break;
