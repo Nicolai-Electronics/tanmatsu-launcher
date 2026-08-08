@@ -122,9 +122,8 @@ static void execute_action(menu_home_action_t action) {
 }
 
 static void describe_addon(addon_location_t location, char* description, size_t description_size) {
-    addon_descriptor_t* descriptor = NULL;
-    esp_err_t           res        = addon_get_descriptor(location, &descriptor);
-    if (res == ESP_OK && descriptor) {
+    addon_descriptor_t* descriptor = addon_get_descriptor(location);
+    if (descriptor) {
         const char* location_str = location == ADDON_LOCATION_INTERNAL ? "Internal" : "CATT";
         switch (descriptor->descriptor_type) {
             case ADDON_TYPE_UNINITIALIZED:
@@ -155,7 +154,7 @@ static void describe_addon(addon_location_t location, char* description, size_t 
 
 static void describe_addons(char* description, size_t description_size) {
     describe_addon(ADDON_LOCATION_INTERNAL, description, description_size);
-    describe_addon(ADDON_LOCATION_EXTERNAL, &description[strlen(description)], description_size - strlen(description));
+    describe_addon(ADDON_LOCATION_CATT, &description[strlen(description)], description_size - strlen(description));
 }
 
 static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2_t position, bool partial, bool icons,

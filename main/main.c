@@ -81,8 +81,8 @@
 #include "esp_hosted.h"
 #endif
 
-
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD) || defined(CONFIG_BSP_TARGET_ESP32_S31_KORVO_1)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD) || \
+    defined(CONFIG_BSP_TARGET_ESP32_S31_KORVO_1)
 #include "hid_keyboard.h"
 #endif
 
@@ -664,7 +664,8 @@ void app_main(void) {
     usb_debug_listener_initialize();
 
     startup_dialog("Detecting Add-On boards...");
-    addon_initialize();
+    addon_read_descriptor(ADDON_LOCATION_INTERNAL);
+    addon_read_descriptor(ADDON_LOCATION_CATT);
 
     if (!display_available) {
         ESP_LOGE(TAG, "Started without display");
@@ -698,7 +699,8 @@ void app_main(void) {
 
     bsp_power_set_usb_host_boost_enabled(true);
 
-#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD) || defined(CONFIG_BSP_TARGET_ESP32_S31_KORVO_1)
+#if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD) || \
+    defined(CONFIG_BSP_TARGET_ESP32_S31_KORVO_1)
     res = hid_kbd_init();
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize USB HID keyboard support");
