@@ -16,6 +16,10 @@ static bool       headphones_inserted = false;
 #define VOLUME_DEFAULT_PERCENT 50
 #define VOLUME_STEP_PERCENT    5
 
+// Mirror of the volume last applied to the codec, so readers don't have to go
+// to NVS. Both writers below keep it up to date.
+static uint8_t current_volume = VOLUME_DEFAULT_PERCENT;
+
 static uint8_t get_active_volume(void) {
     uint8_t v = VOLUME_DEFAULT_PERCENT;
     if (headphones_inserted) {
@@ -23,6 +27,7 @@ static uint8_t get_active_volume(void) {
     } else {
         nvs_settings_get_speaker_volume(&v, VOLUME_DEFAULT_PERCENT);
     }
+    current_volume = v;
     return v;
 }
 
@@ -33,7 +38,16 @@ static void set_active_volume(uint8_t percent) {
     } else {
         nvs_settings_set_speaker_volume(percent);
     }
+    current_volume = percent;
     bsp_audio_set_volume((float)percent);
+}
+
+bool global_event_handler_headphones_inserted(void) {
+    return headphones_inserted;
+}
+
+uint8_t global_event_handler_get_volume(void) {
+    return current_volume;
 }
 
 static void handle_sdcard(bool inserted) {

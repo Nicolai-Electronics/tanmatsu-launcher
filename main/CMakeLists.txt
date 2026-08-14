@@ -29,6 +29,7 @@ endif()
 if(CONFIG_ENABLE_AUDIOMIXER)
 list(APPEND extra_sources
 	"audio_mixer.c"
+	"hardware_test/test_audio.c"
 )
 endif()
 

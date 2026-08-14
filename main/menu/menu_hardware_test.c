@@ -14,8 +14,12 @@
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
+#include "sdkconfig.h"
 #include "test_keyboard.h"
 #include "test_keyboard_stuck_keys.h"
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+#include "test_audio.h"
+#endif
 
 typedef enum {
     ACTION_NONE,
@@ -26,6 +30,7 @@ typedef enum {
     ACTION_TOGGLE_RADIO_MODE,
     ACTION_TOGGLE_GYROSCOPE,
     ACTION_TOGGLE_ACCELEROMETER,
+    ACTION_AUDIO,
 } menu_home_action_t;
 
 static void execute_action(menu_t* menu, menu_home_action_t action) {
@@ -128,6 +133,12 @@ static void execute_action(menu_t* menu, menu_home_action_t action) {
             }
             break;
         }
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+        case ACTION_AUDIO: {
+            test_audio();
+            break;
+        }
+#endif
         default:
             break;
     }
@@ -209,6 +220,12 @@ void menu_hardware_test(void) {
     // menu_insert_item_value(&menu, "Radio mode", "", NULL, (void*)ACTION_TOGGLE_RADIO_MODE, -1);
     menu_insert_item_value(&menu, "Gyroscope", "", NULL, (void*)ACTION_TOGGLE_GYROSCOPE, -1);
     menu_insert_item_value(&menu, "Accelerometer", "", NULL, (void*)ACTION_TOGGLE_ACCELEROMETER, -1);
+#ifdef CONFIG_ENABLE_AUDIOMIXER
+    // Keep this last: render() walks the value columns of the rows above by
+    // index, starting at position_index = 2.
+    menu_insert_item_value(&menu, "Audio test", "", NULL, (void*)ACTION_AUDIO, -1);
+    menu_set_value(&menu, 6, "Click to run");
+#endif
 
     render(&menu, false, true);
     while (1) {
