@@ -1,0 +1,7 @@
+dependencies:
+  idf: ">=6.0.2"
+  espressif/m5stack_tab5_noglib:
+    version: "^1.2.0"
+    rules:
+      - if: "$CONFIG{TANMATSU_LAUNCHER_M5STACK_TAB5} == True"
+  badgeteam/badge-bsp: "=1.4.0"

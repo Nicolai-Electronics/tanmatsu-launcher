@@ -26,6 +26,8 @@
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/mch2022-"
 #elif defined(CONFIG_BSP_TARGET_HACKADAY2025)
 #define OTA_BASE_URL "https://selfsigned.ota.tanmatsu.cloud/hackaday2025-"
+#elif defined(CONFIG_TANMATSU_LAUNCHER_M5STACK_TAB5)
+#define OTA_UNSUPPORTED_ON_THIS_TARGET
 #else
 #error "Unsupported target for firmware update"
 #endif
@@ -37,13 +39,28 @@ static void firmware_update_callback(const char* status_text, uint8_t progress) 
 }
 
 void ota_update_experimental(void) {
+#ifdef OTA_UNSUPPORTED_ON_THIS_TARGET
+    message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Firmware update",
+                   "OTA updates are not available for the M5Stack Tab5 yet. Use USB flashing instead.", "Close");
+#else
     ota_update(OTA_BASE_URL "experimental.bin", firmware_update_callback);
+#endif
 }
 
 void ota_update_staging(void) {
+#ifdef OTA_UNSUPPORTED_ON_THIS_TARGET
+    message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Firmware update",
+                   "OTA updates are not available for the M5Stack Tab5 yet. Use USB flashing instead.", "Close");
+#else
     ota_update(OTA_BASE_URL "staging.bin", firmware_update_callback);
+#endif
 }
 
 void ota_update_stable(void) {
+#ifdef OTA_UNSUPPORTED_ON_THIS_TARGET
+    message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Firmware update",
+                   "OTA updates are not available for the M5Stack Tab5 yet. Use USB flashing instead.", "Close");
+#else
     ota_update(OTA_BASE_URL "stable.bin", firmware_update_callback);
+#endif
 }

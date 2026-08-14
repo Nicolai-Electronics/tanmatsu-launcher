@@ -10,6 +10,7 @@ This application supports the following boards:
  - MCH2022 badge
  - Kami e-paper badge
  - ESP32-P4 function EV board
+ - M5Stack Tab5 with the A164 Tab5 Keyboard
 
 ## License
 
@@ -27,3 +28,6 @@ make flashmonitor
 ```
 
 For more information and more detailed instructions please visit [our documentation website](https://docs.tanmatsu.cloud/)
+
+The Tab5 port is built with `make DEVICE=m5stack-tab5 build`. The A164 keyboard
+must be connected to Ext.Port1; it is configured automatically for I2C HID mode.

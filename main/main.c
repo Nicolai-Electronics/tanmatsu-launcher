@@ -84,6 +84,7 @@
 #if defined(CONFIG_BSP_TARGET_TANMATSU) || defined(CONFIG_BSP_TARGET_ESP32_P4_FUNCTION_EV_BOARD) || \
     defined(CONFIG_BSP_TARGET_ESP32_S31_KORVO_1)
 #include "hid_keyboard.h"
+#include "tab5_keyboard.h"
 #endif
 
 // Constants
@@ -679,6 +680,7 @@ void app_main(void) {
 
     uint8_t patch = 0;
     nvs_settings_get_firmware_patch_level(&patch);
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
     if (patch < 8 && wifi_stack_get_version_mismatch()) {
         nvs_settings_set_firmware_patch_level(8);
         bsp_audio_set_amplifier(false);  // Disable amplifier to prevent noise on reboot
@@ -687,6 +689,7 @@ void app_main(void) {
         vTaskDelay(pdMS_TO_TICKS(100));
         esp_restart();
     }
+#endif
     if (patch < 9 && get_icons_missing()) {
         nvs_settings_set_firmware_patch_level(9);
         download_icons(true);
@@ -704,6 +707,13 @@ void app_main(void) {
     res = hid_kbd_init();
     if (res != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize USB HID keyboard support");
+    }
+#endif
+
+#ifdef CONFIG_TANMATSU_LAUNCHER_M5STACK_TAB5
+    res = tab5_keyboard_init();
+    if (res != ESP_OK) {
+        ESP_LOGW(TAG, "Tab5 A164 keyboard not detected: %s", esp_err_to_name(res));
     }
 #endif
 

@@ -51,3 +51,8 @@ menu "Fast FATFS I/O"
             Size of stdio buffer for fast file I/O. Must be power of 2.
 
 endmenu
+menu "Launcher hardware ports"
+    config TANMATSU_LAUNCHER_M5STACK_TAB5
+        bool "M5Stack Tab5 with A164 keyboard"
+        default n
+endmenu

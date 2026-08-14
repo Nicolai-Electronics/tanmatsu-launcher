@@ -12,6 +12,7 @@ jobs:
             "kami",
             "mch2022",
             "esp32-p4-function-ev-board",
+            "m5stack-tab5",
             "hackaday2025",
           ]
     steps:

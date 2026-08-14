@@ -596,6 +596,13 @@ static void hid_host_keyboard_report_callback(const uint8_t* const data, const i
     memcpy(prev_keys, &kb_report->key, HID_KEYBOARD_KEY_MAX);
 }
 
+void hid_kbd_process_report(uint8_t modifier, const uint8_t keys[6]) {
+    hid_keyboard_input_report_boot_t report = {0};
+    report.modifier.val = modifier;
+    memcpy(report.key, keys, HID_KEYBOARD_KEY_MAX);
+    hid_host_keyboard_report_callback((const uint8_t*)&report, sizeof(report));
+}
+
 /**
  * @brief USB HID Host Mouse Interface report callback handler
  *

@@ -39,6 +39,7 @@ idf_component_register(
 		"common/display.c"
 		"common/theme.c"
 		"common/device.c"
+		"tab5_keyboard.c"
 		
 		# Menus
 		"menu/home.c"
