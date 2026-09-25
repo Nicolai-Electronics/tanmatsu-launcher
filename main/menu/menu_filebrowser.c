@@ -106,6 +106,9 @@ bool menu_filebrowser(const char* in_path, const char* filter[], size_t filter_l
                                 case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
                                     void*       arg   = menu_get_callback_args(&menu, menu_get_position(&menu));
                                     const char* label = menu_get_label(&menu, menu_get_position(&menu));
+                                    if (label == NULL) {
+                                        break;
+                                    }
                                     if (strncmp(label, "..", 2) == 0) {
                                         // Go up one directory
                                         char* last_slash = strrchr(path, '/');
