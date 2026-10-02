@@ -111,9 +111,8 @@ static void mixer_task_fn(void* arg) {
     while (1) {
         memset(g_accum, 0, sizeof(g_accum));
 
-        // Sum samples from every stream that produced data this chunk and
-        // count how many sources contributed, so we can divide the mix down
-        // to avoid clipping when multiple plugins play simultaneously.
+        // Sum samples from every stream that produced data this chunk. The
+        // count of contributing sources is only used to detect silence.
         int active_count = 0;
         xSemaphoreTake(g_streams_mutex, portMAX_DELAY);
         for (int i = 0; i < AUDIO_MIXER_MAX_STREAMS; i++) {
@@ -162,11 +161,10 @@ static void mixer_task_fn(void* arg) {
         }
         silence_chunks = 0;
 
-        // Per-source volume = total / N. Saturate as a safety net in case
-        // a single source is already at the int16 boundary.
-        int divisor = active_count;
+        // Streams are mixed at full volume; saturate so that loud sources
+        // playing at the same time clip instead of wrapping around.
         for (size_t j = 0; j < MIXER_CHUNK_SAMPLES; j++) {
-            int32_t s = g_accum[j] / divisor;
+            int32_t s = g_accum[j];
             if (s > INT16_MAX)
                 s = INT16_MAX;
             else if (s < INT16_MIN)
