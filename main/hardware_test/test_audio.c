@@ -5,7 +5,8 @@
 // Plays a short tune (Ode to Joy) in a loop through the launcher's software
 // audio mixer and shows the state of the audio path while it does: whether
 // the output is routed to the headphone jack or the speaker amplifier, and
-// which volume is currently applied to that output.
+// which volume is currently applied to that output. F5 swaps the tune for a
+// continuous 1 kHz sine (handy for measurements), F4 switches back.
 //
 // The waveform is generated on the fly (sine, phase accumulator) and the
 // melody is a one-byte-per-note table, so nothing but a few dozen bytes of
@@ -49,15 +50,17 @@ static char const* TAG = "test_audio";
 #define CHUNK_FRAMES   256  // matches the mixer's own chunk size, ~5.8 ms
 #define CHUNK_SAMPLES  (CHUNK_FRAMES * 2)
 
-// Peak amplitude of the generated tone, ~-8.7 dBFS. The mixer divides its sum
-// by the number of streams that produced samples, so this drops to half if a
-// plugin happens to play audio at the same time. Actual loudness is set by the
-// codec through the launcher's per-output volume.
-#define TONE_AMPLITUDE 12000
+// Peak amplitude of the generated tone: full scale (0 dBFS). The mixer sums
+// streams without scaling them down, so this clips if a plugin happens to play
+// audio at the same time. Actual loudness is set by the codec through the
+// launcher's per-output volume.
+#define TONE_AMPLITUDE INT16_MAX
 
 #define ENV_ATTACK_SAMPLES  (SAMPLE_RATE_HZ / 200)  // 5 ms
 #define ENV_RELEASE_SAMPLES (SAMPLE_RATE_HZ / 100)  // 10 ms
 #define NOTE_GAP_SAMPLES    (SAMPLE_RATE_HZ / 33)   // ~30 ms of silence at the end of every note
+
+#define SINE_FREQ_HZ 1000.0f
 
 #define TONE_TASK_STACK_SIZE 6144
 #define TONE_TASK_PRIORITY   5  // plugin level; the mixer task runs above this at 7
@@ -99,25 +102,33 @@ static const uint8_t k_melody[] = {
 
 #define MELODY_LENGTH (sizeof(k_melody) / sizeof(k_melody[0]))
 
+typedef enum {
+    TONE_MODE_SONG = 0,
+    TONE_MODE_SINE,
+} tone_mode_t;
+
 // Synthesizer state, owned by the tone task.
-static size_t   s_note     = 0;     // index into k_melody
-static uint32_t s_note_pos = 0;     // samples produced for the current note
-static uint32_t s_note_len = 0;     // length of the current note in samples
-static uint32_t s_gate_len = 0;     // samples of the current note that make sound
-static float    s_phase    = 0.0f;  // oscillator phase in turns, kept in [0, 1)
-static float    s_step     = 0.0f;  // phase increment per sample
+static tone_mode_t s_mode        = TONE_MODE_SONG;
+static uint32_t    s_switch_left = ENV_RELEASE_SAMPLES;  // fade-out samples left before a mode switch
+static size_t      s_note        = 0;                    // index into k_melody
+static uint32_t    s_note_pos    = 0;                    // samples produced for the current note
+static uint32_t    s_note_len    = 0;                    // length of the current note in samples
+static uint32_t    s_gate_len    = 0;                    // samples of the current note that make sound
+static float       s_phase       = 0.0f;                 // oscillator phase in turns, kept in [0, 1)
+static float       s_step        = 0.0f;                 // phase increment per sample
 
 // ---------------------------------------------------------------------------
 // Playback task state
 // ---------------------------------------------------------------------------
 
-static StackType_t*     s_stack          = NULL;
-static StaticTask_t*    s_tcb            = NULL;
-static TaskHandle_t     s_task           = NULL;
-static volatile bool    s_stop_requested = false;
-static volatile bool    s_task_exited    = false;
-static volatile bool    s_stalled        = false;
-static volatile uint8_t s_display_note   = N_REST;  // published for the UI
+static StackType_t*         s_stack          = NULL;
+static StaticTask_t*        s_tcb            = NULL;
+static TaskHandle_t         s_task           = NULL;
+static volatile bool        s_stop_requested = false;
+static volatile bool        s_task_exited    = false;
+static volatile bool        s_stalled        = false;
+static volatile uint8_t     s_display_note   = N_REST;          // published for the UI
+static volatile tone_mode_t s_requested_mode = TONE_MODE_SONG;  // set by the UI, applied by the tone task
 
 static void audio_stop(void);
 
@@ -136,25 +147,66 @@ static void note_start(void) {
     s_display_note = id;
 }
 
-// Renders `frames` stereo frames of the tune into `out` (L/R interleaved).
+// Resets the synthesizer to the start of the given mode. The tune restarts
+// from its first note; the sine fades in through the attack ramp.
+static void mode_start(tone_mode_t mode) {
+    s_mode         = mode;
+    s_note_pos     = 0;
+    s_phase        = 0.0f;
+    s_display_note = N_REST;
+    if (mode == TONE_MODE_SINE) {
+        s_step = SINE_FREQ_HZ / (float)SAMPLE_RATE_HZ;
+    } else {
+        // Wraps around to the first note on the next sample.
+        s_note     = MELODY_LENGTH - 1;
+        s_note_len = 0;
+        s_step     = 0.0f;
+    }
+}
+
+// Renders `frames` stereo frames of the current signal into `out` (L/R
+// interleaved).
 static void render_chunk(int16_t* out, size_t frames) {
     for (size_t i = 0; i < frames; i++) {
-        if (s_note_pos >= s_note_len) {
-            s_note = (s_note + 1) % MELODY_LENGTH;
-            note_start();
+        // Fade out before switching modes so the switch doesn't click.
+        float fade = 1.0f;
+        if (s_mode != s_requested_mode) {
+            if (s_switch_left == 0) {
+                mode_start(s_requested_mode);
+                s_switch_left = ENV_RELEASE_SAMPLES;
+            } else {
+                fade = (float)s_switch_left / (float)ENV_RELEASE_SAMPLES;
+                s_switch_left--;
+            }
+        } else {
+            s_switch_left = ENV_RELEASE_SAMPLES;
         }
 
         float gain = 0.0f;
-        if (s_step > 0.0f && s_note_pos < s_gate_len) {
-            uint32_t remaining = s_gate_len - s_note_pos;
+        if (s_mode == TONE_MODE_SINE) {
             if (s_note_pos < ENV_ATTACK_SAMPLES) {
                 gain = (float)s_note_pos / (float)ENV_ATTACK_SAMPLES;
-            } else if (remaining < ENV_RELEASE_SAMPLES) {
-                gain = (float)remaining / (float)ENV_RELEASE_SAMPLES;
             } else {
                 gain = 1.0f;
             }
+        } else {
+            if (s_note_pos >= s_note_len) {
+                s_note = (s_note + 1) % MELODY_LENGTH;
+                note_start();
+            }
+
+            if (s_step > 0.0f && s_note_pos < s_gate_len) {
+                uint32_t remaining = s_gate_len - s_note_pos;
+                if (s_note_pos < ENV_ATTACK_SAMPLES) {
+                    gain = (float)s_note_pos / (float)ENV_ATTACK_SAMPLES;
+                } else if (remaining < ENV_RELEASE_SAMPLES) {
+                    gain = (float)remaining / (float)ENV_RELEASE_SAMPLES;
+                } else {
+                    gain = 1.0f;
+                }
+            }
         }
+        gain *= fade;
 
         int16_t sample = 0;
         if (gain > 0.0f) {
@@ -163,7 +215,11 @@ static void render_chunk(int16_t* out, size_t frames) {
 
         s_phase += s_step;
         if (s_phase >= 1.0f) s_phase -= 1.0f;
-        s_note_pos++;
+        // The sine only needs the counter for its attack ramp; capping it
+        // keeps it from wrapping around (and re-ramping) after ~27 hours.
+        if (s_mode != TONE_MODE_SINE || s_note_pos < ENV_ATTACK_SAMPLES) {
+            s_note_pos++;
+        }
 
         *out++ = sample;  // left
         *out++ = sample;  // right
@@ -216,14 +272,10 @@ static bool audio_start(void) {
     s_stop_requested = false;
     s_task_exited    = false;
     s_stalled        = false;
-    s_display_note   = N_REST;
 
-    // Start at the beginning of the tune on every run.
-    s_note     = MELODY_LENGTH - 1;
-    s_note_pos = 0;
-    s_note_len = 0;
-    s_phase    = 0.0f;
-    s_step     = 0.0f;
+    // Start at the beginning of the selected signal on every run.
+    mode_start(s_requested_mode);
+    s_switch_left = ENV_RELEASE_SAMPLES;
 
     // A plugin may have left the codec at a different rate; the mixer assumes
     // this one.
@@ -317,7 +369,11 @@ static void render(void) {
     render_base_screen_statusbar(
         buffer, theme, true, true, true,
         ((gui_element_icontext_t[]){{get_icon(headphones ? ICON_HEADPHONES : ICON_SPEAKER), "Audio test"}}), 1,
-        ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"}, {get_icon(ICON_F1), "Back"}}), 2, NULL, 0);
+        ((gui_element_icontext_t[]){{get_icon(ICON_ESC), "/"},
+                                    {get_icon(ICON_F1), "Back"},
+                                    {get_icon(ICON_F4), "Song"},
+                                    {get_icon(ICON_F5), "1 kHz sine"}}),
+        4, NULL, 0);
 
     char text_buffer[64];
     int  line = 0;
@@ -327,15 +383,18 @@ static void render(void) {
     snprintf(text_buffer, sizeof(text_buffer), "%u %%", global_event_handler_get_volume());
     draw_line(buffer, theme, position, line++, "Volume:", text_buffer);
 
+    bool    sine = s_requested_mode == TONE_MODE_SINE;
     uint8_t note = s_display_note;
-    if (s_task != NULL && note != N_REST) {
+    if (s_task != NULL && sine) {
+        snprintf(text_buffer, sizeof(text_buffer), "%u Hz", (unsigned)SINE_FREQ_HZ);
+    } else if (s_task != NULL && note != N_REST) {
         snprintf(text_buffer, sizeof(text_buffer), "%-3s  %u Hz", k_name[note], (unsigned)(k_freq[note] + 0.5f));
     } else {
         snprintf(text_buffer, sizeof(text_buffer), "--");
     }
     draw_line(buffer, theme, position, line++, "Note:", text_buffer);
 
-    draw_line(buffer, theme, position, line++, "Melody:", "Ode to Joy (looping)");
+    draw_line(buffer, theme, position, line++, "Signal:", sine ? "1 kHz sine (continuous)" : "Ode to Joy (looping)");
     draw_line(buffer, theme, position, line++, "Format:", "44100 Hz, 16 bit stereo");
 
     char const* state = "Playing";
@@ -356,6 +415,8 @@ void test_audio(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
+    // Always open with the tune; the sine is only one key press away.
+    s_requested_mode = TONE_MODE_SONG;
     audio_start();
 
     render();
@@ -372,6 +433,14 @@ void test_audio(void) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 running = false;
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_F4:
+                                s_requested_mode = TONE_MODE_SONG;
+                                render();
+                                break;
+                            case BSP_INPUT_NAVIGATION_KEY_F5:
+                                s_requested_mode = TONE_MODE_SINE;
+                                render();
                                 break;
                             default:
                                 break;
