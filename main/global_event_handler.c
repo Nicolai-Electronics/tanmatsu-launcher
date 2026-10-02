@@ -13,8 +13,8 @@ static int        input_hook_id       = -1;
 static bool       power_button_latch  = false;
 static bool       headphones_inserted = false;
 
-#define VOLUME_DEFAULT_PERCENT 50
-#define VOLUME_STEP_PERCENT    5
+#define VOLUME_DEFAULT_PERCENT 100
+#define VOLUME_STEP_PERCENT    1
 
 // Mirror of the volume last applied to the codec, so readers don't have to go
 // to NVS. Both writers below keep it up to date.
