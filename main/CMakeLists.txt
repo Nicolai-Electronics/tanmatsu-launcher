@@ -83,6 +83,7 @@ idf_component_register(
 		# Tests
 		"hardware_test/test_keyboard_stuck_keys.c"
 		"hardware_test/test_keyboard.c"
+		"hardware_test/test_led.c"
 
 		# Fonts
 		"chakrapetchmedium.c"
