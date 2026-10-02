@@ -94,7 +94,6 @@ idf_component_register(
 		"icons.c"
 		"usb_device.c"
 		"esp_efuse_custom_table.c"
-		"sdcard.c"
 		"app_metadata_parser.c"
 		"http_download.c"
 		"repository_client.c"

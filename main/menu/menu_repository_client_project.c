@@ -8,6 +8,7 @@
 #include "appfs.h"
 #include "bsp/device.h"
 #include "bsp/input.h"
+#include "bsp/storage.h"
 #include "cJSON.h"
 #include "common/display.h"
 #include "device_settings.h"
@@ -22,7 +23,6 @@
 #include "pax_text.h"
 #include "pax_types.h"
 #include "repository_client.h"
-#include "sdcard.h"
 #include "shapes/pax_lines.h"
 
 static const char* TAG = "Repository client: project";
@@ -90,7 +90,7 @@ static void resolve_constraints(cJSON* project, install_constraints_t* out) {
     out->external_preferred = get_bool_field(source, "external_preferred");
     out->internal_only      = get_bool_field(source, "internal_only");
     out->internal_preferred = get_bool_field(source, "internal_preferred");
-    out->sd_present         = (sd_status() == SD_STATUS_OK);
+    out->sd_present         = (bsp_storage_get_status(BSP_STORAGE_TYPE_SDCARD) == BSP_STORAGE_STATUS_MOUNTED);
 
     // If both *_only flags are set the metadata is contradictory; let internal_only win
     // because the device always has internal storage but may not have an SD card inserted.

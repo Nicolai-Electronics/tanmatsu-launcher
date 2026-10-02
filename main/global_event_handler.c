@@ -3,10 +3,10 @@
 #include <stdint.h>
 #include "bsp/audio.h"
 #include "bsp/input.h"
+#include "bsp/storage.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "nvs_settings_hardware.h"
-#include "sdcard.h"
 
 static const char TAG[]               = "Event";
 static int        input_hook_id       = -1;
@@ -53,10 +53,10 @@ uint8_t global_event_handler_get_volume(void) {
 static void handle_sdcard(bool inserted) {
     if (inserted) {
         ESP_LOGI(TAG, "SD card inserted");
-        sd_mount();
+        bsp_storage_mount(BSP_STORAGE_TYPE_SDCARD, "/sd");
     } else {
         ESP_LOGI(TAG, "SD card removed");
-        sd_unmount();
+        bsp_storage_unmount(BSP_STORAGE_TYPE_SDCARD);
     }
 }
 

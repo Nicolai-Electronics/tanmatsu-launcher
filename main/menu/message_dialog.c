@@ -3,6 +3,7 @@
 #include <time.h>
 #include "bsp/input.h"
 #include "bsp/power.h"
+#include "bsp/storage.h"
 #include "common/device.h"
 #include "common/display.h"
 #include "common/theme.h"
@@ -19,7 +20,6 @@
 #include "pax_matrix.h"
 #include "pax_text.h"
 #include "pax_types.h"
-#include "sdcard.h"
 #include "sdkconfig.h"
 #include "usb_device.h"
 #include "wifi_connection.h"
@@ -148,10 +148,11 @@ static gui_element_icontext_t wifi_indicator(void) {
 }
 
 static gui_element_icontext_t sdcard_indicator(void) {
-    switch (sd_status()) {
-        case SD_STATUS_OK:
+    bsp_storage_status_t sd_status = bsp_storage_get_status(BSP_STORAGE_TYPE_SDCARD);
+    switch (sd_status) {
+        case BSP_STORAGE_STATUS_MOUNTED:
             return (gui_element_icontext_t){get_icon(ICON_SD_CARD), ""};
-        case SD_STATUS_ERROR:
+        case BSP_STORAGE_STATUS_ERROR:
             return (gui_element_icontext_t){get_icon(ICON_SD_CARD_ALERT), ""};
         default:
             return (gui_element_icontext_t){NULL, ""};

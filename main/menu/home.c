@@ -36,7 +36,6 @@
 #include "pax_matrix.h"
 #include "pax_types.h"
 #include "radio_ota.h"
-#include "sdcard.h"
 #include "sensors.h"
 #include "settings.h"
 #include "tools.h"
