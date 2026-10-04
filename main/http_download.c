@@ -199,6 +199,47 @@ bool http_session_download_ram(http_session_t session, const char* url, uint8_t*
     return false;
 }
 
+bool http_session_post_ram(http_session_t session, const char* url, const char* content_type, const char* body,
+                           size_t body_length, uint8_t** ptr, size_t* size) {
+    if (session == NULL || ptr == NULL || body == NULL) return false;
+    *ptr = NULL;
+
+    download_callback_t saved_callback      = session->info.callback;
+    const char*         saved_callback_text = session->info.callback_text;
+
+    memset(&session->info, 0, sizeof(http_download_info_t));
+    session->info.buffer        = ptr;
+    session->info.callback      = saved_callback;
+    session->info.callback_text = saved_callback_text;
+
+    // POST requests are not retried as they might not be idempotent
+    esp_http_client_set_url(session->client, url);
+    esp_http_client_set_method(session->client, HTTP_METHOD_POST);
+    esp_http_client_set_header(session->client, "Content-Type", content_type);
+    esp_http_client_set_post_field(session->client, body, body_length);
+    esp_err_t err         = esp_http_client_perform(session->client);
+    int       status_code = esp_http_client_get_status_code(session->client);
+
+    // Restore the session to its default state so it can be re-used for downloads
+    esp_http_client_set_post_field(session->client, NULL, 0);
+    esp_http_client_delete_header(session->client, "Content-Type");
+    esp_http_client_set_method(session->client, HTTP_METHOD_GET);
+
+    if (download_success(err, &session->info) && (status_code == 200)) {
+        if (size != NULL) {
+            *size = session->info.size;
+        }
+        return true;
+    }
+
+    ESP_LOGE(TAG, "POST request failed (err=%s, status=%d)", esp_err_to_name(err), status_code);
+    if (*ptr != NULL) {
+        free(*ptr);
+        *ptr = NULL;
+    }
+    return false;
+}
+
 bool http_session_download_file(http_session_t session, const char* url, const char* path) {
     if (session == NULL || path == NULL) return false;
 

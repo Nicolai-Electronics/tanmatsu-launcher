@@ -76,6 +76,7 @@ idf_component_register(
 		"menu/owner.c"
 		"menu/settings_theme.c"
 		"menu/sensors.c"
+		"menu/signature_test.c"
 		"radio_ota.c"
 		"lora_settings_handler.c"
 		"radio_system_protocol_client.c"
@@ -140,6 +141,7 @@ idf_component_register(
 		scd4x
 		esp_driver_tsens
 		esp_driver_usb_serial_jtag
+		signature
 		${extra_requires}
 	INCLUDE_DIRS
 		"."
