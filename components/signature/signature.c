@@ -1,4 +1,9 @@
 #include "signature.h"
+#include "esp_err.h"
+#include "soc/soc_caps.h"
+
+#if SOC_ECDSA_SUPPORTED
+
 #include <inttypes.h>
 #include "esp_efuse.h"
 #include "esp_log.h"
@@ -15,7 +20,7 @@ static char const TAG[] = "signature";
 #define SIGNATURE_ALGORITHM       PSA_ALG_ECDSA(PSA_ALG_SHA_256)
 
 // Import a reference to the hardware ECDSA key stored in eFuse block KEY0 as an opaque PSA key
-static bool import_key(psa_key_id_t* key_id) {
+static esp_err_t import_key(psa_key_id_t* key_id) {
     esp_ecdsa_opaque_key_t opaque_key = {
         .curve       = ESP_ECDSA_CURVE_SECP256R1,
         .efuse_block = EFUSE_BLK_KEY0,
@@ -33,26 +38,31 @@ static bool import_key(psa_key_id_t* key_id) {
 
     if (status != PSA_SUCCESS) {
         ESP_LOGE(TAG, "Error importing key: %" PRId32, (int32_t)status);
-        return false;
+        return ESP_FAIL;
     }
 
-    return true;
+    return ESP_OK;
 }
 
-bool signature_sign(uint8_t* data, size_t data_length, uint8_t* signature) {
+esp_err_t signature_sign(uint8_t* data, size_t data_length, uint8_t* signature) {
     // Signature buffer must be 64 bytes long
+    if (data == NULL || signature == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
     uint8_t hash[PSA_HASH_LENGTH(PSA_ALG_SHA_256)];
     size_t  hash_length = 0;
 
     psa_status_t status = psa_hash_compute(PSA_ALG_SHA_256, data, data_length, hash, sizeof(hash), &hash_length);
     if (status != PSA_SUCCESS) {
         ESP_LOGE(TAG, "Error hashing data: %" PRId32, (int32_t)status);
-        return false;
+        return ESP_FAIL;
     }
 
     psa_key_id_t key_id = 0;
-    if (!import_key(&key_id)) {
-        return false;
+    esp_err_t    res    = import_key(&key_id);
+    if (res != ESP_OK) {
+        return res;
     }
 
     size_t signature_length = 0;
@@ -62,22 +72,27 @@ bool signature_sign(uint8_t* data, size_t data_length, uint8_t* signature) {
 
     if (status != PSA_SUCCESS) {
         ESP_LOGE(TAG, "Error signing: %" PRId32, (int32_t)status);
-        return false;
+        return ESP_FAIL;
     }
 
     if (signature_length != SIGNATURE_LENGTH) {
         ESP_LOGE(TAG, "Invalid signature length");
-        return false;
+        return ESP_ERR_INVALID_SIZE;
     }
 
-    return true;
+    return ESP_OK;
 }
 
-bool signature_read_public_key(uint8_t* public_key) {
+esp_err_t signature_read_public_key(uint8_t* public_key) {
     // Public key buffer must be 65 bytes long
+    if (public_key == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
     psa_key_id_t key_id = 0;
-    if (!import_key(&key_id)) {
-        return false;
+    esp_err_t    res    = import_key(&key_id);
+    if (res != ESP_OK) {
+        return res;
     }
 
     size_t       public_key_length = 0;
@@ -86,13 +101,29 @@ bool signature_read_public_key(uint8_t* public_key) {
 
     if (status != PSA_SUCCESS) {
         ESP_LOGE(TAG, "Error exporting public key: %" PRId32, (int32_t)status);
-        return false;
+        return ESP_FAIL;
     }
 
     if (public_key_length != SIGNATURE_PUBLIC_KEY_SIZE) {
         ESP_LOGE(TAG, "Invalid public key length");
-        return false;
+        return ESP_ERR_INVALID_SIZE;
     }
 
-    return true;
+    return ESP_OK;
 }
+
+#else
+
+esp_err_t signature_sign(uint8_t* data, size_t data_length, uint8_t* signature) {
+    (void)data;
+    (void)data_length;
+    (void)signature;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t signature_read_public_key(uint8_t* public_key) {
+    (void)public_key;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+#endif  // SOC_ECDSA_SUPPORTED

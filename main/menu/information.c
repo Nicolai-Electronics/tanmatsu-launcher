@@ -11,6 +11,7 @@
 #include "menu_device_information.h"
 #include "pax_types.h"
 #include "signature_test.h"
+#include "soc/soc_caps.h"
 
 typedef enum {
     ACTION_NONE,
@@ -38,9 +39,11 @@ static bool on_action(void* action_arg, void* user_ctx) {
         case ACTION_LORA_INFORMATION:
             menu_lora_information();
             break;
+#if SOC_ECDSA_SUPPORTED
         case ACTION_SIGNATURE_TEST:
             menu_signature_test();
             break;
+#endif
         default:
             break;
     }
@@ -57,7 +60,9 @@ void menu_information(void) {
         menu_insert_item_icon(&menu, "LoRa information", NULL, (void*)ACTION_LORA_INFORMATION, -1,
                               get_icon(ICON_WORKSPACES));
     }
+#if SOC_ECDSA_SUPPORTED
     menu_insert_item_icon(&menu, "Signature test", NULL, (void*)ACTION_SIGNATURE_TEST, -1, get_icon(ICON_INFO));
+#endif
     menu_insert_item_icon(&menu, "About", NULL, (void*)ACTION_ABOUT, -1, get_icon(ICON_INFO));
 
     menu_run_list(&menu, ((gui_element_icontext_t[]){{get_icon(ICON_INFO), "Information"}}), 1, MENU_FOOTER_BACK,
