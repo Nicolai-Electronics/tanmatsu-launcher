@@ -10,5 +10,7 @@ typedef struct http_session* http_session_t;
 http_session_t               http_session_begin(const char* initial_url);
 void http_session_set_callback(http_session_t session, download_callback_t callback, const char* text);
 bool http_session_download_ram(http_session_t session, const char* url, uint8_t** ptr, size_t* size);
+bool http_session_post_ram(http_session_t session, const char* url, const char* content_type, const char* body,
+                           size_t body_length, uint8_t** ptr, size_t* size);
 bool http_session_download_file(http_session_t session, const char* url, const char* path);
 void http_session_end(http_session_t session);

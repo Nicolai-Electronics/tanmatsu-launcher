@@ -1,6 +1,7 @@
 #include "repository_client.h"
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "bsp/device.h"
 #include "cJSON.h"
@@ -143,4 +144,131 @@ bool load_project(const char* base_url, repository_json_data_t* out_data, const 
         return false;
     }
     return download_and_parse(url, out_data);
+}
+
+// Signature API
+
+#define SIGNATURE_CHALLENGE_LENGTH 64
+#define SIGNATURE_LENGTH           64
+#define MAC_ADDRESS_LENGTH         6
+
+static void bytes_to_hex(const uint8_t* data, size_t length, char* out_hex) {
+    for (size_t i = 0; i < length; i++) {
+        sprintf(&out_hex[i * 2], "%02x", data[i]);
+    }
+    out_hex[length * 2] = '\0';
+}
+
+static bool hex_to_bytes(const char* hex, uint8_t* out_data, size_t length) {
+    if (strlen(hex) != length * 2) {
+        return false;
+    }
+    for (size_t i = 0; i < length; i++) {
+        if (!isxdigit((unsigned char)hex[i * 2]) || !isxdigit((unsigned char)hex[i * 2 + 1])) {
+            return false;
+        }
+        char byte_hex[3] = {hex[i * 2], hex[i * 2 + 1], '\0'};
+        out_data[i]      = (uint8_t)strtoul(byte_hex, NULL, 16);
+    }
+    return true;
+}
+
+static bool post_and_parse(const char* url, cJSON* request, repository_json_data_t* out_data) {
+    free_repository_data_json(out_data);
+    char* body = cJSON_PrintUnformatted(request);
+    if (body == NULL) return false;
+    http_session_t session = http_session_begin(url);
+    if (session == NULL) {
+        cJSON_free(body);
+        return false;
+    }
+    bool success = http_session_post_ram(session, url, "application/json", body, strlen(body),
+                                         (uint8_t**)&out_data->data, &out_data->size);
+    http_session_end(session);
+    cJSON_free(body);
+    if (!success) return false;
+    out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
+    if (out_data->json == NULL) {
+        free(out_data->data);
+        out_data->data = NULL;
+        return false;
+    }
+    return true;
+}
+
+static bool build_signature_url(const char* base_url, const char* endpoint, char* url, size_t url_length) {
+    char base_uri[64] = {0};
+    nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
+    int res = snprintf(url, url_length, "%s%s/signature/%s", base_url, base_uri, endpoint);
+    if (res < 0 || res >= url_length) {
+        ESP_LOGE(TAG, "URL is too long");
+        return false;
+    }
+    return true;
+}
+
+bool repository_signature_request(const char* base_url, const uint8_t* mac_address, uint8_t* out_challenge) {
+    char url[256];
+    if (!build_signature_url(base_url, "request", url, sizeof(url))) {
+        return false;
+    }
+
+    char mac_hex[MAC_ADDRESS_LENGTH * 2 + 1];
+    bytes_to_hex(mac_address, MAC_ADDRESS_LENGTH, mac_hex);
+
+    cJSON* request = cJSON_CreateObject();
+    if (request == NULL) return false;
+    cJSON_AddStringToObject(request, "mac_address", mac_hex);
+
+    repository_json_data_t response = {0};
+    bool                   success  = post_and_parse(url, request, &response);
+    cJSON_Delete(request);
+    if (!success) {
+        ESP_LOGE(TAG, "Failed to request signature challenge");
+        return false;
+    }
+
+    cJSON* challenge = cJSON_GetObjectItem(response.json, "challenge");
+    success = cJSON_IsString(challenge) && hex_to_bytes(challenge->valuestring, out_challenge, SIGNATURE_CHALLENGE_LENGTH);
+    if (!success) {
+        ESP_LOGE(TAG, "Invalid signature challenge received");
+    }
+    free_repository_data_json(&response);
+    return success;
+}
+
+bool repository_signature_verify(const char* base_url, const uint8_t* mac_address, const uint8_t* signature,
+                                 bool* out_verified) {
+    char url[256];
+    if (!build_signature_url(base_url, "verify", url, sizeof(url))) {
+        return false;
+    }
+
+    char mac_hex[MAC_ADDRESS_LENGTH * 2 + 1];
+    bytes_to_hex(mac_address, MAC_ADDRESS_LENGTH, mac_hex);
+    char signature_hex[SIGNATURE_LENGTH * 2 + 1];
+    bytes_to_hex(signature, SIGNATURE_LENGTH, signature_hex);
+
+    cJSON* request = cJSON_CreateObject();
+    if (request == NULL) return false;
+    cJSON_AddStringToObject(request, "mac_address", mac_hex);
+    cJSON_AddStringToObject(request, "signature", signature_hex);
+
+    repository_json_data_t response = {0};
+    bool                   success  = post_and_parse(url, request, &response);
+    cJSON_Delete(request);
+    if (!success) {
+        ESP_LOGE(TAG, "Failed to verify signature");
+        return false;
+    }
+
+    cJSON* verified = cJSON_GetObjectItem(response.json, "verified");
+    success         = cJSON_IsBool(verified);
+    if (success) {
+        *out_verified = cJSON_IsTrue(verified);
+    } else {
+        ESP_LOGE(TAG, "Invalid signature verification response received");
+    }
+    free_repository_data_json(&response);
+    return success;
 }

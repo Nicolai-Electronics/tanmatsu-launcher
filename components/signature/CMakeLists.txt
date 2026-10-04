@@ -1,0 +1,10 @@
+idf_component_register(
+	SRCS
+		signature.c
+	INCLUDE_DIRS
+		"include"
+	PRIV_REQUIRES
+		mbedtls
+		efuse
+		log
+)
