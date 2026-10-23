@@ -32,8 +32,8 @@ static char const TAG[] = "Signature test";
 
 #define BYTES_PER_LINE 16
 
-static bool    public_key_available = false;
-static uint8_t public_key[65]       = {0};
+static esp_err_t public_key_result = ESP_FAIL;
+static uint8_t   public_key[65]    = {0};
 
 static int draw_line_font(pax_buf_t* buffer, gui_theme_t* theme, pax_font_t const* font, pax_vec2_t position, int line,
                           char const* text) {
@@ -74,7 +74,9 @@ static void render(bool partial, bool icons) {
     }
     if (!partial) {
         int line = 0;
-        if (!public_key_available) {
+        if (public_key_result == ESP_ERR_NOT_SUPPORTED) {
+            line = draw_line(buffer, theme, position, line, "Signing is not supported on this device");
+        } else if (public_key_result != ESP_OK) {
             line = draw_line(buffer, theme, position, line, "No signing key installed");
         } else {
             line = draw_line(buffer, theme, position, line, "Public key:");
@@ -87,7 +89,12 @@ static void render(bool partial, bool icons) {
 static void verify_with_server(void) {
     pax_buf_t* icon = get_icon(ICON_INFO);
 
-    if (!public_key_available) {
+    if (public_key_result == ESP_ERR_NOT_SUPPORTED) {
+        message_dialog(icon, "Signature test", "Signing is not supported on this device", "OK");
+        return;
+    }
+
+    if (public_key_result != ESP_OK) {
         message_dialog(icon, "Signature test", "No signing key installed", "OK");
         return;
     }
@@ -126,7 +133,7 @@ static void verify_with_server(void) {
 
     busy_dialog(icon, "Signature test", "Signing challenge...", true);
     uint8_t signature[64] = {0};
-    if (!signature_sign(challenge, sizeof(challenge), signature)) {
+    if (signature_sign(challenge, sizeof(challenge), signature) != ESP_OK) {
         message_dialog(icon, "Signature test", "Failed to sign challenge", "OK");
         return;
     }
@@ -149,7 +156,7 @@ void menu_signature_test(void) {
     QueueHandle_t input_event_queue = NULL;
     ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
 
-    public_key_available = signature_read_public_key(public_key);
+    public_key_result = signature_read_public_key(public_key);
 
     render(false, true);
     while (1) {

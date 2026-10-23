@@ -423,6 +423,21 @@ void app_main(void) {
     display_available = display_init() == ESP_OK;
     if (display_available) {
         pax_set_renderer_async(true);
+    } else {
+        // No display detected (or it failed to respond): signal the error on the LEDs
+        // instead, since we have no screen to show it on. Keep LEDs in manual mode so
+        // the later `bsp_led_set_mode(true)` call below doesn't override this indicator.
+        ESP_LOGE(TAG, "No display detected, continuing without display output");
+        if (!bsp_device_get_initialized_without_coprocessor()) {
+            bsp_led_set_mode(false);
+            bsp_led_set_brightness(100);
+            uint32_t led_count = 0;
+            bsp_led_get_count(&led_count);
+            for (uint32_t i = 0; i < led_count; i++) {
+                bsp_led_set_pixel_rgb(i, 255, 0, 0);
+            }
+            bsp_led_send();
+        }
     }
 
     if (bsp_device_get_initialized_without_coprocessor()) {
@@ -431,6 +446,13 @@ void app_main(void) {
         vTaskDelay(pdMS_TO_TICKS(2000));
     } else if (bsp_init_result != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize BSP, bailing out.");
+
+        bsp_led_set_mode(false);
+        bsp_led_set_brightness(100);
+        bsp_led_set_pixel_rgb(1, 0, 255, 255);
+        bsp_led_send();
+
+        bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_BOOTLOADER);
         return;
     }
 
@@ -438,9 +460,11 @@ void app_main(void) {
     startup_dialog("Applying settings...");
     device_settings_apply();
 
-    // Configure LEDs
-    bsp_led_clear();
-    bsp_led_set_mode(true);
+    // Configure LEDs, unless they're already showing the "no display" error indicator
+    if (display_available) {
+        bsp_led_clear();
+        bsp_led_set_mode(true);
+    }
 
     // Bootloader
     startup_dialog("Checking bootloader...");
@@ -556,7 +580,7 @@ void app_main(void) {
 
     // App autostart
     esp_reset_reason_t reset_reason = esp_reset_reason();
-    if (reset_reason == ESP_RST_POWERON || reset_reason == ESP_RST_JTAG) {
+    if ((reset_reason == ESP_RST_POWERON || reset_reason == ESP_RST_JTAG) && display_available) {
         char* autostart_slug = malloc(APP_MAX_SLUG_SIZE);
         if (autostart_slug) {
             if (app_autostart_get(autostart_slug) == ESP_OK && strlen(autostart_slug) > 0) {
@@ -667,6 +691,15 @@ void app_main(void) {
 
     if (!display_available) {
         ESP_LOGE(TAG, "Started without display");
+
+        bsp_led_set_mode(false);
+        bsp_led_set_brightness(100);
+        uint32_t led_count = 0;
+        bsp_led_get_count(&led_count);
+        for (uint32_t i = 0; i < led_count; i++) {
+            bsp_led_set_pixel_rgb(i, 0, 255, 0);
+        }
+        bsp_led_send();
         return;
     }
 
