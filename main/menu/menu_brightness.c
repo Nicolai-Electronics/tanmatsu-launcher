@@ -1,5 +1,6 @@
 #include "menu_brightness.h"
 #include <stdbool.h>
+#include "bsp/display.h"
 #include "bsp/input.h"
 #include "bsp/power.h"
 #include "common/display.h"
@@ -11,6 +12,7 @@
 #include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "nvs_settings.h"
+#include "nvs_settings_helpers.h"
 #include "pax_gfx.h"
 #include "pax_matrix.h"
 #include "pax_types.h"
@@ -20,13 +22,23 @@ typedef enum {
     SETTING_DISPLAY_BACKLIGHT_BRIGHTNESS,
     SETTING_KEYBOARD_BACKLIGHT_BRIGHTNESS,
     SETTING_LED_BRIGHTNESS,
+    SETTING_LCD_VCOM,
 } menu_setting_t;
+
+#define NVS_KEY_LCD_VCOM "lcd_vcom"
 
 static void render(menu_t* menu, bool partial, bool icons) {
     pax_buf_t*   buffer = display_get_buffer();
     gui_theme_t* theme  = get_theme();
 
     pax_vec2_t position = menu_calc_position(buffer, theme);
+
+    // Test pattern in the bottom left corner, above the footer. The menu area is reduced so it doesn't cover it
+    const int pattern_size    = 128;
+    const int pattern_spacing = 32;
+    int       pattern_x       = position.x0;
+    int       pattern_y       = position.y1 - pattern_size;
+    position.y1               = pattern_y;
 
     if (!partial || icons) {
         render_base_screen_statusbar(
@@ -53,9 +65,42 @@ static void render(menu_t* menu, bool partial, bool icons) {
     menu_set_value(menu, position_index++, value_buffer);
     snprintf(value_buffer, sizeof(value_buffer), "%u%%", led_brightness);
     menu_set_value(menu, position_index++, value_buffer);
+    uint8_t lcd_vcom = 0;
+    if (position_index < menu_get_length(menu) && bsp_display_get_vcom(&lcd_vcom) == ESP_OK) {
+        snprintf(value_buffer, sizeof(value_buffer), "%u", lcd_vcom);
+        menu_set_value(menu, position_index++, value_buffer);
+    }
 
     menu_render(buffer, menu, position, theme, partial);
+
+    if (!partial) {
+        pax_simple_rect(buffer, 0xFF552075, pattern_x, pattern_y, pattern_size, pattern_size);
+        int lines_x = pattern_x + pattern_size + pattern_spacing;
+        for (int line = 0; line < pattern_size; line++) {
+            pax_simple_rect(buffer, (line & 1) ? 0xFFFFFFFF : 0xFF000000, lines_x, pattern_y + line, pattern_size, 1);
+        }
+    }
+
     display_blit_buffer(buffer);
+}
+
+static void adjust_lcd_vcom(int8_t direction) {
+    uint8_t value = 0;
+    if (bsp_display_get_vcom(&value) != ESP_OK) {
+        return;
+    }
+
+    if (direction > 0 && value < 255) {
+        value++;
+    } else if (direction < 0 && value > 0) {
+        value--;
+    } else {
+        return;
+    }
+
+    if (bsp_display_set_vcom(value) == ESP_OK) {
+        nvs_settings_set_u8(NVS_KEY_LCD_VCOM, value);
+    }
 }
 
 void adjust_setting(menu_setting_t setting, int8_t direction) {
@@ -70,6 +115,9 @@ void adjust_setting(menu_setting_t setting, int8_t direction) {
         case SETTING_LED_BRIGHTNESS:
             nvs_settings_get_led_brightness(&value, DEFAULT_LED_BRIGHTNESS);
             break;
+        case SETTING_LCD_VCOM:
+            adjust_lcd_vcom(direction);
+            return;
         default:
             return;
     }
@@ -110,6 +158,10 @@ void menu_settings_brightness(void) {
     menu_insert_item_value(&menu, "Keyboard backlight brightness", "", NULL,
                            (void*)SETTING_KEYBOARD_BACKLIGHT_BRIGHTNESS, -1);
     menu_insert_item_value(&menu, "LED brightness", "", NULL, (void*)SETTING_LED_BRIGHTNESS, -1);
+    uint8_t lcd_vcom = 0;
+    if (bsp_display_get_vcom(&lcd_vcom) == ESP_OK) {
+        menu_insert_item_value(&menu, "Display VCOM", "", NULL, (void*)SETTING_LCD_VCOM, -1);
+    }
 
     render(&menu, false, true);
     while (1) {
