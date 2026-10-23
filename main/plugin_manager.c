@@ -156,6 +156,17 @@ static bool parse_plugin_metadata(const char* path, plugin_discovery_info_t* inf
         }
     }
 
+    info->network        = false;
+    cJSON* permissions   = cJSON_GetObjectItem(plugin_root, "permissions");
+    cJSON* permission    = NULL;
+    if (permissions && cJSON_IsArray(permissions)) {
+        cJSON_ArrayForEach(permission, permissions) {
+            if (cJSON_IsString(permission) && strcmp(permission->valuestring, "network") == 0) {
+                info->network = true;
+            }
+        }
+    }
+
     cJSON_Delete(plugin_root);
 
     // Read metadata.json for display fields (name, version)

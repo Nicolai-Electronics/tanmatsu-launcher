@@ -24,6 +24,7 @@ typedef struct {
     char*         version;    // Version string
     plugin_type_t type;       // Plugin type
     bool          is_loaded;  // Currently loaded?
+    bool          network;    // "network" in plugin.json's permissions
 } plugin_discovery_info_t;
 
 // ============================================
