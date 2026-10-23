@@ -35,17 +35,17 @@ Tanmatsu plugins can extend the launcher with new menu items, background service
 
 | Type | Description |
 |------|-------------|
-| `PLUGIN_TYPE_MENU` (0) | Adds items to the launcher menu |
+| `PLUGIN_TYPE_MENU` (0) | Runs when picked in the Plugins menu: `menu_select` gets the screen and input (API 3.1) |
 | `PLUGIN_TYPE_SERVICE` (1) | Background service running in its own FreeRTOS task |
 | `PLUGIN_TYPE_HOOK` (2) | Receives system events (app launch, WiFi, power, etc.) |
 
 ### API Version
 
-Current API version: `2.0.0`
+Current API version: `3.1.0`
 
 ```c
-#define TANMATSU_PLUGIN_API_VERSION_MAJOR 2
-#define TANMATSU_PLUGIN_API_VERSION_MINOR 0
+#define TANMATSU_PLUGIN_API_VERSION_MAJOR 3
+#define TANMATSU_PLUGIN_API_VERSION_MINOR 1
 #define TANMATSU_PLUGIN_API_VERSION_PATCH 0
 #define TANMATSU_PLUGIN_API_VERSION \
     ((TANMATSU_PLUGIN_API_VERSION_MAJOR << 16) | \
@@ -54,6 +54,12 @@ Current API version: `2.0.0`
 ```
 
 Plugins must specify the API version they were built against. The host will reject plugins with incompatible API versions.
+
+A menu plugin that needs `menu_select` to run asks for API 3.1: a launcher that only knows 3.0 loads menu plugins without ever running them, and refuses one built for 3.1 instead.
+
+### Running a menu plugin
+
+Picking a menu plugin in the Plugins menu (Return or F2: "Run") loads it, calls `menu_select` until it returns `false`, and unloads it again (unless it was loaded already, for example by auto-start). A plugin whose `plugin.json` lists the `network` permission gets WiFi first: the launcher connects to a known network if it is not connected yet. If that fails the plugin runs anyway; check with `asp_net_is_connected`.
 
 ---
 
@@ -87,7 +93,7 @@ Structure containing plugin callbacks:
 | `init` | Yes | Called once at load time. Return 0 on success, non-zero on failure |
 | `cleanup` | Yes | Called before unload. Clean up resources |
 | `menu_render` | Menu only | Render custom menu content. Receives `plugin_context_t*` and `pax_buf_t*` |
-| `menu_select` | Menu only | Handle menu item selection. Return `true` to stay in plugin, `false` to return to menu |
+| `menu_select` | Menu only | Called when the plugin is picked in the Plugins menu, on the launcher's UI task: it owns the screen and the input queue until it returns. Called again while it returns `true`; return `false` to go back to the menu |
 | `service_run` | Service only | Main service loop (runs in dedicated FreeRTOS task) |
 | `hook_event` | Hook only | Handle system events. Return 0 if not handled, positive if handled |
 
