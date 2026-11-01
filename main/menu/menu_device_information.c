@@ -18,6 +18,7 @@
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU)
 #include "bsp/tanmatsu.h"
+#include "dsi_panel_nicolaielectronics_st7701.h"
 #include "tanmatsu_coprocessor.h"
 #endif
 
@@ -95,6 +96,12 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
         snprintf(text_buffer, sizeof(text_buffer), "Region:              %s", identity.region);
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+        snprintf(text_buffer, sizeof(text_buffer), "LCD type:            %s",
+                 st7701_is_display_variant_2() ? "SW39480800PN03-01-1" : "LH397K-IC01");
+        pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
+                      position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
+#endif
         snprintf(text_buffer, sizeof(text_buffer), "APP SOC UID:         ");
         for (size_t i = 0; i < 16; i++) {
             snprintf(text_buffer + strlen(text_buffer), sizeof(text_buffer) - strlen(text_buffer), "%02x",
