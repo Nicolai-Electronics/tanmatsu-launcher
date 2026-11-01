@@ -780,12 +780,17 @@ void menu_repository_client(char* category) {
                                 message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
                                     get_icon(ICON_HELP), "Update all", "Update all apps with available updates?");
                                 if (msg_ret == MSG_DIALOG_RETURN_OK) {
+                                    int total = 0;
+                                    for (int j = 0; j < project_count; j++) {
+                                        if (project_statuses[j] == INSTALL_STATUS_UPDATE_AVAILABLE) total++;
+                                    }
+
                                     int updated = 0;
                                     int failed  = 0;
-                                    int total   = 0;
+                                    int index   = 0;
                                     for (int j = 0; j < project_count; j++) {
                                         if (project_statuses[j] != INSTALL_STATUS_UPDATE_AVAILABLE) continue;
-                                        total++;
+                                        index++;
                                         cJSON* wrapper  = get_project_by_index(projects.json, project_indices[j]);
                                         cJSON* slug_obj = wrapper ? cJSON_GetObjectItem(wrapper, "slug") : NULL;
                                         if (slug_obj == NULL) {
@@ -794,7 +799,7 @@ void menu_repository_client(char* category) {
                                         }
                                         char msg[64];
                                         snprintf(msg, sizeof(msg), "Updating %s (%d/%d)...", slug_obj->valuestring,
-                                                 updated + failed + 1, total);
+                                                 index, total);
                                         busy_dialog(get_icon(ICON_STOREFRONT), "Updating", msg, true);
                                         esp_err_t res = app_mgmt_install(server, slug_obj->valuestring,
                                                                          project_locations[j], download_callback);
