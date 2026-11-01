@@ -8,6 +8,7 @@
 #include "gui_element_footer.h"
 #include "gui_style.h"
 #include "icons.h"
+#include "lora.h"
 #include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"
 #include "pax_gfx.h"
@@ -15,6 +16,9 @@
 #include "pax_text.h"
 #include "pax_types.h"
 #include "radio_system_protocol_client.h"
+
+extern bool           wifi_stack_get_initialized(void);
+extern lora_handle_t* lora_get_handle(void);
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU)
 #include "bsp/tanmatsu.h"
@@ -97,7 +101,20 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
         }
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
-        snprintf(text_buffer, sizeof(text_buffer), "Radio:               %s", get_radio_name(identity.radio));
+        // snprintf(text_buffer, sizeof(text_buffer), "Radio:               %s", get_radio_name(identity.radio));
+        // pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
+        //               position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
+        if (!wifi_stack_get_initialized()) {
+            snprintf(text_buffer, sizeof(text_buffer), "LoRa module:         Unavailable");
+        } else {
+            lora_protocol_status_params_t lora_status = {0};
+            if (lora_get_status(lora_get_handle(), &lora_status) == ESP_OK) {
+                snprintf(text_buffer, sizeof(text_buffer), "LoRa module:         %s",
+                         lora_status.chip_type == LORA_PROTOCOL_CHIP_SX1268 ? "E22-400M22S (SX1268)" : "E22-900M22S (SX1262)");
+            } else {
+                snprintf(text_buffer, sizeof(text_buffer), "LoRa module:         Unavailable");
+            }
+        }
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
         snprintf(text_buffer, sizeof(text_buffer), "Color:               %s", get_color_name(identity.color));
