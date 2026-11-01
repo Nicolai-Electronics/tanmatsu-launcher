@@ -118,7 +118,7 @@ static esp_http_client_handle_t create_http_client(const char* url, http_downloa
     esp_http_client_config_t config = {.url                 = url,
                                        .use_global_ca_store = true,
                                        .keep_alive_enable   = true,
-                                       .timeout_ms          = 10000,
+                                       .timeout_ms          = 15000,
                                        .buffer_size         = 4096,
                                        .user_data           = info,
                                        .event_handler       = _event_handler,
