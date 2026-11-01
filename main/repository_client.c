@@ -74,13 +74,15 @@ void free_repository_data_json(repository_json_data_t* data) {
     }
 }
 
-static bool download_and_parse(const char* url, repository_json_data_t* out_data) {
+static bool download_and_parse(const char* url, repository_json_data_t* out_data, http_result_t* out_result) {
     // Free any prior contents so callers can safely re-use the same struct
     // (e.g. the static `projects` global in menu_repository_client) without leaking.
     free_repository_data_json(out_data);
+    if (out_result != NULL) *out_result = HTTP_RESULT_OTHER;
     http_session_t session = http_session_begin(url);
     if (session == NULL) return false;
     bool success = http_session_download_ram(session, url, (uint8_t**)&out_data->data, &out_data->size);
+    if (out_result != NULL) *out_result = http_session_get_last_result(session);
     http_session_end(session);
     if (!success) return false;
     out_data->json = cJSON_ParseWithLength(out_data->data, out_data->size);
@@ -89,6 +91,7 @@ static bool download_and_parse(const char* url, repository_json_data_t* out_data
         out_data->data = NULL;
         return false;
     }
+    if (out_result != NULL) *out_result = HTTP_RESULT_OK;
     return true;
 }
 
@@ -117,20 +120,21 @@ bool load_information(const char* base_url, repository_json_data_t* out_data) {
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
     char url[256];
     sprintf(url, "%s%s/information", base_url, base_uri);
-    return download_and_parse(url, out_data);
+    return download_and_parse(url, out_data, NULL);
 }
 
-bool load_categories(const char* base_url, repository_json_data_t* out_data) {
+bool load_categories(const char* base_url, repository_json_data_t* out_data, http_result_t* out_result) {
     char base_uri[64] = {0};
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
 
     char url[256];
     sprintf(url, "%s%s/categories?", base_url, base_uri);
     url_append(url, device_query, sizeof(url));
-    return download_and_parse(url, out_data);
+    return download_and_parse(url, out_data, out_result);
 }
 
-bool load_projects(const char* base_url, repository_json_data_t* out_data, const char* category) {
+bool load_projects(const char* base_url, repository_json_data_t* out_data, const char* category,
+                   http_result_t* out_result) {
     char base_uri[64] = {0};
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
     char url[256];
@@ -142,7 +146,7 @@ bool load_projects(const char* base_url, repository_json_data_t* out_data, const
     }
 
     url_append(url, device_query, sizeof(url));
-    return download_and_parse(url, out_data);
+    return download_and_parse(url, out_data, out_result);
 }
 
 bool load_projects_paginated(const char* base_url, repository_json_data_t* out_data, const char* category,
@@ -158,7 +162,7 @@ bool load_projects_paginated(const char* base_url, repository_json_data_t* out_d
         sprintf(url, "%s%s/projects?offset=%" PRIu32 "&amount=%" PRIu32 "&", base_url, base_uri, offset, amount);
     }
     url_append(url, device_query, sizeof(url));
-    return download_and_parse(url, out_data);
+    return download_and_parse(url, out_data, NULL);
 }
 
 bool load_project(const char* base_url, repository_json_data_t* out_data, const char* project_slug) {
@@ -170,7 +174,30 @@ bool load_project(const char* base_url, repository_json_data_t* out_data, const 
         ESP_LOGE(TAG, "URL is too long");
         return false;
     }
-    return download_and_parse(url, out_data);
+    return download_and_parse(url, out_data, NULL);
+}
+
+void repository_describe_load_failure(char* out, size_t out_len, const char* what, http_result_t result) {
+    switch (result) {
+        case HTTP_RESULT_TIMEOUT:
+            snprintf(out, out_len, "Failed to load %s from server:\nconnection timed out.", what);
+            break;
+        case HTTP_RESULT_CLIENT_ERROR:
+            snprintf(out, out_len,
+                     "Failed to load %s from server:\nrequest rejected by server (4xx).\n"
+                     "Make sure your firmware is up to date.",
+                     what);
+            break;
+        case HTTP_RESULT_SERVER_ERROR:
+            snprintf(out, out_len,
+                     "Failed to load %s from server:\nserver error (5xx).\n"
+                     "This is an issue on the server side.",
+                     what);
+            break;
+        default:
+            snprintf(out, out_len, "Failed to load %s from server", what);
+            break;
+    }
 }
 
 // Signature API

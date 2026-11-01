@@ -96,14 +96,14 @@ void menu_repository_client_categories(void) {
 
     if (!wifi_stack_get_initialized()) {
         ESP_LOGE(TAG, "WiFi stack not initialized");
-        message_dialog(get_icon(ICON_STOREFRONT), "Repository: fatal error", "WiFi stack not initialized", "Quit");
+        message_dialog(get_icon(ICON_STOREFRONT), "Something went wrong", "WiFi stack not initialized", "Quit");
         return;
     }
 
     if (!wifi_connection_is_connected()) {
         if (wifi_connect_try_all() != ESP_OK) {
             ESP_LOGE(TAG, "Not connected to WiFi");
-            message_dialog(get_icon(ICON_STOREFRONT), "Repository: fatal error", "Failed to connect to WiFi network",
+            message_dialog(get_icon(ICON_STOREFRONT), "Something went wrong", "Failed to connect to WiFi network",
                            "Quit");
             return;
         }
@@ -113,11 +113,13 @@ void menu_repository_client_categories(void) {
 
     char server[128] = {0};
     nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
-    bool success = load_categories(server, &categories);
+    http_result_t result  = HTTP_RESULT_OTHER;
+    bool          success = load_categories(server, &categories, &result);
     if (!success) {
-        ESP_LOGE(TAG, "Failed to load projects");
-        message_dialog(get_icon(ICON_STOREFRONT), "Repository: fatal error", "Failed to load categories from server",
-                       "Quit");
+        ESP_LOGE(TAG, "Failed to load categories (result=%d)", result);
+        char msg[192];
+        repository_describe_load_failure(msg, sizeof(msg), "categories", result);
+        message_dialog(get_icon(ICON_STOREFRONT), "Something went wrong", msg, "Quit");
         return;
     }
 

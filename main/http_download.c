@@ -107,6 +107,8 @@ static bool download_success(esp_err_t err, http_download_info_t* info) {
 struct http_session {
     esp_http_client_handle_t client;
     http_download_info_t     info;
+    esp_err_t                last_err;          // Result of the most recent esp_http_client_perform call
+    int                      last_status_code;  // HTTP status code of the most recent request (0 if none received)
 };
 
 static esp_http_client_handle_t create_http_client(const char* url, http_download_info_t* info) {
@@ -168,6 +170,8 @@ bool http_session_download_ram(http_session_t session, const char* url, uint8_t*
         esp_http_client_set_url(session->client, url);
         esp_err_t err         = esp_http_client_perform(session->client);
         int       status_code = esp_http_client_get_status_code(session->client);
+        session->last_err         = err;
+        session->last_status_code = status_code;
 
         if (download_success(err, &session->info) && (status_code == 200)) {
             if (size != NULL) {
@@ -219,6 +223,8 @@ bool http_session_post_ram(http_session_t session, const char* url, const char* 
     esp_http_client_set_post_field(session->client, body, body_length);
     esp_err_t err         = esp_http_client_perform(session->client);
     int       status_code = esp_http_client_get_status_code(session->client);
+    session->last_err         = err;
+    session->last_status_code = status_code;
 
     // Restore the session to its default state so it can be re-used for downloads
     esp_http_client_set_post_field(session->client, NULL, 0);
@@ -265,6 +271,8 @@ bool http_session_download_file(http_session_t session, const char* url, const c
         esp_http_client_set_url(session->client, url);
         esp_err_t err         = esp_http_client_perform(session->client);
         int       status_code = esp_http_client_get_status_code(session->client);
+        session->last_err         = err;
+        session->last_status_code = status_code;
         fastclose(fd);
 
         if (download_success(err, &session->info) && (status_code == 200)) {
@@ -288,6 +296,29 @@ bool http_session_download_file(http_session_t session, const char* url, const c
     // don't have to know about this side effect of opening with mode "w".
     unlink(path);
     return false;
+}
+
+http_result_t http_session_get_last_result(http_session_t session) {
+    if (session == NULL) return HTTP_RESULT_OTHER;
+
+    int status = session->last_status_code;
+    if (status >= 400 && status < 500) return HTTP_RESULT_CLIENT_ERROR;
+    if (status >= 500 && status < 600) return HTTP_RESULT_SERVER_ERROR;
+    if (status == 200) return HTTP_RESULT_OK;
+
+    // No (usable) status code was received: the connection could not be established, or it
+    // dropped/timed out before a response arrived.
+    switch (session->last_err) {
+        case ESP_ERR_HTTP_CONNECT:
+        case ESP_ERR_HTTP_CONNECTING:
+        case ESP_ERR_HTTP_EAGAIN:
+        case ESP_ERR_HTTP_READ_TIMEOUT:
+        case ESP_ERR_HTTP_CONNECTION_CLOSED:
+        case ESP_ERR_HTTP_INCOMPLETE_DATA:
+            return HTTP_RESULT_TIMEOUT;
+        default:
+            return HTTP_RESULT_OTHER;
+    }
 }
 
 void http_session_end(http_session_t session) {
