@@ -23,7 +23,12 @@
 #include "pax_text.h"
 #include "pax_types.h"
 #include "repository_client.h"
+#include "sdkconfig.h"
 #include "shapes/pax_lines.h"
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#include "dsi_panel_nicolaielectronics_st7701.h"
+#endif
 
 static const char* TAG = "Repository client: project";
 
@@ -42,6 +47,7 @@ typedef struct {
     bool sd_disabled;
     bool default_internal;
     bool sd_required_warning;
+    bool not_compatible;
 } install_constraints_t;
 
 static bool get_bool_field(cJSON* obj, const char* name) {
@@ -83,6 +89,27 @@ static cJSON* find_application_for_device(cJSON* project) {
     return NULL;
 }
 
+// On Tanmatsu devices with the variant 2 display panel, appfs apps built against an older BSP
+// (bsp_version < 2, or absent) are not guaranteed to be compatible. Checked only for "appfs" type
+// entries since that's the only executable type affected by this ABI boundary.
+static bool appfs_app_incompatible_with_display(cJSON* application) {
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+    if (application == NULL || !st7701_is_display_variant_2()) {
+        return false;
+    }
+    cJSON* type_obj = cJSON_GetObjectItem(application, "type");
+    if (type_obj == NULL || !cJSON_IsString(type_obj) || strcmp(type_obj->valuestring, "appfs") != 0) {
+        return false;
+    }
+    cJSON* bsp_version_obj = cJSON_GetObjectItem(application, "bsp_version");
+    int    bsp_version     = (bsp_version_obj != NULL && cJSON_IsNumber(bsp_version_obj)) ? bsp_version_obj->valueint : 0;
+    return bsp_version < 2;
+#else
+    (void)application;
+    return false;
+#endif
+}
+
 static void resolve_constraints(cJSON* project, install_constraints_t* out) {
     cJSON* application      = find_application_for_device(project);
     cJSON* source           = application != NULL ? application : project;
@@ -91,11 +118,17 @@ static void resolve_constraints(cJSON* project, install_constraints_t* out) {
     out->internal_only      = get_bool_field(source, "internal_only");
     out->internal_preferred = get_bool_field(source, "internal_preferred");
     out->sd_present         = (bsp_storage_get_status(BSP_STORAGE_TYPE_SDCARD) == BSP_STORAGE_STATUS_MOUNTED);
+    out->not_compatible     = appfs_app_incompatible_with_display(application);
 
     // If both *_only flags are set the metadata is contradictory; let internal_only win
     // because the device always has internal storage but may not have an SD card inserted.
     out->internal_disabled = out->external_only && !out->internal_only;
     out->sd_disabled       = out->internal_only || !out->sd_present;
+
+    if (out->not_compatible) {
+        out->internal_disabled = true;
+        out->sd_disabled       = true;
+    }
 
     bool prefer_internal;
     if (out->internal_preferred && out->external_preferred) {
@@ -147,7 +180,10 @@ static void render_project(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t pos
     pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 4, text_buffer);
 
-    if (constraints != NULL && constraints->sd_required_warning) {
+    if (constraints != NULL && constraints->not_compatible) {
+        pax_draw_text(buffer, 0xFFFF0000, theme->menu.text_font, font_size, position.x0, position.y0 + font_size * 5,
+                      "Not compatible with this device");
+    } else if (constraints != NULL && constraints->sd_required_warning) {
         pax_draw_text(buffer, 0xFFFF0000, theme->menu.text_font, font_size, position.x0, position.y0 + font_size * 5,
                       "SD card is required for installation");
     }
@@ -326,6 +362,11 @@ static bool execute_action(menu_repository_client_project_action_t action, cJSON
 
     cJSON* slug_obj = cJSON_GetObjectItem(wrapper, "slug");
     cJSON* project  = cJSON_GetObjectItem(wrapper, "project");
+
+    if (constraints != NULL && constraints->not_compatible) {
+        message_dialog(get_icon(ICON_ERROR), "Repository", "Not compatible with this device.", "OK");
+        return false;
+    }
 
     app_mgmt_location_t location;
     const char*         loc_text;
