@@ -29,7 +29,7 @@ static void bytes_to_hex(const uint8_t* data, size_t length, char* out_hex) {
     out_hex[length * 2] = '\0';
 }
 
-static char device_query[160] = {0};
+static char device_query[200] = {0};
 
 void repository_client_prepare_device_query(void) {
     char device_name[64] = {0};
@@ -51,11 +51,12 @@ void repository_client_prepare_device_query(void) {
     const esp_app_desc_t* app_description = esp_app_get_description();
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU)
-    snprintf(device_query, sizeof(device_query), "device=%s&revision=%u&version=%s&mac=%s&lcd2=%d", device_name,
-             revision, app_description->version, mac_hex, st7701_is_display_variant_2() ? 1 : 0);
+    snprintf(device_query, sizeof(device_query), "device=%s&board_revision=%u&firmware_version=%s&mac_address=%s&lcd2=%s",
+             device_name, revision, app_description->version, mac_hex,
+             st7701_is_display_variant_2() ? "true" : "false");
 #else
-    snprintf(device_query, sizeof(device_query), "device=%s&revision=%u&version=%s&mac=%s", device_name, revision,
-             app_description->version, mac_hex);
+    snprintf(device_query, sizeof(device_query), "device=%s&board_revision=%u&firmware_version=%s&mac_address=%s",
+             device_name, revision, app_description->version, mac_hex);
 #endif
 }
 
