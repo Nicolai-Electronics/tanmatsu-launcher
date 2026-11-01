@@ -760,7 +760,7 @@ void app_main(void) {
     uint8_t welcome = 0;
     nvs_settings_get_welcome_message_state(&welcome);
 
-    const uint8_t welcome_target = 4;
+    const uint8_t welcome_target = 5;
     if (welcome < welcome_target) {
         const esp_app_desc_t* app_description   = esp_app_get_description();
         char                  title_buffer[128] = {0};
@@ -768,8 +768,10 @@ void app_main(void) {
         device_identity_t identity = {0};
         read_device_identity(&identity);
         message_dialog(get_icon(ICON_HELP), title_buffer,
-                       "This release fixes multiple issues in the LoRa driver\n"
-                       "that is part of the radio firmware.\n",
+                       "This release adds support for new revisions of Tanmatsu\n"
+                       "and fixes multiple issues with the repository client.\n"
+                       "If you encounter bugs and/or crashes in the launcher\n"
+                       "then please let us know via Github or Discord.\n",
                        "Close");
         nvs_settings_set_welcome_message_state(welcome_target);
     }
