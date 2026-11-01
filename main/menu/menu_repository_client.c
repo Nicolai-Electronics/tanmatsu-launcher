@@ -700,10 +700,11 @@ void menu_repository_client(char* category) {
                                         break;
                                     }
 #ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
-                                    menu_repository_client_project(buffer, theme, wrapper,
-                                                                   current_view_mode == VIEW_MODE_PLUGINS);
+                                    const char* needed_interpreter = menu_repository_client_project(
+                                        buffer, theme, wrapper, current_view_mode == VIEW_MODE_PLUGINS);
 #else
-                                    menu_repository_client_project(buffer, theme, wrapper, false);
+                                    const char* needed_interpreter =
+                                        menu_repository_client_project(buffer, theme, wrapper, false);
 #endif
                                     // Rebuild menu to refresh status markers (app may have been installed)
                                     menu_free(&menu);
@@ -713,6 +714,16 @@ void menu_repository_client(char* category) {
                                         pos = menu_get_length(&menu) - 1;
                                     }
                                     menu_set_position(&menu, pos);
+
+                                    // Installing the interpreter itself happens here, after
+                                    // menu_repository_client_project() has fully returned, rather
+                                    // than nested inside it: it involves its own HTTPS/TLS
+                                    // handshake, and stacking that inside an already-deep call
+                                    // chain overflowed the task's stack in practice.
+                                    if (needed_interpreter != NULL) {
+                                        menu_repository_client_prompt_install_interpreter(buffer, theme,
+                                                                                           needed_interpreter);
+                                    }
                                 }
                                 render(buffer, theme, &menu, server, false, true);
                                 break;

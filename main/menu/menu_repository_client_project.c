@@ -129,19 +129,21 @@ static void render_project(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t pos
     float font_size = 16;
 
     char text_buffer[256];
-    sprintf(text_buffer, "Name: %s", name_obj ? name_obj->valuestring : "Unknown");
+    snprintf(text_buffer, sizeof(text_buffer), "Name: %s", name_obj ? name_obj->valuestring : "Unknown");
     pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 0, text_buffer);
-    sprintf(text_buffer, "Description: %s", description_obj ? description_obj->valuestring : "Unknown");
+    snprintf(text_buffer, sizeof(text_buffer), "Description: %s",
+             description_obj ? description_obj->valuestring : "Unknown");
     pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 1, text_buffer);
-    sprintf(text_buffer, "Version: %s", version_obj ? version_obj->valuestring : "Unknown");
+    snprintf(text_buffer, sizeof(text_buffer), "Version: %s", version_obj ? version_obj->valuestring : "Unknown");
     pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 2, text_buffer);
-    sprintf(text_buffer, "Author: %s", author_obj ? author_obj->valuestring : "Unknown");
+    snprintf(text_buffer, sizeof(text_buffer), "Author: %s", author_obj ? author_obj->valuestring : "Unknown");
     pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 3, text_buffer);
-    sprintf(text_buffer, "License: %s", license_type_obj ? license_type_obj->valuestring : "Unknown");
+    snprintf(text_buffer, sizeof(text_buffer), "License: %s",
+             license_type_obj ? license_type_obj->valuestring : "Unknown");
     pax_draw_text(buffer, theme->palette.color_foreground, theme->menu.text_font, font_size, position.x0,
                   position.y0 + font_size * 4, text_buffer);
 
@@ -272,8 +274,13 @@ static bool interpreter_available(const char* interpreter_slug) {
     return app_mgmt_has_binary_in_install_dir(interpreter_slug);
 }
 
-// Prompt user to install the interpreter using the standard project install dialog
-static void prompt_install_interpreter(pax_buf_t* buffer, gui_theme_t* theme, const char* interpreter_slug) {
+static const char* menu_repository_client_project_impl(pax_buf_t* buffer, gui_theme_t* theme, cJSON* wrapper,
+                                                        bool is_plugin, bool is_interpreter_install);
+
+// Prompt user to install the interpreter using the standard project install dialog.
+// Must be called at a shallow stack depth — see the header comment for why.
+void menu_repository_client_prompt_install_interpreter(pax_buf_t* buffer, gui_theme_t* theme,
+                                                        const char* interpreter_slug) {
     char msg[128];
     snprintf(msg, sizeof(msg), "This app requires interpreter '%s'.\nInstall it?", interpreter_slug);
     message_dialog_return_type_t result = adv_dialog_yes_no(get_icon(ICON_HELP), "Interpreter needed", msg);
@@ -299,13 +306,21 @@ static void prompt_install_interpreter(pax_buf_t* buffer, gui_theme_t* theme, co
     cJSON_AddItemToObject(wrapper, "project", cJSON_Duplicate(interp_data.json, true));
     free_repository_data_json(&interp_data);
 
-    // Use the standard project install dialog
-    menu_repository_client_project(buffer, theme, wrapper, false);
+    // Marked as an interpreter install so this can't itself report (and have the caller chain
+    // into) another interpreter prompt: metadata that forms a cycle (an interpreter that lists
+    // itself, or two interpreters requiring each other) would otherwise chain indefinitely.
+    menu_repository_client_project_impl(buffer, theme, wrapper, false, true);
     cJSON_Delete(wrapper);
 }
 
-static bool execute_action(pax_buf_t* buffer, menu_repository_client_project_action_t action, gui_theme_t* theme,
-                           cJSON* wrapper, bool is_plugin, const install_constraints_t* constraints) {
+// out_interpreter_slug, if non-NULL, is set to the interpreter slug needed by the just-installed
+// project (points into `wrapper`'s cJSON tree — valid as long as the caller holds `wrapper`).
+// Installing it is deliberately left to the caller rather than done here: doing it here would
+// nest a second full install (with its own HTTPS/TLS handshake) inside this call's still-live
+// stack frame, which is exactly what caused a stack overflow in practice (see header comment).
+static bool execute_action(menu_repository_client_project_action_t action, cJSON* wrapper, bool is_plugin,
+                           bool is_interpreter_install, const install_constraints_t* constraints,
+                           const char** out_interpreter_slug) {
     char server[128] = {0};
     nvs_settings_get_repo_server(server, sizeof(server), DEFAULT_REPO_SERVER);
 
@@ -357,24 +372,27 @@ static bool execute_action(pax_buf_t* buffer, menu_repository_client_project_act
     snprintf(success_msg, sizeof(success_msg), "%s successfully installed", item_type);
     message_dialog(get_icon(ICON_STOREFRONT), "Repository", success_msg, "OK");
 
-    // Check if this is a script app that needs an interpreter (not applicable for plugins)
-    if (!is_plugin && project != NULL) {
+    // Check if this is a script app that needs an interpreter (not applicable for plugins, and
+    // not while we're already installing an interpreter on behalf of another app). Reported to
+    // the caller rather than acted on here — see the comment above this function.
+    if (out_interpreter_slug != NULL && !is_plugin && !is_interpreter_install && project != NULL) {
         const char* interpreter_slug = find_interpreter_slug(project);
         if (interpreter_slug != NULL && !interpreter_available(interpreter_slug)) {
-            prompt_install_interpreter(buffer, theme, interpreter_slug);
+            *out_interpreter_slug = interpreter_slug;
         }
     }
 
     return true;
 }
 
-void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON* wrapper, bool is_plugin) {
+static const char* menu_repository_client_project_impl(pax_buf_t* buffer, gui_theme_t* theme, cJSON* wrapper,
+                                                        bool is_plugin, bool is_interpreter_install) {
     busy_dialog(get_icon(ICON_STOREFRONT), "Repository", "Rendering project...", true);
 
     cJSON* project = cJSON_GetObjectItem(wrapper, "project");
     if (project == NULL) {
         ESP_LOGE(TAG, "Project object is NULL");
-        return;
+        return NULL;
     }
 
     install_constraints_t constraints = {0};
@@ -401,7 +419,7 @@ void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 menu_free(&menu);
-                                return;
+                                return NULL;
                             case BSP_INPUT_NAVIGATION_KEY_LEFT:
                                 menu_navigate_previous(&menu);
                                 render(buffer, theme, &menu, true, false, project, &constraints);
@@ -413,12 +431,14 @@ void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON
                             case BSP_INPUT_NAVIGATION_KEY_RETURN:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_A:
                             case BSP_INPUT_NAVIGATION_KEY_JOYSTICK_PRESS: {
-                                void* arg       = menu_get_callback_args(&menu, menu_get_position(&menu));
-                                bool  installed = execute_action(buffer, (menu_repository_client_project_action_t)arg,
-                                                                 theme, wrapper, is_plugin, &constraints);
+                                void*       arg               = menu_get_callback_args(&menu, menu_get_position(&menu));
+                                const char* needed_interpreter = NULL;
+                                bool installed = execute_action((menu_repository_client_project_action_t)arg, wrapper,
+                                                                 is_plugin, is_interpreter_install, &constraints,
+                                                                 &needed_interpreter);
                                 if (installed) {
                                     menu_free(&menu);
-                                    return;
+                                    return needed_interpreter;
                                 }
                                 render(buffer, theme, &menu, false, true, project, &constraints);
                                 break;
@@ -436,4 +456,8 @@ void menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON
             render(buffer, theme, &menu, true, true, project, &constraints);
         }
     }
+}
+
+const char* menu_repository_client_project(pax_buf_t* buffer, gui_theme_t* theme, cJSON* wrapper, bool is_plugin) {
+    return menu_repository_client_project_impl(buffer, theme, wrapper, is_plugin, false);
 }
