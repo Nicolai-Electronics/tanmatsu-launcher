@@ -5,15 +5,59 @@
 #include <string.h>
 #include "bsp/device.h"
 #include "cJSON.h"
+#include "device_information.h"
 #include "device_settings.h"
+#include "esp_app_desc.h"
 #include "esp_log.h"
 #include "http_download.h"
 #include "nvs_settings.h"
+#include "sdkconfig.h"
 #include "wifi_connection.h"
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+#include "dsi_panel_nicolaielectronics_st7701.h"
+#endif
 
 extern bool wifi_stack_get_initialized(void);
 
 static const char* TAG = "Repository";
+
+static void bytes_to_hex(const uint8_t* data, size_t length, char* out_hex) {
+    for (size_t i = 0; i < length; i++) {
+        sprintf(&out_hex[i * 2], "%02x", data[i]);
+    }
+    out_hex[length * 2] = '\0';
+}
+
+static char device_query[160] = {0};
+
+void repository_client_prepare_device_query(void) {
+    char device_name[64] = {0};
+    bsp_device_get_name(device_name, sizeof(device_name));
+    for (size_t i = 0; i < strlen(device_name); i++) {
+        device_name[i] = tolower(device_name[i]);
+    }
+
+    device_identity_t identity = {0};
+    uint8_t            revision = 0;
+    char               mac_hex[sizeof(identity.mac) * 2 + 1] = {0};
+    if (read_device_identity(&identity) == ESP_OK) {
+        revision = identity.revision;
+        bytes_to_hex(identity.mac, sizeof(identity.mac), mac_hex);
+    } else {
+        ESP_LOGW(TAG, "Failed to read device identity, defaulting board revision and MAC address to 0");
+    }
+
+    const esp_app_desc_t* app_description = esp_app_get_description();
+
+#if defined(CONFIG_BSP_TARGET_TANMATSU)
+    snprintf(device_query, sizeof(device_query), "device=%s&revision=%u&version=%s&mac=%s&lcd2=%d", device_name,
+             revision, app_description->version, mac_hex, st7701_is_display_variant_2() ? 1 : 0);
+#else
+    snprintf(device_query, sizeof(device_query), "device=%s&revision=%u&version=%s&mac=%s", device_name, revision,
+             app_description->version, mac_hex);
+#endif
+}
 
 // Helper functions for data management
 
@@ -79,15 +123,9 @@ bool load_categories(const char* base_url, repository_json_data_t* out_data) {
     char base_uri[64] = {0};
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
 
-    char device_name[64] = {0};
-    bsp_device_get_name(device_name, sizeof(device_name));
-    for (size_t i = 0; i < strlen(device_name); i++) {
-        device_name[i] = tolower(device_name[i]);
-    }
-
     char url[256];
-    sprintf(url, "%s%s/categories?device=", base_url, base_uri);
-    url_append(url, device_name, sizeof(url));
+    sprintf(url, "%s%s/categories?", base_url, base_uri);
+    url_append(url, device_query, sizeof(url));
     return download_and_parse(url, out_data);
 }
 
@@ -96,19 +134,13 @@ bool load_projects(const char* base_url, repository_json_data_t* out_data, const
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
     char url[256];
 
-    char device_name[32] = {0};
-    bsp_device_get_name(device_name, sizeof(device_name) - 1);
-    for (size_t i = 0; i < strlen(device_name); i++) {
-        device_name[i] = tolower(device_name[i]);
-    }
-
     if (category != NULL) {
-        sprintf(url, "%s%s/projects?category=%s&device=", base_url, base_uri, category);
+        sprintf(url, "%s%s/projects?category=%s&", base_url, base_uri, category);
     } else {
-        sprintf(url, "%s%s/projects?device=", base_url, base_uri);
+        sprintf(url, "%s%s/projects?", base_url, base_uri);
     }
 
-    url_append(url, device_name, sizeof(url));
+    url_append(url, device_query, sizeof(url));
     return download_and_parse(url, out_data);
 }
 
@@ -117,20 +149,14 @@ bool load_projects_paginated(const char* base_url, repository_json_data_t* out_d
     char base_uri[64] = {0};
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
 
-    char device_name[32] = {0};
-    bsp_device_get_name(device_name, sizeof(device_name) - 1);
-    for (size_t i = 0; i < strlen(device_name); i++) {
-        device_name[i] = tolower(device_name[i]);
-    }
-
     char url[256];
     if (category != NULL) {
-        sprintf(url, "%s%s/projects?category=%s&offset=%" PRIu32 "&amount=%" PRIu32 "&device=", base_url, base_uri,
-                category, offset, amount);
+        sprintf(url, "%s%s/projects?category=%s&offset=%" PRIu32 "&amount=%" PRIu32 "&", base_url, base_uri, category,
+                offset, amount);
     } else {
-        sprintf(url, "%s%s/projects?offset=%" PRIu32 "&amount=%" PRIu32 "&device=", base_url, base_uri, offset, amount);
+        sprintf(url, "%s%s/projects?offset=%" PRIu32 "&amount=%" PRIu32 "&", base_url, base_uri, offset, amount);
     }
-    url_append(url, device_name, sizeof(url));
+    url_append(url, device_query, sizeof(url));
     return download_and_parse(url, out_data);
 }
 
@@ -151,13 +177,6 @@ bool load_project(const char* base_url, repository_json_data_t* out_data, const 
 #define SIGNATURE_CHALLENGE_LENGTH 64
 #define SIGNATURE_LENGTH           64
 #define MAC_ADDRESS_LENGTH         6
-
-static void bytes_to_hex(const uint8_t* data, size_t length, char* out_hex) {
-    for (size_t i = 0; i < length; i++) {
-        sprintf(&out_hex[i * 2], "%02x", data[i]);
-    }
-    out_hex[length * 2] = '\0';
-}
 
 static bool hex_to_bytes(const char* hex, uint8_t* out_data, size_t length) {
     if (strlen(hex) != length * 2) {

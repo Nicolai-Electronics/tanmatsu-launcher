@@ -10,6 +10,8 @@ typedef struct {
     cJSON* json;
 } repository_json_data_t;
 
+void repository_client_prepare_device_query(void);
+
 void free_repository_data_json(repository_json_data_t* data);
 bool load_information(const char* base_url, repository_json_data_t* out_data);
 bool load_categories(const char* base_url, repository_json_data_t* out_data);

@@ -58,6 +58,7 @@
 #include "portmacro.h"
 #include "radio_ota.h"
 #include "radio_system_protocol_client.h"
+#include "repository_client.h"
 #include "sdkconfig.h"
 #include "timezone.h"
 #include "usb_device.h"
@@ -470,6 +471,9 @@ void app_main(void) {
     startup_dialog("Checking bootloader...");
     bootloader_update();
     reinit_startup_dialog();
+
+    // Collect device information for repository access
+    repository_client_prepare_device_query();
 
     // Initialize filesystems
     startup_dialog("Mounting FAT filesystem...");
