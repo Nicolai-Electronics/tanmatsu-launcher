@@ -50,6 +50,9 @@ static esp_err_t _event_handler(esp_http_client_event_t* evt) {
                 ESP_LOGI(TAG, "Size is known: %u bytes", info->size);
                 if ((info->size > 0) &&
                     (info->buffer != NULL)) {  // Buffer poiner is set, buffer pointer points to NULL
+                    if (*info->buffer != NULL) {
+                        free(*info->buffer);
+                    }
                     *info->buffer = malloc(info->size);
                     ESP_LOGI(TAG, "Allocated buffer (%u bytes)", info->size);
                     if (*info->buffer == NULL) {
