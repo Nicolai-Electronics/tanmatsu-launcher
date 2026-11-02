@@ -92,6 +92,7 @@ static void execute_action(menu_home_action_t action) {
             plugin_manager_shutdown();
 #endif
             esp_restart();
+            break;
         case ACTION_APPS:
             menu_apps(false);
             break;
