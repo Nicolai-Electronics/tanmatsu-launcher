@@ -60,6 +60,7 @@ typedef enum {
     ACTION_TOOLS,
     ACTION_INFORMATION,
     ACTION_USB_MODE,
+    ACTION_SENSORS,
 } menu_home_action_t;
 
 static void toggle_usb_mode(void) {
@@ -114,6 +115,9 @@ static void execute_action(menu_home_action_t action) {
             break;
         case ACTION_USB_MODE:
             toggle_usb_mode();
+            break;
+        case ACTION_SENSORS:
+            menu_sensors();
             break;
         default:
             break;
@@ -285,6 +289,9 @@ void menu_home(void) {
         menu_insert_item_icon(&menu, "Download icons", NULL, (void*)ACTION_DOWNLOAD_ICONS, -1,
                               get_icon(ICON_DOWNLOADING));
     }
+    if (menu_sensors_available()) {
+        menu_insert_item_icon(&menu, "Sensors", NULL, (void*)ACTION_SENSORS, -1, get_icon(ICON_INFO));
+    }
 
     /*menu_t footer_menu = {0};
     menu_initialize(&footer_menu);
@@ -307,9 +314,7 @@ void menu_home(void) {
                     if (event.args_navigation.state) {
                         switch (event.args_navigation.key) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
-                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_FUNCTION) {
-                                    menu_sensors();  // Temporary
-                                } else if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_CTRL_L) {
+                                if (event.args_navigation.modifiers & BSP_INPUT_MODIFIER_CTRL_L) {
                                     toggle_usb_mode();
                                 }
                                 render(buffer, theme, &menu, position, false, true, provisioned, name_match);

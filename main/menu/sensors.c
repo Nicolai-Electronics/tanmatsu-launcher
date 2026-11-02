@@ -55,10 +55,7 @@ static void render(void) {
     display_blit_buffer(buffer);
 }
 
-void menu_sensors(void) {
-    QueueHandle_t input_event_queue = NULL;
-    ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
-
+static bool ensure_scd4x_initialized(void) {
     if (!scd4x_initialized) {
         i2c_master_bus_handle_t i2c_bus_handle_internal;
         esp_err_t               res = bsp_i2c_primary_bus_get_handle(&i2c_bus_handle_internal);
@@ -72,6 +69,18 @@ void menu_sensors(void) {
             }
         }
     }
+    return scd4x_initialized;
+}
+
+bool menu_sensors_available(void) {
+    return ensure_scd4x_initialized();
+}
+
+void menu_sensors(void) {
+    QueueHandle_t input_event_queue = NULL;
+    ESP_ERROR_CHECK(bsp_input_get_queue(&input_event_queue));
+
+    ensure_scd4x_initialized();
 
     if (scd4x_initialized) {
         if (scd4x_start_periodic_measurement(&scd4x_handle) == ESP_OK) {
