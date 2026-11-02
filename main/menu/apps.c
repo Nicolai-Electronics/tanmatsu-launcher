@@ -587,19 +587,23 @@ void menu_apps(bool favorites_only) {
                                 case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_Y: {
                                     void*  arg = menu_get_callback_args(&menu, menu_get_position(&menu));
                                     app_t* app = (app_t*)arg;
-                                    message_dialog_return_type_t msg_ret = adv_dialog_yes_no(
-                                        get_icon(ICON_HELP), "Delete App", "Do you really want to delete the app?");
-                                    if (msg_ret == MSG_DIALOG_RETURN_OK) {
-                                        app_favorite_set(app->slug, false);
-                                        esp_err_t res_int = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_INTERNAL);
-                                        esp_err_t res_sd  = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_SD);
-                                        if (res_int != ESP_OK && res_sd != ESP_OK) {
-                                            message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to remove app",
-                                                           "OK");
+                                    if (app != NULL) {
+                                        message_dialog_return_type_t msg_ret =
+                                            adv_dialog_yes_no(get_icon(ICON_HELP), "Delete App",
+                                                              "Do you really want to delete the app?");
+                                        if (msg_ret == MSG_DIALOG_RETURN_OK) {
+                                            app_favorite_set(app->slug, false);
+                                            esp_err_t res_int =
+                                                app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_INTERNAL);
+                                            esp_err_t res_sd = app_mgmt_uninstall(app->slug, APP_MGMT_LOCATION_SD);
+                                            if (res_int != ESP_OK && res_sd != ESP_OK) {
+                                                message_dialog(get_icon(ICON_ERROR), "Failed", "Failed to remove app",
+                                                               "OK");
+                                            }
+                                            refresh = true;
+                                        } else {
+                                            render(buffer, theme, &menu, position, false, true, favorites_only);
                                         }
-                                        refresh = true;
-                                    } else {
-                                        render(buffer, theme, &menu, position, false, true, favorites_only);
                                     }
                                     break;
                                 }
