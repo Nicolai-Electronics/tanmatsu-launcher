@@ -108,6 +108,13 @@ void menu_sensors(void) {
                             case BSP_INPUT_NAVIGATION_KEY_ESC:
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
+                                if (scd4x_initialized) {
+                                    if (scd4x_stop_periodic_measurement(&scd4x_handle) == ESP_OK) {
+                                        ESP_LOGI(TAG, "SCD4X periodic measurement stopped");
+                                    } else {
+                                        ESP_LOGW(TAG, "SCD4X failed to stop periodic measurement");
+                                    }
+                                }
                                 return;
                             default:
                                 break;
@@ -118,14 +125,6 @@ void menu_sensors(void) {
                 default:
                     break;
             }
-        }
-    }
-
-    if (scd4x_initialized) {
-        if (scd4x_stop_periodic_measurement(&scd4x_handle) == ESP_OK) {
-            ESP_LOGI(TAG, "SCD4X periodic measurement stopped");
-        } else {
-            ESP_LOGW(TAG, "SCD4X failed to stop periodic measurement");
         }
     }
 }
