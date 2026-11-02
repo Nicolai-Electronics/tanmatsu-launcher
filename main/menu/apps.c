@@ -338,7 +338,7 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, menu_t* menu, pax_vec2
                 action_text = "⏎ Start app";
                 break;
         }
-        snprintf(footer_right_text, sizeof(footer_right_text), "AppFS: %u%% | %s", (100 - (free_kb * 100 / total_kb)),
+        snprintf(footer_right_text, sizeof(footer_right_text), "AppFS: %u%% | %s", total_kb == 0 ? 100 : (100 - (free_kb * 100 / total_kb)),
                  action_text);
         gui_element_icontext_t footer_right[] = {{NULL, footer_right_text}};
 
