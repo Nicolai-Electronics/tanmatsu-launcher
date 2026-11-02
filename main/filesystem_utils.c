@@ -73,6 +73,7 @@ esp_err_t fs_utils_remove(const char* path) {
             if (fs_utils_remove(full_path) != ESP_OK) {
                 failed = true;
             }
+            free(full_path);
             continue;
         }
 
