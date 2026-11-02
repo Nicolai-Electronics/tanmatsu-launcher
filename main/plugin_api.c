@@ -30,6 +30,12 @@ static const char* TAG = "plugin_api";
 // Mutex for protecting plugin API registries during concurrent access
 static SemaphoreHandle_t plugin_api_mutex = NULL;
 
+// Note: plugin_api_mutex must never be held while invoking a plugin-supplied callback
+// (status widget render, input hook dispatch) - plugins may call back into registration
+// functions from within their callback, and the mutex is not recursive.
+#define PLUGIN_API_LOCK()   do { if (plugin_api_mutex) xSemaphoreTake(plugin_api_mutex, portMAX_DELAY); } while (0)
+#define PLUGIN_API_UNLOCK() do { if (plugin_api_mutex) xSemaphoreGive(plugin_api_mutex); } while (0)
+
 // ============================================
 // Status Widget Registry
 // ============================================
@@ -72,31 +78,45 @@ bool asp_plugin_led_claim(plugin_context_t* ctx, uint32_t index) {
     // always the highest-numbered indices (typically 4 and 5 on 6-LED hardware).
     if (index < led_claim_count - 2) return false;
 
+    PLUGIN_API_LOCK();
     // Can only claim if unclaimed or already owned by this plugin
-    if (!led_claims[index].claimed || led_claims[index].owner == ctx) {
+    bool success = !led_claims[index].claimed || led_claims[index].owner == ctx;
+    if (success) {
         led_claims[index].claimed = true;
         led_claims[index].owner   = ctx;
+    }
+    PLUGIN_API_UNLOCK();
+
+    if (success) {
         ESP_LOGI(TAG, "Plugin %s claimed LED %lu", ctx->plugin_slug ? ctx->plugin_slug : "unknown",
                  (unsigned long)index);
-        return true;
     }
-    return false;
+    return success;
 }
 
 void asp_plugin_led_release(plugin_context_t* ctx, uint32_t index) {
     if (led_claims == NULL || index >= led_claim_count) return;
 
+    PLUGIN_API_LOCK();
     // Can only release if owned by this plugin (or ctx is NULL for force release)
-    if (led_claims[index].claimed && (ctx == NULL || led_claims[index].owner == ctx)) {
-        ESP_LOGI(TAG, "Released LED %lu", (unsigned long)index);
+    bool released = led_claims[index].claimed && (ctx == NULL || led_claims[index].owner == ctx);
+    if (released) {
         led_claims[index].claimed = false;
         led_claims[index].owner   = NULL;
+    }
+    PLUGIN_API_UNLOCK();
+
+    if (released) {
+        ESP_LOGI(TAG, "Released LED %lu", (unsigned long)index);
     }
 }
 
 bool plugin_api_is_led_claimed(uint32_t index) {
     if (led_claims == NULL || index >= led_claim_count) return false;
-    return led_claims[index].claimed;
+    PLUGIN_API_LOCK();
+    bool claimed = led_claims[index].claimed;
+    PLUGIN_API_UNLOCK();
+    return claimed;
 }
 
 // Display API moved to badge-elf-api (asp/display.h)
@@ -107,27 +127,36 @@ bool plugin_api_is_led_claimed(uint32_t index) {
 // ============================================
 
 int asp_plugin_status_widget_register(plugin_context_t* ctx, plugin_status_widget_fn callback, void* user_data) {
+    PLUGIN_API_LOCK();
+    int slot = -1;
     for (int i = 0; i < MAX_STATUS_WIDGETS; i++) {
         if (!status_widgets[i].active) {
             status_widgets[i].active    = true;
             status_widgets[i].callback  = callback;
             status_widgets[i].user_data = user_data;
             status_widgets[i].owner     = ctx;
-            ESP_LOGI(TAG, "Registered status widget %d", i);
-            return i;
+            slot                        = i;
+            break;
         }
     }
-    ESP_LOGW(TAG, "No free status widget slots");
-    return -1;
+    PLUGIN_API_UNLOCK();
+
+    if (slot >= 0) {
+        ESP_LOGI(TAG, "Registered status widget %d", slot);
+    } else {
+        ESP_LOGW(TAG, "No free status widget slots");
+    }
+    return slot;
 }
 
 void asp_plugin_status_widget_unregister(int widget_id) {
-    if (widget_id >= 0 && widget_id < MAX_STATUS_WIDGETS) {
-        status_widgets[widget_id].active    = false;
-        status_widgets[widget_id].callback  = NULL;
-        status_widgets[widget_id].user_data = NULL;
-        ESP_LOGI(TAG, "Unregistered status widget %d", widget_id);
-    }
+    if (widget_id < 0 || widget_id >= MAX_STATUS_WIDGETS) return;
+    PLUGIN_API_LOCK();
+    status_widgets[widget_id].active    = false;
+    status_widgets[widget_id].callback  = NULL;
+    status_widgets[widget_id].user_data = NULL;
+    PLUGIN_API_UNLOCK();
+    ESP_LOGI(TAG, "Unregistered status widget %d", widget_id);
 }
 
 // ============================================
@@ -140,16 +169,32 @@ void asp_plugin_status_widget_unregister(int widget_id) {
 // Widgets draw right-to-left from x_right position
 // Returns total width used by all widgets
 int plugin_api_render_status_widgets(pax_buf_t* buffer, int x_right, int y, int height) {
-    int total_width = 0;
-    int current_x   = x_right;
+    // Snapshot the active widgets under the lock, then invoke callbacks outside of it:
+    // a widget callback must be free to call back into register/unregister without
+    // deadlocking on our non-recursive mutex.
+    struct {
+        plugin_status_widget_fn callback;
+        void*                   user_data;
+    } snapshot[MAX_STATUS_WIDGETS];
+    int snapshot_count = 0;
 
+    PLUGIN_API_LOCK();
     for (int i = 0; i < MAX_STATUS_WIDGETS; i++) {
         if (status_widgets[i].active && status_widgets[i].callback) {
-            int widget_width = status_widgets[i].callback(buffer, current_x, y, height, status_widgets[i].user_data);
-            if (widget_width > 0) {
-                current_x   -= widget_width;
-                total_width += widget_width;
-            }
+            snapshot[snapshot_count].callback  = status_widgets[i].callback;
+            snapshot[snapshot_count].user_data = status_widgets[i].user_data;
+            snapshot_count++;
+        }
+    }
+    PLUGIN_API_UNLOCK();
+
+    int total_width = 0;
+    int current_x   = x_right;
+    for (int i = 0; i < snapshot_count; i++) {
+        int widget_width = snapshot[i].callback(buffer, current_x, y, height, snapshot[i].user_data);
+        if (widget_width > 0) {
+            current_x   -= widget_width;
+            total_width += widget_width;
         }
     }
     return total_width;
@@ -186,12 +231,21 @@ static bool plugin_input_hook_wrapper(bsp_input_event_t* bsp_event, void* user_d
         return false;
     }
 
-    plugin_input_hook_entry_t* entry = &plugin_input_hooks[hook_index];
-    if (!entry->in_use || !entry->callback) {
+    // Snapshot the entry under the lock, then invoke the callback outside of it: a hook
+    // callback must be free to call back into register/unregister without deadlocking
+    // on our non-recursive mutex.
+    PLUGIN_API_LOCK();
+    plugin_input_hook_entry_t* entry    = &plugin_input_hooks[hook_index];
+    bool                       in_use   = entry->in_use;
+    plugin_input_hook_fn       callback = entry->callback;
+    void*                      udata    = entry->user_data;
+    PLUGIN_API_UNLOCK();
+
+    if (!in_use || !callback) {
         return false;
     }
 
-    return entry->callback((asp_input_event_t*)bsp_event, entry->user_data);
+    return callback((asp_input_event_t*)bsp_event, udata);
 }
 
 int asp_plugin_input_hook_register(plugin_context_t* ctx, plugin_input_hook_fn callback, void* user_data) {
@@ -199,32 +253,44 @@ int asp_plugin_input_hook_register(plugin_context_t* ctx, plugin_input_hook_fn c
         return -1;
     }
 
-    // Find free slot
+    // Find a free slot and reserve it (mark in_use) before releasing the lock, so no
+    // other task can claim the same slot while we register it with the BSP below.
+    PLUGIN_API_LOCK();
     int hook_index = -1;
     for (int i = 0; i < MAX_PLUGIN_INPUT_HOOKS; i++) {
         if (!plugin_input_hooks[i].in_use) {
-            hook_index = i;
+            hook_index                          = i;
+            plugin_input_hooks[i].in_use        = true;
+            plugin_input_hooks[i].callback      = NULL;
+            plugin_input_hooks[i].user_data     = NULL;
+            plugin_input_hooks[i].owner         = NULL;
             break;
         }
     }
+    PLUGIN_API_UNLOCK();
 
     if (hook_index < 0) {
         ESP_LOGW(TAG, "No free plugin input hook slots");
         return -1;
     }
 
-    // Register with BSP, passing our index as user_data
+    // Register with BSP, passing our index as user_data. Done outside the lock since we
+    // don't control the BSP layer's own locking.
     int bsp_id = bsp_input_hook_register(plugin_input_hook_wrapper, (void*)(intptr_t)hook_index);
     if (bsp_id < 0) {
+        PLUGIN_API_LOCK();
+        plugin_input_hooks[hook_index].in_use = false;
+        PLUGIN_API_UNLOCK();
         ESP_LOGW(TAG, "Failed to register BSP input hook");
         return -1;
     }
 
+    PLUGIN_API_LOCK();
     plugin_input_hooks[hook_index].bsp_hook_id = bsp_id;
     plugin_input_hooks[hook_index].callback    = callback;
     plugin_input_hooks[hook_index].user_data   = user_data;
-    plugin_input_hooks[hook_index].in_use      = true;
     plugin_input_hooks[hook_index].owner       = ctx;
+    PLUGIN_API_UNLOCK();
 
     ESP_LOGI(TAG, "Registered plugin input hook %d (BSP hook %d)", hook_index, bsp_id);
     return hook_index;
@@ -235,17 +301,21 @@ void asp_plugin_input_hook_unregister(int hook_id) {
         return;
     }
 
+    PLUGIN_API_LOCK();
     plugin_input_hook_entry_t* entry = &plugin_input_hooks[hook_id];
     if (!entry->in_use) {
+        PLUGIN_API_UNLOCK();
         return;
     }
-
-    bsp_input_hook_unregister(entry->bsp_hook_id);
-
+    int bsp_hook_id    = entry->bsp_hook_id;
     entry->bsp_hook_id = -1;
     entry->callback    = NULL;
     entry->user_data   = NULL;
     entry->in_use      = false;
+    PLUGIN_API_UNLOCK();
+
+    // Done outside the lock since we don't control the BSP layer's own locking.
+    bsp_input_hook_unregister(bsp_hook_id);
 
     ESP_LOGI(TAG, "Unregistered plugin input hook %d", hook_id);
 }
