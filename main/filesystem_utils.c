@@ -35,7 +35,9 @@ esp_err_t fs_utils_remove(const char* path) {
     struct stat    stat_path, stat_entry;
     struct dirent* entry;
 
-    stat(path, &stat_path);
+    if (stat(path, &stat_path) != 0) {
+        return (errno == ENOENT) ? ESP_OK : ESP_FAIL;
+    }
 
     // Remove file if path is not a directory
     if (S_ISDIR(stat_path.st_mode) == 0) {
@@ -67,7 +69,13 @@ esp_err_t fs_utils_remove(const char* path) {
         strcat(full_path, "/");
         strcat(full_path, entry->d_name);
 
-        stat(full_path, &stat_entry);
+        if (stat(full_path, &stat_entry) != 0) {
+            if (errno != ENOENT) {
+                failed = true;
+            }
+            free(full_path);
+            continue;
+        }
 
         if (S_ISDIR(stat_entry.st_mode) != 0) {
             if (fs_utils_remove(full_path) != ESP_OK) {
