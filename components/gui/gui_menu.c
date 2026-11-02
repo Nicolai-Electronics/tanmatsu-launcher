@@ -97,6 +97,8 @@ ssize_t menu_insert_item_value(menu_t* menu, const char* label, const char* valu
                 newItem->nextItem->previousItem = newItem;  // Replace pointer to previous item with new item
             if (newItem->previousItem != NULL)
                 newItem->previousItem->nextItem = newItem;  // Replace pointer to next item in previous item
+            else
+                menu->firstItem = newItem;
         }
     }
     if (position > menu->length) {
