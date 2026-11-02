@@ -326,7 +326,7 @@ bool menu_wifi_edit(pax_buf_t* buffer, gui_theme_t* theme, uint8_t index, bool n
 
     wifi_settings_t settings = {0};
     if (new_entry) {
-        memcpy(settings.ssid, new_ssid, sizeof(settings.ssid));
+        strncpy(settings.ssid, new_ssid, sizeof(settings.ssid));
         settings.authmode = authmode;
     } else {
         esp_err_t res = wifi_settings_get(index, &settings);
