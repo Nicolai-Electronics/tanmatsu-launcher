@@ -603,6 +603,7 @@ void app_main(void) {
                 if (app == NULL) {
                     ESP_LOGE(TAG, "Could not find application '%s' to autostart, disabling autostart.", autostart_slug);
                     app_autostart_get(NULL);  // Reset autostart NVS entry when app can not be found
+                    free_list_of_apps(apps, MAX_NUM_APPS);
                 } else {
                     bool canceled = false;
                     for (uint8_t i = 4; i >= 1; i--) {
@@ -636,8 +637,8 @@ void app_main(void) {
                         message_dialog(get_icon(ICON_ERROR), "Autostart failed",
                                        "The configured autostart app could not be started.", "Close");
                         reinit_startup_dialog();
-                        free_list_of_apps(apps, MAX_NUM_APPS);
                     }
+                    free_list_of_apps(apps, MAX_NUM_APPS);
                 }
             }
             free(autostart_slug);
