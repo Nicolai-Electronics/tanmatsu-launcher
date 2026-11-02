@@ -211,7 +211,7 @@ void ota_update(char* ota_url, ota_status_cb_t status_cb) {
 
         int len_total = esp_https_ota_get_image_size(https_ota_handle);
         int len_read  = esp_https_ota_get_image_len_read(https_ota_handle);
-        int percent   = (len_read * 100) / len_total;
+        int percent   = (len_total > 0) ? (len_read * 100) / len_total : 0;
 
         if (percent != percent_shown) {
             ESP_LOGI(TAG, "Downloading %d / %d", len_read, len_total);
