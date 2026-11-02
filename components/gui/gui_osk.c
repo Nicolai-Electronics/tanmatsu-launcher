@@ -23,6 +23,7 @@
 */
 
 #include "gui_osk.h"
+#include <assert.h>
 #include <malloc.h>
 #include <string.h>
 #include "esp_timer.h"
@@ -34,6 +35,7 @@
 void gui_osk_init(pax_buf_t* buf, gui_osk_ctx_t* ctx, size_t buffer_cap) {
     // Allocate a bufffer.
     char* buffer = malloc(buffer_cap);
+    assert(buffer != NULL);
     memset(buffer, 0, buffer_cap);
 
     // Some defaults.
