@@ -243,7 +243,7 @@ esp_err_t radio_ota_update(void) {
 
         size_t   position     = 0;
         uint32_t seq          = 0;
-        uint32_t total_blocks = steps[i].compressed_size / 4096;
+        uint32_t total_blocks = (steps[i].compressed_size + 4095) / 4096;
         while (position < steps[i].compressed_size) {
             size_t block_length = steps[i].compressed_size - position;
             if (block_length > 4096) {
