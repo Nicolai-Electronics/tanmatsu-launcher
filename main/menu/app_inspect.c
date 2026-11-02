@@ -225,7 +225,11 @@ bool menu_app_inspect(pax_buf_t* buffer, gui_theme_t* theme, app_t* app) {
                                 if (msg_ret == MSG_DIALOG_RETURN_OK) {
                                     busy_dialog(get_icon(ICON_APPS), "Moving", "Moving app...", true);
                                     esp_err_t res = app_mgmt_move(app->slug, from, to);
-                                    if (res == ESP_ERR_NO_MEM) {
+                                    if (res == ESP_OK) {
+                                        char ok_msg[128];
+                                        snprintf(ok_msg, sizeof(ok_msg), "Moved app to %s", to_name);
+                                        message_dialog(get_icon(ICON_APPS), "Moved", ok_msg, "OK");
+                                    } else if (res == ESP_ERR_NO_MEM) {
                                         char err_msg[128];
                                         snprintf(err_msg, sizeof(err_msg), "Not enough space on %s", to_name);
                                         message_dialog(get_icon(ICON_ERROR), "No space", err_msg, "OK");
