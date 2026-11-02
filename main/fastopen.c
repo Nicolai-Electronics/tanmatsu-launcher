@@ -30,14 +30,19 @@ FILE* fastopen(const char* path, const char* mode) {
     if (path_needs_fast_io(path)) {
         void* buf = heap_caps_malloc(CONFIG_FATFS_STDIO_BUF_SIZE, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
         if (buf != NULL) {
-            setvbuf(f, buf, _IOFBF, CONFIG_FATFS_STDIO_BUF_SIZE);
-            // Track the buffer so we can free it on close
+            int slot = -1;
             for (int i = 0; i < CONFIG_FATFS_MAX_FILES_OPEN; i++) {
                 if (fast_file_table[i].file == NULL) {
-                    fast_file_table[i].file   = f;
-                    fast_file_table[i].buffer = buf;
+                    slot = i;
                     break;
                 }
+            }
+            if (slot >= 0) {
+                setvbuf(f, buf, _IOFBF, CONFIG_FATFS_STDIO_BUF_SIZE);
+                fast_file_table[slot].file   = f;
+                fast_file_table[slot].buffer = buf;
+            } else {
+                free(buf);
             }
         }
     }
