@@ -56,12 +56,17 @@ static void render(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, b
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
 
 #if defined(CONFIG_BSP_TARGET_TANMATSU)
-        uint16_t                      coprocessor_firmware_version;
-        tanmatsu_coprocessor_handle_t coprocessor_handle = NULL;
+        char                          coprocessor_version_str[16] = "Unknown";
+        tanmatsu_coprocessor_handle_t coprocessor_handle          = NULL;
         if (bsp_tanmatsu_coprocessor_get_handle(&coprocessor_handle) == ESP_OK) {
-            tanmatsu_coprocessor_get_firmware_version(coprocessor_handle, &coprocessor_firmware_version);
+            uint16_t coprocessor_firmware_version;
+            if (tanmatsu_coprocessor_get_firmware_version(coprocessor_handle, &coprocessor_firmware_version) ==
+                ESP_OK) {
+                snprintf(coprocessor_version_str, sizeof(coprocessor_version_str), "r%" PRIu16,
+                         coprocessor_firmware_version);
+            }
         }
-        snprintf(text_buffer, sizeof(text_buffer), "Coprocessor r%" PRIu16, coprocessor_firmware_version);
+        snprintf(text_buffer, sizeof(text_buffer), "Coprocessor %s", coprocessor_version_str);
         pax_draw_text(buffer, theme->palette.color_foreground, TEXT_FONT, TEXT_SIZE, position.x0,
                       position.y0 + (TEXT_SIZE + 2) * (line++), text_buffer);
 #endif
