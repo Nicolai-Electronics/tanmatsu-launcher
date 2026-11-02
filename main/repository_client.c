@@ -97,12 +97,14 @@ static bool download_and_parse(const char* url, repository_json_data_t* out_data
 
 // Helper functions for API
 
-static void url_append(char* destination, char* source, size_t buffer_length) {
+// Returns true if the whole of `source` was appended, false if it was truncated to fit `buffer_length`.
+static bool url_append(char* destination, char* source, size_t buffer_length) {
     if (buffer_length == 0) {
-        return;
+        return false;
     }
     size_t dest_len = strlen(destination);
-    for (size_t i = 0; source[i] != '\0'; i++) {
+    size_t i;
+    for (i = 0; source[i] != '\0'; i++) {
         if (source[i] == ' ') {
             if (dest_len + 3 >= buffer_length) break;
             memcpy(&destination[dest_len], "%20", 3);
@@ -113,6 +115,7 @@ static void url_append(char* destination, char* source, size_t buffer_length) {
         }
     }
     destination[dest_len] = '\0';
+    return source[i] == '\0';
 }
 
 bool load_information(const char* base_url, repository_json_data_t* out_data) {
@@ -137,7 +140,10 @@ bool load_categories(const char* base_url, repository_json_data_t* out_data, htt
         ESP_LOGE(TAG, "URL is too long");
         return false;
     }
-    url_append(url, device_query, sizeof(url));
+    if (!url_append(url, device_query, sizeof(url))) {
+        ESP_LOGE(TAG, "URL is too long");
+        return false;
+    }
     return download_and_parse(url, out_data, out_result);
 }
 
@@ -145,7 +151,7 @@ bool load_projects(const char* base_url, repository_json_data_t* out_data, const
                    http_result_t* out_result) {
     char base_uri[64] = {0};
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
-    char url[256];
+    char url[320];
 
     int res;
     if (category != NULL) {
@@ -158,7 +164,10 @@ bool load_projects(const char* base_url, repository_json_data_t* out_data, const
         return false;
     }
 
-    url_append(url, device_query, sizeof(url));
+    if (!url_append(url, device_query, sizeof(url))) {
+        ESP_LOGE(TAG, "URL is too long");
+        return false;
+    }
     return download_and_parse(url, out_data, out_result);
 }
 
@@ -167,7 +176,7 @@ bool load_projects_paginated(const char* base_url, repository_json_data_t* out_d
     char base_uri[64] = {0};
     nvs_settings_get_repo_base_uri(base_uri, sizeof(base_uri), DEFAULT_REPO_BASE_URI);
 
-    char url[256];
+    char url[320];
     int  res;
     if (category != NULL) {
         res = snprintf(url, sizeof(url), "%s%s/projects?category=%s&offset=%" PRIu32 "&amount=%" PRIu32 "&", base_url,
@@ -180,7 +189,10 @@ bool load_projects_paginated(const char* base_url, repository_json_data_t* out_d
         ESP_LOGE(TAG, "URL is too long");
         return false;
     }
-    url_append(url, device_query, sizeof(url));
+    if (!url_append(url, device_query, sizeof(url))) {
+        ESP_LOGE(TAG, "URL is too long");
+        return false;
+    }
     return download_and_parse(url, out_data, NULL);
 }
 
