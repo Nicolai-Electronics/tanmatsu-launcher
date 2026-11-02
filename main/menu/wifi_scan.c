@@ -240,10 +240,13 @@ void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
                             case BSP_INPUT_NAVIGATION_KEY_F1:
                             case BSP_INPUT_NAVIGATION_KEY_GAMEPAD_B:
                                 menu_free(&menu);
+                                free(aps);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_F2:
                             case BSP_INPUT_NAVIGATION_KEY_START:
                                 add_manually(buffer, theme);
+                                menu_free(&menu);
+                                free(aps);
                                 return;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
@@ -265,6 +268,7 @@ void menu_wifi_scan(pax_buf_t* buffer, gui_theme_t* theme) {
                                             menu_wifi_edit(buffer, theme, index, true, (char*)ap->ssid, ap->authmode);
                                         if (stored) {
                                             menu_free(&menu);
+                                            free(aps);
                                             return;
                                         }
                                     } else {
