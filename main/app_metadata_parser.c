@@ -127,17 +127,14 @@ bool get_executable_revision(const char* path, const char* slug, uint32_t* out_r
     return result;
 }
 
-app_t* create_app(const char* path, const char* slug) {
-    app_t* app = calloc(1, sizeof(app_t));
-    app->path  = strdup(path);
-    app->slug  = strdup(slug);
-
+static void parse_app_metadata(app_t* app, const char* path, const char* slug) {
     char path_buffer[256] = {0};
     snprintf(path_buffer, sizeof(path_buffer), "%s/%s/metadata.json", path, slug);
+
     FILE* fd = fastopen(path_buffer, "r");
     if (fd == NULL) {
         ESP_LOGE(TAG, "Failed to open metadata file %s", path_buffer);
-        return app;
+        return;
     }
 
     char* json_data = (char*)load_file_to_ram(fd);
@@ -145,14 +142,14 @@ app_t* create_app(const char* path, const char* slug) {
 
     if (json_data == NULL) {
         ESP_LOGE(TAG, "Failed to read from metadata file %s", path_buffer);
-        return app;
+        return;
     }
 
     cJSON* root = cJSON_Parse(json_data);
     if (root == NULL) {
         free(json_data);
         ESP_LOGE(TAG, "Failed to parse metadata file %s", path_buffer);
-        return app;
+        return;
     }
 
     cJSON* name_obj = cJSON_GetObjectItem(root, "name");
@@ -326,6 +323,14 @@ app_t* create_app(const char* path, const char* slug) {
 
     cJSON_Delete(root);
     free(json_data);
+}
+
+app_t* create_app(const char* path, const char* slug) {
+    app_t* app = calloc(1, sizeof(app_t));
+    app->path  = strdup(path);
+    app->slug  = strdup(slug);
+
+    parse_app_metadata(app, path, slug);
 
     if (app->icon == NULL) {
         ESP_LOGE(TAG, "No icon found for app %s, using default icon", slug);
