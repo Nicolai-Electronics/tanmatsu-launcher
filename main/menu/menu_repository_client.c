@@ -411,7 +411,10 @@ static void populate_project_list(menu_t* menu, cJSON* json_projects) {
         }
     }
 
-    if (total == 0) return;
+    if (total == 0) {
+        free_project_info();
+        return;
+    }
 
     // Collect entries for sorting
     project_sort_entry_t* sorted = malloc(sizeof(project_sort_entry_t) * total);
