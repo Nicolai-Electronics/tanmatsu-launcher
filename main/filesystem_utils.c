@@ -1,5 +1,6 @@
 #include "filesystem_utils.h"
 #include <dirent.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,8 +49,9 @@ esp_err_t fs_utils_remove(const char* path) {
 
     // Open directory
     if ((dir = opendir(path)) == NULL) {
-        // Can't open directory
-        return false;
+        // If it doesn't exist, there's nothing left to remove - that's a successful outcome.
+        // Any other error (permission denied, I/O error, etc.) is a genuine failure.
+        return (errno == ENOENT) ? ESP_OK : ESP_FAIL;
     }
 
     // Remove all files from the directory and enter any subdirectories recursively
