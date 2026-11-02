@@ -171,10 +171,24 @@ esp_err_t radio_ota_update(void) {
     }
 
     for (int i = 0; i < step_count; i++) {
-        cJSON* step_json           = cJSON_GetArrayItem(instructions_json, i);
-        steps[i].offset            = (uint32_t)cJSON_GetObjectItem(step_json, "offset")->valueint;
-        steps[i].uncompressed_size = (size_t)cJSON_GetObjectItem(step_json, "size")->valueint;
-        const char* filename       = cJSON_GetObjectItem(step_json, "file")->valuestring;
+        cJSON* step_json  = cJSON_GetArrayItem(instructions_json, i);
+        cJSON* offset_obj = cJSON_GetObjectItem(step_json, "offset");
+        cJSON* size_obj   = cJSON_GetObjectItem(step_json, "size");
+        cJSON* file_obj   = cJSON_GetObjectItem(step_json, "file");
+        if (!cJSON_IsNumber(offset_obj) || !cJSON_IsNumber(size_obj) || !cJSON_IsString(file_obj)) {
+            for (int j = 0; j < i; j++) {
+                free(steps[j].compressed_data);
+            }
+            http_session_end(session);
+            cJSON_Delete(instructions_json);
+            free(instructions_data);
+            message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Downloaded instructions were invalid",
+                           "Quit");
+            return ESP_FAIL;
+        }
+        steps[i].offset            = (uint32_t)offset_obj->valueint;
+        steps[i].uncompressed_size = (size_t)size_obj->valueint;
+        const char* filename       = file_obj->valuestring;
 
         char url[256] = {0};
         sprintf(url, BASE_URL "/%s", filename);
