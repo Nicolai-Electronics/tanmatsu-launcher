@@ -204,7 +204,14 @@ esp_err_t radio_system_protocol_nvs_list(const char* namespace_name, const char*
     if (result != ESP_OK) return result;
 
     nvs_list_response_t* resp_body = (nvs_list_response_t*)(response + sizeof(radio_system_protocol_header_t));
-    *out_count                     = resp_body->count < max_entries ? resp_body->count : max_entries;
+
+    size_t   available_entries_bytes = response_length - sizeof(radio_system_protocol_header_t) - sizeof(resp_body->count);
+    uint32_t available_entry_count   = (uint32_t)(available_entries_bytes / sizeof(radio_system_protocol_nvs_entry_t));
+
+    *out_count = resp_body->count < max_entries ? resp_body->count : max_entries;
+    if (*out_count > available_entry_count) {
+        *out_count = available_entry_count;
+    }
     memcpy(out_entries, resp_body->entries, *out_count * sizeof(radio_system_protocol_nvs_entry_t));
     return ESP_OK;
 }
