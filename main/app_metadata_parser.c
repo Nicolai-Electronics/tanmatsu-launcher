@@ -34,7 +34,7 @@ appfs_handle_t find_appfs_handle_for_slug(const char* search_slug) {
     while (appfs_fd != APPFS_INVALID_FD) {
         const char* slug = NULL;
         appfsEntryInfoExt(appfs_fd, &slug, NULL, NULL, NULL);
-        if ((strlen(search_slug) == strlen(slug)) && (strcmp(search_slug, slug) == 0)) {
+        if (slug != NULL && (strlen(search_slug) == strlen(slug)) && (strcmp(search_slug, slug) == 0)) {
             return appfs_fd;
         }
         appfs_fd = appfsNextEntry(appfs_fd);
@@ -438,32 +438,36 @@ size_t create_list_of_apps_from_other_appfs_entries(app_t** out_list, size_t lis
         uint16_t    version = 0xFFFF;
         appfsEntryInfoExt(appfs_fd, &slug, &name, &version, NULL);
 
-        bool already_in_list = false;
-        for (size_t i = 0; i < full_list_size; i++) {
-            if (full_list[i] != NULL && full_list[i]->slug != NULL && strcmp(full_list[i]->slug, slug) == 0) {
-                already_in_list = true;
-                break;
-            }
-        }
-
-        if (!already_in_list) {
-            app_t* app = calloc(1, sizeof(app_t));
-            if (app != NULL) {
-                app->slug                = strdup(slug);
-                app->name                = (strcmp(name, "main.bin") == 0) ? strdup(slug) : strdup(name);
-                app->path                = strdup("");
-                app->version             = strdup("Unknown");
-                app->icon                = calloc(1, sizeof(pax_buf_t));
-                app->executable_type     = EXECUTABLE_TYPE_APPFS;
-                app->executable_revision = version;
-                if (app->icon != NULL) {
-                    pax_buf_init(app->icon, NULL, 32, 32, PAX_BUF_32_8888ARGB);
-                    pax_draw_image(app->icon, get_icon(ICON_APP), 0, 0);
+        if (slug == NULL || name == NULL) {
+            ESP_LOGW(TAG, "Skipping AppFS entry with missing slug/name");
+        } else {
+            bool already_in_list = false;
+            for (size_t i = 0; i < full_list_size; i++) {
+                if (full_list[i] != NULL && full_list[i]->slug != NULL && strcmp(full_list[i]->slug, slug) == 0) {
+                    already_in_list = true;
+                    break;
                 }
-                app->executable_appfs_fd = appfs_fd;
-                out_list[count++]        = app;
-            } else {
-                ESP_LOGE(TAG, "Failed to allocate app_t for app %s", slug);
+            }
+
+            if (!already_in_list) {
+                app_t* app = calloc(1, sizeof(app_t));
+                if (app != NULL) {
+                    app->slug                = strdup(slug);
+                    app->name                = (strcmp(name, "main.bin") == 0) ? strdup(slug) : strdup(name);
+                    app->path                = strdup("");
+                    app->version             = strdup("Unknown");
+                    app->icon                = calloc(1, sizeof(pax_buf_t));
+                    app->executable_type     = EXECUTABLE_TYPE_APPFS;
+                    app->executable_revision = version;
+                    if (app->icon != NULL) {
+                        pax_buf_init(app->icon, NULL, 32, 32, PAX_BUF_32_8888ARGB);
+                        pax_draw_image(app->icon, get_icon(ICON_APP), 0, 0);
+                    }
+                    app->executable_appfs_fd = appfs_fd;
+                    out_list[count++]        = app;
+                } else {
+                    ESP_LOGE(TAG, "Failed to allocate app_t for app %s", slug);
+                }
             }
         }
 
