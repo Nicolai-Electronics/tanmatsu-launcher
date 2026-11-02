@@ -138,7 +138,7 @@ static esp_err_t radio_install_compressed(const char* path, size_t uncompressed_
     }
     size_t   position     = 0;
     uint32_t seq          = 0;
-    uint32_t total_blocks = compressed_size / 4096;
+    uint32_t total_blocks = (compressed_size + 4095) / 4096;
     while (position < compressed_size) {
         size_t block_length = compressed_size - position;
         if (block_length > 4096) {
@@ -221,7 +221,7 @@ static esp_err_t radio_install_raw(const char* path, size_t offset) {
 
     size_t   position     = 0;
     uint32_t seq          = 0;
-    uint32_t total_blocks = file_size / 4096;
+    uint32_t total_blocks = (file_size + 4095) / 4096;
     while (position < file_size) {
         size_t block_length = file_size - position;
         if (block_length > 4096) {
