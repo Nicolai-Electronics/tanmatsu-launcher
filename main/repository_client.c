@@ -97,7 +97,6 @@ static bool download_and_parse(const char* url, repository_json_data_t* out_data
 
 // Helper functions for API
 
-// Returns true if the whole of `source` was appended, false if it was truncated to fit `buffer_length`.
 static bool url_append(char* destination, char* source, size_t buffer_length) {
     if (buffer_length == 0) {
         return false;

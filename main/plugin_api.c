@@ -30,9 +30,6 @@ static const char* TAG = "plugin_api";
 // Mutex for protecting plugin API registries during concurrent access
 static SemaphoreHandle_t plugin_api_mutex = NULL;
 
-// Note: plugin_api_mutex must never be held while invoking a plugin-supplied callback
-// (status widget render, input hook dispatch) - plugins may call back into registration
-// functions from within their callback, and the mutex is not recursive.
 #define PLUGIN_API_LOCK()   do { if (plugin_api_mutex) xSemaphoreTake(plugin_api_mutex, portMAX_DELAY); } while (0)
 #define PLUGIN_API_UNLOCK() do { if (plugin_api_mutex) xSemaphoreGive(plugin_api_mutex); } while (0)
 
@@ -169,9 +166,6 @@ void asp_plugin_status_widget_unregister(int widget_id) {
 // Widgets draw right-to-left from x_right position
 // Returns total width used by all widgets
 int plugin_api_render_status_widgets(pax_buf_t* buffer, int x_right, int y, int height) {
-    // Snapshot the active widgets under the lock, then invoke callbacks outside of it:
-    // a widget callback must be free to call back into register/unregister without
-    // deadlocking on our non-recursive mutex.
     struct {
         plugin_status_widget_fn callback;
         void*                   user_data;
@@ -231,9 +225,6 @@ static bool plugin_input_hook_wrapper(bsp_input_event_t* bsp_event, void* user_d
         return false;
     }
 
-    // Snapshot the entry under the lock, then invoke the callback outside of it: a hook
-    // callback must be free to call back into register/unregister without deadlocking
-    // on our non-recursive mutex.
     PLUGIN_API_LOCK();
     plugin_input_hook_entry_t* entry    = &plugin_input_hooks[hook_index];
     bool                       in_use   = entry->in_use;
@@ -253,8 +244,6 @@ int asp_plugin_input_hook_register(plugin_context_t* ctx, plugin_input_hook_fn c
         return -1;
     }
 
-    // Find a free slot and reserve it (mark in_use) before releasing the lock, so no
-    // other task can claim the same slot while we register it with the BSP below.
     PLUGIN_API_LOCK();
     int hook_index = -1;
     for (int i = 0; i < MAX_PLUGIN_INPUT_HOOKS; i++) {
@@ -274,8 +263,6 @@ int asp_plugin_input_hook_register(plugin_context_t* ctx, plugin_input_hook_fn c
         return -1;
     }
 
-    // Register with BSP, passing our index as user_data. Done outside the lock since we
-    // don't control the BSP layer's own locking.
     int bsp_id = bsp_input_hook_register(plugin_input_hook_wrapper, (void*)(intptr_t)hook_index);
     if (bsp_id < 0) {
         PLUGIN_API_LOCK();
@@ -314,7 +301,6 @@ void asp_plugin_input_hook_unregister(int hook_id) {
     entry->in_use      = false;
     PLUGIN_API_UNLOCK();
 
-    // Done outside the lock since we don't control the BSP layer's own locking.
     bsp_input_hook_unregister(bsp_hook_id);
 
     ESP_LOGI(TAG, "Unregistered plugin input hook %d", hook_id);
