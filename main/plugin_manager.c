@@ -729,12 +729,11 @@ static void deferred_unload_task(void* arg) {
                 break;
             }
         }
-        xSemaphoreGive(plugin_mutex);
-
         if (still_loaded) {
             ESP_LOGI(TAG, "Auto-unloading service plugin: %s", ctx->plugin_slug);
-            plugin_manager_unload(ctx);
+            _plugin_manager_unload(ctx);
         }
+        xSemaphoreGive(plugin_mutex);
     }
     vTaskDelete(NULL);
 }
@@ -751,17 +750,21 @@ static void plugin_service_task(void* arg) {
 
     ESP_LOGI(TAG, "Service task ended for plugin: %s", ctx->plugin_slug);
 
+    bool stop_was_requested = ctx->stop_requested;
+
     // Clear handle BEFORE marking as not running to prevent race with stop_service()
     // This ensures stop_service() won't try to delete an already-deleting task
     ctx->task_handle  = NULL;
     ctx->task_running = false;
     ctx->state        = PLUGIN_STATE_STOPPED;
 
-    // Create a small task to handle deferred unload with sufficient stack
-    // This runs after the service task exits, so it's safe to unload the plugin
-    BaseType_t ret = xTaskCreate(deferred_unload_task, "unload", 4096, ctx, 5, NULL);
-    if (ret != pdPASS) {
-        ESP_LOGW(TAG, "Failed to create deferred unload task for plugin: %s", ctx->plugin_slug);
+    if (!stop_was_requested) {
+        // Create a small task to handle deferred unload with sufficient stack
+        // This runs after the service task exits, so it's safe to unload the plugin
+        BaseType_t ret = xTaskCreate(deferred_unload_task, "unload", 4096, ctx, 5, NULL);
+        if (ret != pdPASS) {
+            ESP_LOGW(TAG, "Failed to create deferred unload task for plugin: %s", ctx->plugin_slug);
+        }
     }
 
     // FreeRTOS idiom: vTaskDelete(NULL) deletes the calling task
