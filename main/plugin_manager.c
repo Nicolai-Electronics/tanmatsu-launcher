@@ -475,17 +475,6 @@ plugin_context_t* plugin_manager_load(const char* plugin_path) {
         ESP_LOGI(TAG, "Context: slug=%s path=%s ctx=%p", ctx->plugin_slug ? ctx->plugin_slug : "(null)",
                  ctx->plugin_path ? ctx->plugin_path : "(null)", (void*)ctx);
 
-        // Debug: dump GOT.PLT entries (first 16 words after plugin_info section)
-        {
-            uint32_t* base = (uint32_t*)reg_addr;
-            ESP_LOGI(TAG, "GOT.PLT dump (from base %p):", (void*)base);
-            for (int i = 0; i < 16; i++) {
-                uint32_t  offset = 0x614 + i * 4;
-                uint32_t* addr   = (uint32_t*)((uint8_t*)base + offset);
-                ESP_LOGI(TAG, "  [0x%03lx] = 0x%08lx", (unsigned long)offset, (unsigned long)*addr);
-            }
-        }
-
         // Verify the plugin was built for a compatible API major version.
         // get_info is required; minor version skew is allowed (backwards
         // compatible additions), major skew is not.
