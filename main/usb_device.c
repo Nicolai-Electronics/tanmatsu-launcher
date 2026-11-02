@@ -499,11 +499,20 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize) {
 
 void usb_send_data(uint8_t const* data, size_t len) {
     if (current_mode == USB_DEVICE) {
+        TickType_t last_progress = xTaskGetTickCount();
         while (len) {
             uint32_t max = tud_vendor_write(data, len);
             tud_vendor_write_flush();
+            if (max == 0) {
+                if (xTaskGetTickCount() - last_progress > pdMS_TO_TICKS(1000)) {
+                    break;
+                }
+                vTaskDelay(pdMS_TO_TICKS(1));
+                continue;
+            }
             data += max;
             len  -= max;
+            last_progress = xTaskGetTickCount();
         }
     } else if (current_mode == USB_DEBUG) {
         size_t remaining_size = len;
