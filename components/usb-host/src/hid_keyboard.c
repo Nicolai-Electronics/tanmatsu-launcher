@@ -325,7 +325,7 @@ static void inject_navigation_event(uint8_t hid_scancode, bool state) {
         case BSP_INPUT_SCANCODE_F5:
             key = BSP_INPUT_NAVIGATION_KEY_F5;
             break;
-        case BSP_INPUT_SCANCODE_6:
+        case BSP_INPUT_SCANCODE_F6:
             key = BSP_INPUT_NAVIGATION_KEY_F6;
             break;
         case BSP_INPUT_SCANCODE_F7:
