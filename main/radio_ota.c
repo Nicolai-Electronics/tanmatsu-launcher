@@ -34,6 +34,8 @@ typedef struct {
     uint32_t offset;
 } ota_step_t;
 
+#define RADIO_OTA_MAX_STEPS 16
+
 static void download_callback(size_t download_position, size_t file_size, const char* status_text) {
     if (file_size == 0) {
         ESP_LOGD(TAG, "Download callback called with file_size == 0");
@@ -147,12 +149,24 @@ esp_err_t radio_ota_update(void) {
 
     cJSON* instructions_json = cJSON_ParseWithLength((const char*)instructions_data, instructions_size);
 
-    ota_step_t steps[16]  = {0};
-    int        step_count = cJSON_GetArraySize(instructions_json);
+    ota_step_t steps[RADIO_OTA_MAX_STEPS] = {0};
+    int        step_count                = cJSON_GetArraySize(instructions_json);
 
     if (step_count < 1) {
         http_session_end(session);
+        cJSON_Delete(instructions_json);
+        free(instructions_data);
         message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Downloaded instructions were empty", "Quit");
+        return ESP_FAIL;
+    }
+
+    if (step_count > RADIO_OTA_MAX_STEPS) {
+        ESP_LOGE(TAG, "Instructions contain %d steps, maximum supported is %d", step_count, RADIO_OTA_MAX_STEPS);
+        http_session_end(session);
+        cJSON_Delete(instructions_json);
+        free(instructions_data);
+        message_dialog(get_icon(ICON_SYSTEM_UPDATE), "Radio update", "Downloaded instructions were invalid (too many steps)",
+                       "Quit");
         return ESP_FAIL;
     }
 
