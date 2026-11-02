@@ -127,10 +127,12 @@ static bool _menu_wifi(void) {
                             case BSP_INPUT_NAVIGATION_KEY_F2:
                             case BSP_INPUT_NAVIGATION_KEY_START:
                                 menu_wifi_scan(buffer, theme);
+                                menu_free(&menu);
                                 return true;
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F3:
                                 add_manually(buffer, theme);
+                                menu_free(&menu);
                                 return true;
                                 break;
                             case BSP_INPUT_NAVIGATION_KEY_F4:
@@ -161,6 +163,7 @@ static bool _menu_wifi(void) {
                                     wifi_connection_disconnect();
                                     message_dialog(get_icon(ICON_WIFI), "WiFi", "Disconnected from WiFi network", "OK");
                                 }
+                                menu_free(&menu);
                                 return true;
                                 break;
                             }
@@ -180,11 +183,13 @@ static bool _menu_wifi(void) {
                                 if (msg_ret == MSG_DIALOG_RETURN_OK) {
                                     wifi_settings_erase(index);
                                 }
+                                menu_free(&menu);
                                 return true;
                             }
                             case BSP_INPUT_NAVIGATION_KEY_F6:
                             case BSP_INPUT_NAVIGATION_KEY_MENU:
                                 menu_wifi_info();
+                                menu_free(&menu);
                                 return true;
                             case BSP_INPUT_NAVIGATION_KEY_UP:
                                 menu_navigate_previous(&menu);
