@@ -552,7 +552,12 @@ error_cleanup:
 
     // Clean up ELF if it was loaded
     if (ctx && ctx->elf_handle) {
-        kbelf_dyn dyn = (kbelf_dyn)ctx->elf_handle;
+        kbelf_dyn dyn        = (kbelf_dyn)ctx->elf_handle;
+        size_t    fini_count = kbelf_dyn_fini_len(dyn);
+        for (size_t i = 0; i < fini_count; i++) {
+            void (*func)(void) = (void*)kbelf_dyn_fini_get(dyn, i);
+            func();
+        }
         kbelf_dyn_unload(dyn);
         kbelf_dyn_destroy(dyn);
         ctx->elf_handle = NULL;
