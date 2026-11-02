@@ -284,6 +284,9 @@ uint8_t* fs_utils_load_file_to_ram(FILE* fd) {
     fseek(fd, 0, SEEK_SET);
     uint8_t* file = malloc(fsize);
     if (file == NULL) return NULL;
-    fread(file, fsize, 1, fd);
+    if (fsize > 0 && fread(file, fsize, 1, fd) != 1) {
+        free(file);
+        return NULL;
+    }
     return file;
 }
