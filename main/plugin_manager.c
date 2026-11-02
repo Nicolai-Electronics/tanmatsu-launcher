@@ -792,7 +792,7 @@ bool plugin_manager_start_service(plugin_context_t* ctx) {
     ctx->task_running   = false;
 
     // Allocate task stack and TCB - we own this memory, no cleanup race with FreeRTOS
-    ctx->task_stack = malloc(SERVICE_TASK_STACK_SIZE * sizeof(StackType_t));
+    ctx->task_stack = heap_caps_malloc(SERVICE_TASK_STACK_SIZE * sizeof(StackType_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     if (ctx->task_stack == NULL) {
         ESP_LOGE(TAG, "Failed to allocate task stack");
         return false;
@@ -805,7 +805,7 @@ bool plugin_manager_start_service(plugin_context_t* ctx) {
     //          ctx->task_stack,
     //          (unsigned)(internal_before - internal_after_stack));
 
-    ctx->task_tcb = malloc(sizeof(StaticTask_t));
+    ctx->task_tcb = heap_caps_malloc(sizeof(StaticTask_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     if (ctx->task_tcb == NULL) {
         ESP_LOGE(TAG, "Failed to allocate task TCB");
         free(ctx->task_stack);
