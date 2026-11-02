@@ -156,7 +156,7 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
     pax_draw_text(buffer, theme->palette.color_foreground, theme->footer.text_font, theme->footer.text_height,
                   position.x0, position.y0, message);
     display_blit_buffer(buffer);
-    printf("Starting %s (from %s)...\n", app->slug, app->path);
+    printf("Starting %s (from %s)...\n", app->slug, app->path ? app->path : "AppFS");
 
     switch (app->executable_type) {
         case EXECUTABLE_TYPE_APPFS:
@@ -165,9 +165,13 @@ void execute_app(pax_buf_t* buffer, gui_theme_t* theme, pax_vec2_t position, app
                 return;
             }
             {
-                char app_path[256];
-                snprintf(app_path, sizeof(app_path), "%s/%s", app->path, app->slug);
-                appfsBootSelect(app->executable_appfs_fd, app_path);
+                char  app_path[256];
+                char* app_path_arg = NULL;
+                if (app->path != NULL) {
+                    snprintf(app_path, sizeof(app_path), "%s/%s", app->path, app->slug);
+                    app_path_arg = app_path;
+                }
+                appfsBootSelect(app->executable_appfs_fd, app_path_arg);
             }
             while (wifi_stack_get_task_done() == false) {
                 printf("Waiting for wifi stack task to finish...\n");
