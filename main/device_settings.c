@@ -38,7 +38,7 @@ void device_settings_get_default_http_user_agent(char* out_value, size_t max_len
 
 esp_err_t device_settings_get_lora_frequency(uint32_t* out_value) {
     esp_err_t res = nvs_settings_get_lora_frequency(out_value, 0);
-    if (res != ESP_OK || out_value == 0) {
+    if (res != ESP_OK || *out_value == 0) {
         lora_protocol_status_params_t status = {0};
         lora_get_status(lora_get_handle(), &status);
         *out_value = status.chip_type == LORA_PROTOCOL_CHIP_SX1268 ? 433875000 : 869618000;
