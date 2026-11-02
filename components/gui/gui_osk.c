@@ -722,8 +722,11 @@ void gui_osk_press(gui_osk_ctx_t* ctx, gui_osk_input_t input) {
         case GUI_OSK_MODESELECT:
             ctx->board_sel++;
             ctx->board_sel %= 4;
-            rowlen          = strlen(board[ctx->key_y]);
-            if (ctx->key_x >= rowlen) ctx->key_x = rowlen - 1;
+            if (ctx->key_y != -1) {
+                board  = boards[ctx->board_sel];
+                rowlen = strlen(board[ctx->key_y]);
+                if (ctx->key_x >= rowlen) ctx->key_x = rowlen - 1;
+            }
             ctx->kb_dirty = true;
             break;
 
