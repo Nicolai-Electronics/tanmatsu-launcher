@@ -109,7 +109,7 @@ bool menu_filebrowser(const char* in_path, const char* filter[], size_t filter_l
                                     if (label == NULL) {
                                         break;
                                     }
-                                    if (strncmp(label, "..", 2) == 0) {
+                                    if (strcmp(label, "..") == 0) {
                                         // Go up one directory
                                         char* last_slash = strrchr(path, '/');
                                         if (last_slash != NULL) {
