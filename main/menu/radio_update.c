@@ -424,7 +424,7 @@ void radio_install(const char* instructions_filename) {
         printf("%s\r\n", text_buffer);
 
         const char* last_slash = strrchr(instructions_filename, '/');
-        size_t      dir_len    = last_slash - instructions_filename + 1;
+        size_t      dir_len    = (last_slash != NULL) ? (size_t)(last_slash - instructions_filename + 1) : 0;
         snprintf(text_buffer, sizeof(text_buffer), "%.*s/%s", (int)dir_len, instructions_filename, file_path);
 
         if (compressed) {

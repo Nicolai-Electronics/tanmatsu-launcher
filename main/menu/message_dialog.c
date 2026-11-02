@@ -67,7 +67,7 @@ static gui_element_icontext_t battery_indicator(bsp_power_battery_information_t*
     }
 #endif
 
-    // snprintf(percentage_buffer, sizeof(percentage_buffer), "%3u%%", (uint8_t)information->remaining_percentage);
+    snprintf(percentage_buffer, sizeof(percentage_buffer), "%3u%%", (uint8_t)information->remaining_percentage);
     if (information->remaining_percentage >= 98) {
         return (gui_element_icontext_t){get_icon(ICON_BATTERY_FULL), percentage_buffer};
     }

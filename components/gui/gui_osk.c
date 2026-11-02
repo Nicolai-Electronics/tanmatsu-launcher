@@ -622,9 +622,10 @@ void gui_osk_press(gui_osk_ctx_t* ctx, gui_osk_input_t input) {
         size_t rowlen;
         case GUI_OSK_UP:
             ctx->key_y--;
-            if (ctx->key_y < -1)
+            if (ctx->key_y < -1) {
                 ctx->key_y = 3;
-            else if (ctx->key_y != -1) {
+            }
+            if (ctx->key_y != -1) {
                 rowlen = strlen(board[ctx->key_y]);
                 if (ctx->key_x >= rowlen) ctx->key_x = rowlen - 1;
             }

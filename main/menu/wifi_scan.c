@@ -52,7 +52,6 @@ static inline void wifi_desc_record(wifi_ap_record_t* record) {
     if (record->phy_11n) {
         strcat(phy_str, "/n");
     }
-    phy_str[2] = '1';
 
     printf("AP %s %s rssi=%hhd%s\r\n", bssid_str, record->ssid, record->rssi, phy_str);
     free(bssid_str);
