@@ -19,6 +19,7 @@
 #include "freertos/queue.h"
 #include "gui_menu.h"
 #include "gui_style.h"
+#include "icon_provisioning.h"
 #include "icons.h"
 #include "information.h"
 #include "lora.h"

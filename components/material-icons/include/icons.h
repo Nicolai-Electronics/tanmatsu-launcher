@@ -1,7 +1,5 @@
 #pragma once
 
-#include <complex.h>
-#include "esp_err.h"
 #include "pax_types.h"
 
 typedef enum {
@@ -86,8 +84,16 @@ typedef enum {
     ICON_LAST
 } icon_t;
 
-void       load_icons(void);
+void       load_icons(pax_col_t recolor_foreground);
 void       unload_icons(void);
 pax_buf_t* get_icon(icon_t icon);
 bool       get_icons_missing(void);
-esp_err_t  download_icons(bool delete_old_files);
+
+// Filesystem path an icon is (or would be) loaded from. Used by the icon
+// provisioning code in main to know where to save downloaded icon files.
+void get_icon_path(icon_t icon, char* out_path, size_t max_path_len);
+
+// Raw catalog name of an icon (e.g. "wifi"), or NULL for icons with no
+// catalog entry (absolute paths, unused slots). Used by the icon
+// provisioning code in main to build download URLs.
+const char* get_icon_name(icon_t icon);

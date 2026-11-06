@@ -1,16 +1,13 @@
 #include "icons.h"
-#include "bsp/power.h"
-#include "common/theme.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "esp_heap_caps.h"
 #include "esp_log.h"
-#include "fastopen.h"
-#include "filesystem_utils.h"
-#include "http_download.h"
-#include "menu/message_dialog.h"
 #include "nvs_settings.h"
 #include "pax_codecs.h"
 #include "pax_gfx.h"
-#include "wifi_connection.h"
+#include "sdkconfig.h"
 
 static char const TAG[] = "icons";
 
@@ -19,7 +16,6 @@ static char const TAG[] = "icons";
 #define ICON_HEIGHT       16
 #define ICON_BUFFER_SIZE  (ICON_WIDTH * ICON_HEIGHT * 4)  // 4 bytes per pixel (ARGB8888)
 #define ICON_COLOR_FORMAT PAX_BUF_32_8888ARGB
-// #define ICON_COLOR_FORMAT PAX_BUF_2_PAL
 #else
 #define ICON_WIDTH        32
 #define ICON_HEIGHT       32
@@ -29,13 +25,6 @@ static char const TAG[] = "icons";
 
 #define ICON_BASE_PATH "/int/icons"
 #define ICON_EXT       ".png"
-
-#if defined(CONFIG_BSP_TARGET_KAMI)
-char             icon_suffix[64] = "_f_r_black_16";
-static pax_col_t palette[]       = {0xffffffff, 0xff000000, 0xffff0000};  // white, black, red
-#else
-char icon_suffix[64] = "_f_r_black_32";
-#endif
 
 static const char* icon_paths[] = {
     // Keyboard keys (these are custom icons)
@@ -135,14 +124,25 @@ void get_icon_path(icon_t icon, char* out_path, size_t max_path_len) {
     }
 }
 
-void load_icons(void) {
+const char* get_icon_name(icon_t icon) {
+    if (icon < 0 || icon >= ICON_LAST) {
+        return NULL;
+    }
+    const char* icon_path = icon_paths[icon];
+    if (icon_path == NULL || icon_path[0] == '/') {
+        return NULL;
+    }
+    return icon_path;
+}
+
+void load_icons(pax_col_t recolor_foreground) {
     theme_setting_t theme_setting = THEME_BLACK;
     nvs_settings_get_theme(&theme_setting);
 
     for (int i = 0; i < ICON_LAST; i++) {
         char path[512] = {0};
         get_icon_path(i, path, sizeof(path));
-        FILE* fd = fastopen(path, "rb");
+        FILE* fd = fopen(path, "rb");
         if (fd == NULL) {
             ESP_LOGE(TAG, "Failed to open icon file %s", path);
             icons_missing = true;
@@ -151,15 +151,11 @@ void load_icons(void) {
         void* buffer = heap_caps_calloc(1, ICON_BUFFER_SIZE, MALLOC_CAP_SPIRAM);
         if (buffer == NULL) {
             ESP_LOGE(TAG, "Failed to allocate memory for icon %s", path);
-            fastclose(fd);
+            fclose(fd);
             icons_missing = true;
             continue;
         }
         pax_buf_init(&icons[i], buffer, ICON_WIDTH, ICON_HEIGHT, ICON_COLOR_FORMAT);
-#if defined(CONFIG_BSP_TARGET_KAMI)
-        // icons[i].palette      = palette;
-        // icons[i].palette_size = sizeof(palette) / sizeof(pax_col_t);
-#endif
         if (!pax_insert_png_fd(&icons[i], fd, 0, 0, 0)) {
             pax_buf_destroy(&icons[i]);
             free(buffer);
@@ -167,13 +163,9 @@ void load_icons(void) {
             ESP_LOGE(TAG, "Failed to decode icon file %s", icon_paths[i]);
             icons_missing = true;
         }
-        fastclose(fd);
+        fclose(fd);
 
         if (theme_setting != THEME_BLACK) {
-            gui_theme_t* theme = get_theme();
-
-            uint32_t color = theme->palette.color_foreground;
-
             if (i < ICON_F1 || i >= ICON_BATTERY_0) {
                 for (size_t y = 0; y < ICON_HEIGHT; y++) {
                     for (size_t x = 0; x < ICON_WIDTH; x++) {
@@ -181,9 +173,9 @@ void load_icons(void) {
                         col                ^= 0x00FFFFFF;  // Invert color
                         uint8_t brightness  = ((col & 0xFF) + (col >> 8 & 0xFF) + (col >> 16 & 0xFF)) / 3;
                         col                &= 0xFF000000;  // Remove colors
-                        uint8_t r           = (((color >> 16) & 0xFF) * brightness) / 255;
-                        uint8_t g           = (((color >> 8) & 0xFF) * brightness) / 255;
-                        uint8_t b           = (((color >> 0) & 0xFF) * brightness) / 255;
+                        uint8_t r           = (((recolor_foreground >> 16) & 0xFF) * brightness) / 255;
+                        uint8_t g           = (((recolor_foreground >> 8) & 0xFF) * brightness) / 255;
+                        uint8_t b           = (((recolor_foreground >> 0) & 0xFF) * brightness) / 255;
                         col                |= (r << 16) | (g << 8) | b;
                         pax_set_pixel(&icons[i], col, x, y);
                     }
@@ -215,115 +207,4 @@ pax_buf_t* get_icon(icon_t icon) {
 
 bool get_icons_missing(void) {
     return icons_missing;
-}
-
-extern bool wifi_stack_get_initialized(void);
-
-static void download_callback(size_t download_position, size_t file_size, const char* status_text) {
-    if (file_size == 0) {
-        ESP_LOGD(TAG, "Download callback called with file_size == 0");
-        return;
-    }
-    uint8_t        percentage      = 100 * download_position / file_size;
-    static uint8_t last_percentage = 0;
-    if (percentage == last_percentage) {
-        return;  // No change, no need to update
-    }
-    ESP_LOGI(TAG, "%s (%u%%)", status_text, percentage);
-    /*last_percentage = percentage;
-    progress_dialog(get_icon(ICON_DOWNLOADING), "Icon downloader", status_text ? status_text : "Downloading",
-                    percentage, true);*/
-};
-
-void print_commands(void) {
-    for (int i = 0; i < ICON_LAST; i++) {
-        if (icon_paths[i] == NULL || icon_paths[i][0] == '/') {
-            // Absolute path, skip
-            continue;
-        }
-        char path[512] = {0};
-        get_icon_path(i, path, sizeof(path));
-        char url[512] = {0};
-        if (i > ICON_F6) {
-            snprintf(url, sizeof(url), "https://ota.tanmatsu.cloud/icons/%s%s" ICON_EXT, icon_paths[i], icon_suffix);
-        } else {
-            // For keyboard icons, use a different naming scheme
-            snprintf(url, sizeof(url), "https://ota.tanmatsu.cloud/icons/%s" ICON_EXT, icon_paths[i]);
-        }
-        printf("wget -O '%s' '%s'\n", path, url);
-    }
-}
-
-esp_err_t download_icons(bool delete_old_files) {
-    print_commands();
-    const char title[] = "Icon downloader";
-    pax_buf_t* icon    = get_icon(ICON_DOWNLOADING);
-
-    busy_dialog(icon, title, "Connecting to WiFi...", true);
-    if (!wifi_stack_get_initialized()) {
-        ESP_LOGE(TAG, "WiFi stack not initialized");
-        message_dialog(icon, title, "WiFi stack not initialized", "Quit");
-        return ESP_FAIL;
-    }
-    if (!wifi_connection_is_connected()) {
-        if (wifi_connect_try_all() != ESP_OK) {
-            ESP_LOGE(TAG, "Not connected to WiFi");
-            message_dialog(icon, title, "Failed to connect to WiFi network", "Quit");
-            return ESP_FAIL;
-        }
-    }
-
-    if (delete_old_files) {
-        busy_dialog(icon, title, "Removing old icon files...", true);
-        fs_utils_remove("/int/icons");
-        if (mkdir("/int/icons", 0777) != 0) {
-            message_dialog(icon, title, "Failed to create icons directory", "Quit");
-            return ESP_FAIL;
-        }
-    }
-
-    http_session_t session = http_session_begin("https://ota.tanmatsu.cloud/icons/");
-    if (session == NULL) {
-        message_dialog(icon, title, "Failed to create HTTP session", "Quit");
-        return ESP_FAIL;
-    }
-
-    for (int i = 0; i < ICON_LAST; i++) {
-        if (icon_paths[i] == NULL || icon_paths[i][0] == '/') {
-            // Absolute path, skip
-            continue;
-        }
-        char path[512] = {0};
-        get_icon_path(i, path, sizeof(path));
-        remove(path);  // Remove currently present icon if it exists
-
-        char url[512] = {0};
-        if (i > ICON_F6) {
-            snprintf(url, sizeof(url), "https://ota.tanmatsu.cloud/icons/%s%s" ICON_EXT, icon_paths[i], icon_suffix);
-        } else {
-            // For keyboard icons, use a different naming scheme
-            snprintf(url, sizeof(url), "https://ota.tanmatsu.cloud/icons/%s" ICON_EXT, icon_paths[i]);
-        }
-        ESP_LOGI(TAG, "Downloading icon from '%s' and saving to '%s'...", url, path);
-
-        char status[512] = {0};
-        snprintf(status, sizeof(status), "Downloading icon '%s' (%u of %u)...", icon_paths[i], i + 1, ICON_LAST);
-        progress_dialog(get_icon(ICON_DOWNLOADING), "Icon downloader", status, ((i * 100) / ICON_LAST), true);
-        http_session_set_callback(session, download_callback, status);
-        bool success = http_session_download_file(session, url, path);
-
-        if (!success) {
-            snprintf(status, sizeof(status), "Failed to download icon '%s'", icon_paths[i]);
-            ESP_LOGE(TAG, "%s", status);
-            busy_dialog(icon, title, status, true);
-        }
-    }
-
-    http_session_end(session);
-
-    busy_dialog(NULL, "Icon download successful",
-                "The icons have been downloaded successfully.\r\nDevice will restart now.", true);
-    bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    esp_restart();
 }

@@ -7,6 +7,7 @@
 #include "esp_log.h"
 #include "firmware_update.h"
 #include "gui_menu.h"
+#include "icon_provisioning.h"
 #include "icons.h"
 #include "menu/menu_helpers.h"
 #include "menu/message_dialog.h"

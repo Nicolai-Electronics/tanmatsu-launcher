@@ -3,6 +3,7 @@ idf_component_register(
 		gui_menu.c
 		gui_menu_render.c
 		gui_chat_render.c
+		gui_screen.c
 		gui_element_header.c
 		gui_element_footer.c
 		gui_element_icontext.c

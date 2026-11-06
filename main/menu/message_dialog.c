@@ -10,10 +10,9 @@
 #include "esp_wifi.h"
 #include "esp_wifi_types_generic.h"
 #include "freertos/idf_additions.h"
-#include "gui_element_footer.h"
-#include "gui_element_header.h"
 #include "gui_element_icontext.h"
 #include "gui_element_progressbar.h"
+#include "gui_screen.h"
 #include "gui_style.h"
 #include "icons.h"
 #include "pax_gfx.h"
@@ -159,31 +158,6 @@ static gui_element_icontext_t sdcard_indicator(void) {
     }
 }
 
-void render_base_screen(pax_buf_t* buffer, gui_theme_t* theme, bool background, bool header, bool footer,
-                        gui_element_icontext_t* header_left, size_t header_left_count,
-                        gui_element_icontext_t* header_right, size_t header_right_count,
-                        gui_element_icontext_t* footer_left, size_t footer_left_count,
-                        gui_element_icontext_t* footer_right, size_t footer_right_count) {
-    if (background) {
-        pax_background(buffer, theme->palette.color_background);
-    }
-    if (header) {
-        if (!background) {
-            pax_simple_rect(buffer, theme->palette.color_background, 0, 0, pax_buf_get_width(buffer),
-                            theme->header.height + (theme->header.vertical_margin * 2));
-        }
-        gui_header_draw(buffer, theme, header_left, header_left_count, header_right, header_right_count);
-    }
-    if (footer) {
-        if (!background) {
-            pax_simple_rect(buffer, theme->palette.color_background, 0,
-                            pax_buf_get_height(buffer) - theme->footer.height - (theme->footer.vertical_margin * 2),
-                            pax_buf_get_width(buffer), theme->footer.height + (theme->footer.vertical_margin * 2));
-        }
-        gui_footer_draw(buffer, theme, footer_left, footer_left_count, footer_right, footer_right_count);
-    }
-}
-
 void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool background, bool header, bool footer,
                                   gui_element_icontext_t* header_left, size_t header_left_count,
                                   gui_element_icontext_t* footer_left, size_t footer_left_count,
@@ -212,9 +186,9 @@ void render_base_screen_statusbar(pax_buf_t* buffer, gui_theme_t* theme, bool ba
     } else {
         header_right_count = 0;
     }
-    render_base_screen(buffer, theme, background, header || footer, footer, header_left, header_left_count,
-                       header_right, header_right_count, footer_left, footer_left_count, footer_right,
-                       footer_right_count);
+    gui_screen_draw(buffer, theme, background, header || footer, footer, header_left, header_left_count,
+                    header_right, header_right_count, footer_left, footer_left_count, footer_right,
+                    footer_right_count);
 
 #ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
     // Render plugin status widgets in the header area

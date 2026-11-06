@@ -93,7 +93,7 @@ idf_component_register(
 		# Libraries
 		"coprocessor_management.c"
 		"wifi_ota.c"
-		"icons.c"
+		"icon_provisioning.c"
 		"usb_device.c"
 		"esp_efuse_custom_table.c"
 		"app_metadata_parser.c"
@@ -119,6 +119,7 @@ idf_component_register(
 		nvs_flash
 		badge-bsp
 		gui
+		material-icons
 		wpa_supplicant
 		esp_https_ota
 		app_update

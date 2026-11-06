@@ -33,7 +33,7 @@ static bool on_action(void* action_arg, void* user_ctx) {
     update_menu(g_theme_menu);
     theme_initialize();
     unload_icons();
-    load_icons();
+    load_icons(get_theme()->palette.color_foreground);
     return false;
 }
 

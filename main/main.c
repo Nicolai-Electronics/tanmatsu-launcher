@@ -42,6 +42,7 @@
 #include "gui_menu.h"
 #include "gui_style.h"
 #include "hal/lcd_types.h"
+#include "icon_provisioning.h"
 #include "icons.h"
 #include "lora.h"
 #include "lora_settings_handler.h"
@@ -495,7 +496,7 @@ void app_main(void) {
         }
     } else {
         startup_dialog("Loading icons...");
-        load_icons();
+        load_icons(get_theme()->palette.color_foreground);
     }
 
     startup_dialog("Checking I2C bus...");
