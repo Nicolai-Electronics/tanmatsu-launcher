@@ -19,6 +19,7 @@
 #include "app_favorite.h"
 #include "bsp/input.h"
 #include "bsp/power.h"
+#include "bsp/usb_device.h"
 #include "common/display.h"
 #include "common/theme.h"
 #include "esp_wifi.h"
@@ -134,7 +135,8 @@ static appfs_handle_t ensure_interpreter_in_appfs(const char* interpreter_slug) 
 // Put the device into a known state before handing control to an app:
 // switch USB to flash/monitor (debug) mode and power the radio off.
 void prepare_device_for_app_launch(void) {
-    usb_mode_set(USB_DEBUG);
+    bsp_usb_device_mode_set(BSP_USB_MODE_DEBUG);
+    usb_resume_log_output();
     esp_wifi_stop();
     bsp_power_set_radio_state(BSP_POWER_RADIO_STATE_OFF);
 }

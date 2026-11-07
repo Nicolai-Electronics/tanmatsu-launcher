@@ -4,6 +4,7 @@
 #include "bsp/input.h"
 #include "bsp/power.h"
 #include "bsp/storage.h"
+#include "bsp/usb_device.h"
 #include "common/device.h"
 #include "common/display.h"
 #include "common/theme.h"
@@ -20,7 +21,6 @@
 #include "pax_text.h"
 #include "pax_types.h"
 #include "sdkconfig.h"
-#include "usb_device.h"
 #include "wifi_connection.h"
 #ifdef CONFIG_ENABLE_LAUNCHERPLUGINS
 #include "plugin_manager.h"
@@ -92,7 +92,7 @@ static gui_element_icontext_t battery_indicator(bsp_power_battery_information_t*
 }
 
 static gui_element_icontext_t usb_indicator(void) {
-    if (usb_mode_get() == USB_DEVICE) {
+    if (bsp_usb_device_mode_get() == BSP_USB_MODE_DEVICE) {
         return (gui_element_icontext_t){get_icon(ICON_USB), ""};
     } else {
         return (gui_element_icontext_t){get_icon(ICON_BUG_REPORT), ""};

@@ -5,6 +5,32 @@
 
 #include "usb_device.h"
 #include "sdkconfig.h"
+
+#include <stdio.h>
+#include "bsp/usb_device.h"
+#include "esp_log.h"
+
+static vprintf_like_t real_log_printf = NULL;
+
+static int dummy_log_vprintf(const char* fmt, va_list args) {
+    char buf[160];
+    int  len = vsnprintf(buf, sizeof(buf), fmt, args);
+    return len;
+}
+
+void usb_suspend_log_output(void) {
+    if (real_log_printf == NULL) {
+        real_log_printf = esp_log_set_vprintf(dummy_log_vprintf);
+    }
+}
+
+void usb_resume_log_output(void) {
+    if (real_log_printf != NULL) {
+        esp_log_set_vprintf(real_log_printf);
+        real_log_printf = NULL;
+    }
+}
+
 #if defined(CONFIG_IDF_TARGET_ESP32P4) || defined(CONFIG_IDF_TARGET_ESP32S3)
 
 #include <stdio.h>
@@ -13,19 +39,14 @@
 #include "badgelink.h"
 #include "bsp/device.h"
 #include "driver/usb_serial_jtag.h"
-#include "esp_log.h"
 #include "esp_mac.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "hal/usb_serial_jtag_ll.h"
-#include "hal/usb_wrap_ll.h"
 #include "tinyusb.h"
 #include "tinyusb_default_config.h"
 
 static const char* TAG = "USB device";
-
-static usb_mode_t current_mode = USB_DEBUG;
 
 // Interface counter
 enum interface_count {
@@ -188,112 +209,6 @@ static const char ACK_BADGELINK[]   = "OK switching to badgelink mode\r\n";
 static const char TOKEN_BADGESERIAL[] = "BADGESERIAL";
 static const char ACK_BADGESERIAL[]   = "OK switching to badgelink over debug mode\r\n";
 
-static int dummy_log_vprintf(const char* fmt, va_list args) {
-    char buf[160];
-    int  len = vsnprintf(buf, sizeof(buf), fmt, args);
-    return len;
-}
-
-static vprintf_like_t real_log_printf = NULL;
-
-static void disable_log_output(void) {
-    if (real_log_printf == NULL) {
-        real_log_printf = esp_log_set_vprintf(dummy_log_vprintf);
-    }
-}
-
-static void enable_log_output(void) {
-    if (real_log_printf != NULL) {
-        esp_log_set_vprintf(real_log_printf);
-        real_log_printf = NULL;
-    }
-}
-
-void usb_mode_set(usb_mode_t mode) {
-#if defined(CONFIG_IDF_TARGET_ESP32P4)
-    const usb_serial_jtag_pull_override_vals_t override_disable_usb = {
-        .dm_pd = true, .dm_pu = false, .dp_pd = true, .dp_pu = false};
-    const usb_serial_jtag_pull_override_vals_t override_enable_usb = {
-        .dm_pd = false, .dm_pu = false, .dp_pd = false, .dp_pu = true};
-
-    // Drop off the bus by removing the pull-up on USB DP
-    usb_serial_jtag_ll_phy_enable_pull_override(&override_disable_usb);
-
-    // Select USB mode by swapping and un-swapping the two PHYs
-    switch (mode) {
-        case USB_DEVICE:
-            vTaskDelay(pdMS_TO_TICKS(500));  // Wait for disconnect before switching to device
-            usb_serial_jtag_ll_phy_select(1);
-            break;
-        case USB_DEBUG:
-        case USB_DISABLED:
-        default:
-            usb_serial_jtag_ll_phy_select(0);
-            vTaskDelay(pdMS_TO_TICKS(500));  // Wait for disconnect after switching to debug
-            break;
-    }
-
-    if (mode != USB_DISABLED) {
-        // Put the device back onto the bus by re-enabling the pull-up on USB DP
-        usb_serial_jtag_ll_phy_enable_pull_override(&override_enable_usb);
-        usb_serial_jtag_ll_phy_disable_pull_override();
-    }
-    current_mode = mode;
-
-    if (mode == USB_DEBUG) {
-        enable_log_output();
-    }
-#endif
-
-#if defined(CONFIG_IDF_TARGET_ESP32S3)
-    const usb_serial_jtag_pull_override_vals_t debug_override_disable_usb = {
-        .dm_pd = true, .dm_pu = false, .dp_pd = true, .dp_pu = false};
-    const usb_serial_jtag_pull_override_vals_t debug_override_enable_usb = {
-        .dm_pd = false, .dm_pu = false, .dp_pd = false, .dp_pu = true};
-
-    const usb_wrap_pull_override_vals_t device_override_disable_usb = {
-        .dp_pu = false, .dp_pd = true, .dm_pu = false, .dm_pd = true};
-    const usb_wrap_pull_override_vals_t device_override_enable_usb = {
-        .dp_pu = true, .dp_pd = false, .dm_pu = false, .dm_pd = false};
-
-    usb_wrap_ll_phy_enable_pull_override(&USB_WRAP, &device_override_disable_usb);
-    usb_serial_jtag_ll_phy_enable_pull_override(&debug_override_disable_usb);
-
-    // Select USB mode by muxing the internal PHY to the appropriate controller
-    switch (mode) {
-        case USB_DEVICE:
-            vTaskDelay(pdMS_TO_TICKS(500));                     // Wait for disconnect before switching to device
-            usb_wrap_ll_phy_enable_external(&USB_WRAP, false);  // Internal PHY -> USB-OTG
-            usb_wrap_ll_phy_enable_pad(&USB_WRAP, true);
-            break;
-        case USB_DEBUG:
-        case USB_DISABLED:
-        default:
-            usb_serial_jtag_ll_phy_enable_external(false);  // Internal PHY -> USB-Serial-JTAG
-            usb_serial_jtag_ll_phy_enable_pad(true);
-            vTaskDelay(pdMS_TO_TICKS(500));  // Wait for disconnect after switching to debug
-            break;
-    }
-
-    if (mode != USB_DISABLED) {
-        // Put the device back onto the bus by re-enabling the pull-up on USB DP of the
-        // now-active controller
-        if (mode == USB_DEVICE) {
-            usb_wrap_ll_phy_enable_pull_override(&USB_WRAP, &device_override_enable_usb);
-            usb_wrap_ll_phy_disable_pull_override(&USB_WRAP);
-        } else {
-            usb_serial_jtag_ll_phy_enable_pull_override(&debug_override_enable_usb);
-            usb_serial_jtag_ll_phy_disable_pull_override();
-        }
-    }
-    current_mode = mode;
-#endif
-}
-
-usb_mode_t usb_mode_get(void) {
-    return current_mode;
-}
-
 static void usb_debug_listener_task(void* pvParameters) {
     usb_serial_jtag_driver_config_t config = {
         .rx_buffer_size = 256,
@@ -314,7 +229,7 @@ static void usb_debug_listener_task(void* pvParameters) {
     while (true) {
         uint8_t buffer[256];
         int     n = usb_serial_jtag_read_bytes(buffer, sizeof(buffer), portMAX_DELAY);
-        if (current_mode == USB_DEBUG) {
+        if (bsp_usb_device_mode_get() == BSP_USB_MODE_DEBUG) {
             bool badgelink_over_debug_trigger = false;
             if (real_log_printf == NULL) {  // Log is enabled
                 for (int i = 0; i < n; i++) {
@@ -326,9 +241,9 @@ static void usb_debug_listener_task(void* pvParameters) {
                             usb_serial_jtag_write_bytes((const uint8_t*)ACK_BADGELINK, strlen(ACK_BADGELINK),
                                                         pdMS_TO_TICKS(100));
                             ESP_LOGI(TAG, "Switching to BadgeLink USB mode");
-                            usb_mode_set(USB_DEVICE);
+                            bsp_usb_device_mode_set(BSP_USB_MODE_DEVICE);
                             // Peripheral is now off-bus; reads will block until the
-                            // user switches back to USB_DEBUG via the home menu.
+                            // user switches back to BSP_USB_MODE_DEBUG via the home menu.
                         } else if (strcmp(line, TOKEN_BADGESERIAL) == 0) {
                             usb_serial_jtag_write_bytes((const uint8_t*)ACK_BADGESERIAL, strlen(ACK_BADGESERIAL),
                                                         pdMS_TO_TICKS(100));
@@ -351,7 +266,7 @@ static void usb_debug_listener_task(void* pvParameters) {
                 // Switch over to badgelink over debug mode by disabling log output
                 fflush(stdout);
                 usb_serial_jtag_wait_tx_done(pdMS_TO_TICKS(100));
-                disable_log_output();
+                usb_suspend_log_output();
             }
             badgelink_rxdata_cb(buffer, n);
         }
@@ -380,7 +295,8 @@ void usb_initialize(void) {
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
     // Return to debug mode after initializing the USB stack
-    usb_mode_set(USB_DEBUG);
+    bsp_usb_device_mode_set(BSP_USB_MODE_DEBUG);
+    usb_resume_log_output();
 #endif
 
     xTaskCreate(usb_debug_listener_task, "USB debug listener", LISTENER_TASK_STACK_SIZE, NULL, 5, NULL);
@@ -477,8 +393,10 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize) {
         return;
     }
 
+    bsp_usb_mode_t mode = bsp_usb_device_mode_get();
+
     if (bufsize > 0) {
-        if (current_mode == USB_DEVICE) {
+        if (mode == BSP_USB_MODE_DEVICE) {
             badgelink_rxdata_cb(buffer, bufsize);
         }
 #if CFG_TUD_VENDOR_RX_BUFSIZE > 0
@@ -490,7 +408,7 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize) {
         uint32_t available;
         while ((available = tud_vendor_available()) > 0) {
             uint32_t read = tud_vendor_read(rx_buf, sizeof(rx_buf));
-            if (current_mode == USB_DEVICE) {
+            if (mode == BSP_USB_MODE_DEVICE) {
                 badgelink_rxdata_cb(rx_buf, read);
             }
         }
@@ -498,7 +416,8 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize) {
 }
 
 void usb_send_data(uint8_t const* data, size_t len) {
-    if (current_mode == USB_DEVICE) {
+    bsp_usb_mode_t mode = bsp_usb_device_mode_get();
+    if (mode == BSP_USB_MODE_DEVICE) {
         TickType_t last_progress = xTaskGetTickCount();
         while (len) {
             uint32_t max = tud_vendor_write(data, len);
@@ -514,7 +433,7 @@ void usb_send_data(uint8_t const* data, size_t len) {
             len  -= max;
             last_progress = xTaskGetTickCount();
         }
-    } else if (current_mode == USB_DEBUG) {
+    } else if (mode == BSP_USB_MODE_DEBUG) {
         size_t remaining_size = len;
         while (remaining_size) {
             size_t xfer_size = remaining_size;
@@ -535,22 +454,16 @@ void               usb_initialize(void) {
 void usb_send_data(uint8_t const* data, size_t len) {
 }
 
-usb_mode_t usb_mode_get(void) {
-    return USB_DEVICE;
-}
-
-void usb_mode_set(usb_mode_t mode) {
-}
-
 #endif
 
 void usb_mode_set_from_badgelink(badgelink_usb_mode_t mode) {
     switch (mode) {
         case BADGELINK_USB_MODE_DEBUG:
-            usb_mode_set(USB_DEBUG);
+            bsp_usb_device_mode_set(BSP_USB_MODE_DEBUG);
+            usb_resume_log_output();
             break;
         case BADGELINK_USB_MODE_DEVICE:
-            usb_mode_set(USB_DEVICE);
+            bsp_usb_device_mode_set(BSP_USB_MODE_DEVICE);
             break;
     }
 }

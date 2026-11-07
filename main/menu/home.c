@@ -8,6 +8,7 @@
 #include "bsp/display.h"
 #include "bsp/input.h"
 #include "bsp/power.h"
+#include "bsp/usb_device.h"
 #include "charging_mode.h"
 #include "common/device.h"
 #include "common/display.h"
@@ -65,13 +66,14 @@ typedef enum {
 } menu_home_action_t;
 
 static void toggle_usb_mode(void) {
-    if (usb_mode_get() == USB_DEVICE) {
+    if (bsp_usb_device_mode_get() == BSP_USB_MODE_DEVICE) {
         busy_dialog(get_icon(ICON_USB), "USB mode", "Debug mode", true);
-        usb_mode_set(USB_DEBUG);
+        bsp_usb_device_mode_set(BSP_USB_MODE_DEBUG);
+        usb_resume_log_output();
         vTaskDelay(pdMS_TO_TICKS(1000));
     } else {
         busy_dialog(get_icon(ICON_USB), "USB mode", "BadgeLink mode", true);
-        usb_mode_set(USB_DEVICE);
+        bsp_usb_device_mode_set(BSP_USB_MODE_DEVICE);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
