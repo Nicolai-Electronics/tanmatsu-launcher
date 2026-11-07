@@ -139,15 +139,13 @@ pax_buf_t* display_get_buffer(void) {
     return &fb;
 }
 
-void display_blit_buffer(pax_buf_t* fb) {
+esp_err_t display_blit_buffer(pax_buf_t* fb) {
     pax_join();
-    size_t display_h_res = 0, display_v_res = 0;
-    ESP_ERROR_CHECK(bsp_display_get_parameters(&display_h_res, &display_v_res, NULL, NULL));
-    ESP_ERROR_CHECK(bsp_display_blit(0, 0, display_h_res, display_v_res, pax_buf_get_pixels(fb)));
+    return bsp_display_blit(0, 0, display_h_res, display_v_res, pax_buf_get_pixels(fb));
 }
 
-void display_blit(void) {
-    display_blit_buffer(&fb);
+esp_err_t display_blit(void) {
+    return display_blit_buffer(&fb);
 }
 
 bool display_is_initialized(void) {
