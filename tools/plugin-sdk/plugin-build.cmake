@@ -97,7 +97,9 @@ function(build_tanmatsu_plugin PLUGIN_NAME PLUGIN_SOURCES)
             -lc
             -lgcc
             -o ${PLUGIN_OUTPUT}
-        DEPENDS ${PLUGIN_NAME}_obj
+        # The objects themselves: a target name alone in DEPENDS orders the
+        # build but never relinks the plugin when a source changes.
+        DEPENDS ${PLUGIN_NAME}_obj $<TARGET_OBJECTS:${PLUGIN_NAME}_obj>
         COMMENT "Linking plugin ${PLUGIN_NAME}.plugin"
         COMMAND_EXPAND_LISTS
     )

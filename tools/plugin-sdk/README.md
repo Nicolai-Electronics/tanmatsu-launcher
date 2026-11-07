@@ -102,7 +102,7 @@ This SDK allows you to build plugins for the Tanmatsu launcher.
 
 ## Plugin Types
 
-- **PLUGIN_TYPE_MENU**: Adds items to launcher menu
+- **PLUGIN_TYPE_MENU**: Runs when picked in the Plugins menu: `menu_select` gets the screen and input until it returns `false` (API 3.1)
 - **PLUGIN_TYPE_SERVICE**: Background service running in its own task
 - **PLUGIN_TYPE_HOOK**: Receives system events (app launch, WiFi, etc.)
 
@@ -127,7 +127,7 @@ Available permissions in `plugin.json`:
 - `display`: Access to display buffer
 - `input`: Access to input events
 - `storage`: File system access (sandboxed to plugin directory)
-- `network`: Network access
+- `network`: Network access; a menu plugin with it gets WiFi connected before it runs
 - `settings`: NVS settings access
 
 ## Debugging

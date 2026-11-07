@@ -20,7 +20,7 @@ extern "C" {
 // ============================================
 
 #define TANMATSU_PLUGIN_API_VERSION_MAJOR 3
-#define TANMATSU_PLUGIN_API_VERSION_MINOR 0
+#define TANMATSU_PLUGIN_API_VERSION_MINOR 1  // 3.1: menu plugins run when picked
 #define TANMATSU_PLUGIN_API_VERSION_PATCH 0
 #define TANMATSU_PLUGIN_API_VERSION \
     ((TANMATSU_PLUGIN_API_VERSION_MAJOR << 16) | \

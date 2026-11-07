@@ -21,6 +21,9 @@
 #include "pax_matrix.h"
 #include "pax_types.h"
 #include "plugin_manager.h"
+#include "wifi_connection.h"
+
+extern bool wifi_stack_get_initialized(void);
 
 static const char* TAG = "menu_plugins";
 
@@ -57,15 +60,57 @@ static void free_menu_icons(menu_t* menu) {
     }
 }
 
-static void render_footer(pax_buf_t* buffer, gui_theme_t* theme, bool has_plugins) {
+// What F2 (or Return) does to the selected plugin: a menu plugin runs, the
+// others load or unload.
+static const char* select_label(plugin_discovery_info_t* plugins, size_t plugin_count, menu_t* menu) {
+    if (plugin_count == 0) return "";
+    size_t idx = (size_t)(uintptr_t)menu_get_callback_args(menu, menu_get_position(menu));
+    if (idx >= plugin_count) return "";
+    if (plugins[idx].type == PLUGIN_TYPE_MENU) return "Run";
+    return plugins[idx].is_loaded ? "Unload" : "Load";
+}
+
+static void render_footer(pax_buf_t* buffer, gui_theme_t* theme, bool has_plugins, const char* select) {
     gui_element_icontext_t footer_left[] = {
         {get_icon(ICON_F1), "Back"},
-        {get_icon(ICON_F2), has_plugins ? "Load" : ""},
+        {get_icon(ICON_F2), has_plugins ? (char*)select : ""},
     };
     gui_element_icontext_t footer_right[] = {
         {get_icon(ICON_F3), has_plugins ? "Auto[A]" : ""},
     };
     gui_footer_draw(buffer, theme, footer_left, has_plugins ? 2 : 1, footer_right, has_plugins ? 1 : 0);
+}
+
+// Run a menu plugin: its menu_select gets the screen and the input queue,
+// and is called again for as long as it returns true. One that asks for the
+// "network" permission gets WiFi first (if that fails it runs anyway, and
+// can tell with asp_net_is_connected). Loaded for the run and unloaded after,
+// unless it was loaded already.
+static void run_menu_plugin(plugin_discovery_info_t* plugin) {
+    bool              was_loaded = plugin->is_loaded;
+    plugin_context_t* ctx = was_loaded ? plugin_manager_get_by_slug(plugin->slug) : plugin_manager_load(plugin->path);
+    if (ctx == NULL) {
+        message_dialog(get_icon(ICON_ERROR), "Error", "Failed to load plugin", "OK");
+        return;
+    }
+
+    if (ctx->registration == NULL || ctx->registration->entry.menu_select == NULL) {
+        message_dialog(get_icon(ICON_ERROR), "Error", "This plugin has nothing to run", "OK");
+    } else {
+        if (plugin->network && wifi_stack_get_initialized() && !wifi_connection_is_connected()) {
+            busy_dialog(get_icon(ICON_EXTENSION), plugin->name, "Connecting to WiFi...", true);
+            if (wifi_connect_try_all() != ESP_OK) {
+                ESP_LOGW(TAG, "Plugin %s: could not connect to WiFi", plugin->slug);
+            }
+        }
+        ESP_LOGI(TAG, "Running menu plugin %s", plugin->slug);
+        while (ctx->registration->entry.menu_select(ctx)) {
+        }
+    }
+
+    if (!was_loaded && !plugin_manager_unload(ctx)) {
+        ESP_LOGW(TAG, "Failed to unload plugin %s", plugin->slug);
+    }
 }
 
 void menu_plugins(void) {
@@ -141,7 +186,7 @@ void menu_plugins(void) {
             menu_render(buffer, &menu, position, theme, false);
         }
 
-        render_footer(buffer, theme, plugin_count > 0);
+        render_footer(buffer, theme, plugin_count > 0, select_label(plugins, plugin_count, &menu));
         display_blit_buffer(buffer);
 
         refresh = false;
@@ -166,7 +211,7 @@ void menu_plugins(void) {
                                     ((gui_element_icontext_t[]){{get_icon(ICON_EXTENSION), "Plugins"}}), 1, NULL, 0,
                                     NULL, 0);
                                 menu_render(buffer, &menu, position, theme, false);
-                                render_footer(buffer, theme, true);
+                                render_footer(buffer, theme, true, select_label(plugins, plugin_count, &menu));
                                 display_blit_buffer(buffer);
                             }
                             break;
@@ -179,7 +224,7 @@ void menu_plugins(void) {
                                     ((gui_element_icontext_t[]){{get_icon(ICON_EXTENSION), "Plugins"}}), 1, NULL, 0,
                                     NULL, 0);
                                 menu_render(buffer, &menu, position, theme, false);
-                                render_footer(buffer, theme, true);
+                                render_footer(buffer, theme, true, select_label(plugins, plugin_count, &menu));
                                 display_blit_buffer(buffer);
                             }
                             break;
@@ -192,7 +237,9 @@ void menu_plugins(void) {
                                 if (idx < plugin_count) {
                                     plugin_discovery_info_t* plugin = &plugins[idx];
 
-                                    if (plugin->is_loaded) {
+                                    if (plugin->type == PLUGIN_TYPE_MENU) {
+                                        run_menu_plugin(plugin);
+                                    } else if (plugin->is_loaded) {
                                         // Unload plugin
                                         plugin_context_t* ctx = plugin_manager_get_by_slug(plugin->slug);
                                         if (ctx) {
