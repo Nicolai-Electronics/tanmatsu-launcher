@@ -4,9 +4,11 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "hid_gamepad.h"
+#include "hid_gamepad_nav.h"
+#include "hid_mouse.h"
 #include "usb/hid_host.h"
 #include "usb/hid_usage_keyboard.h"
-#include "usb/hid_usage_mouse.h"
 #include "usb/usb_host.h"
 
 static const char* TAG = "hid_kbd";
@@ -235,26 +237,6 @@ static inline bool key_found(const uint8_t* const src, uint8_t key, unsigned int
         }
     }
     return false;
-}
-
-/**
- * @brief Makes new line depending on report output protocol type
- *
- * @param[in] proto Current protocol to output
- */
-static void hid_print_new_device_report_header(hid_protocol_t proto) {
-    static hid_protocol_t prev_proto_output = -1;
-
-    if (prev_proto_output != proto) {
-        prev_proto_output = proto;
-        if (proto == HID_PROTOCOL_MOUSE) {
-            ESP_LOGI(TAG, "Mouse");
-        } else if (proto == HID_PROTOCOL_KEYBOARD) {
-            ESP_LOGI(TAG, "Keyboard");
-        } else {
-            ESP_LOGI(TAG, "Generic");
-        }
-    }
 }
 
 static void inject_navigation_event(uint8_t hid_scancode, bool state) {
@@ -597,48 +579,6 @@ static void hid_host_keyboard_report_callback(const uint8_t* const data, const i
 }
 
 /**
- * @brief USB HID Host Mouse Interface report callback handler
- *
- * @param[in] data    Pointer to input report data buffer
- * @param[in] length  Length of input report data buffer
- */
-static void hid_host_mouse_report_callback(const uint8_t* const data, const int length) {
-    hid_mouse_input_report_boot_t* mouse_report = (hid_mouse_input_report_boot_t*)data;
-
-    if (length < sizeof(hid_mouse_input_report_boot_t)) {
-        return;
-    }
-
-    static int x_pos = 0;
-    static int y_pos = 0;
-
-    // Calculate absolute position from displacement
-    x_pos += mouse_report->x_displacement;
-    y_pos += mouse_report->y_displacement;
-
-    hid_print_new_device_report_header(HID_PROTOCOL_MOUSE);
-
-    ESP_LOGI(TAG, "X: %06d\tY: %06d\t|%c|%c|", x_pos, y_pos, (mouse_report->buttons.button1 ? 'o' : ' '),
-             (mouse_report->buttons.button2 ? 'o' : ' '));
-}
-
-/**
- * @brief USB HID Host Generic Interface report callback handler
- *
- * 'generic' means anything else than mouse or keyboard
- *
- * @param[in] data    Pointer to input report data buffer
- * @param[in] length  Length of input report data buffer
- */
-static void hid_host_generic_report_callback(const uint8_t* const data, const int length) {
-    hid_print_new_device_report_header(HID_PROTOCOL_NONE);
-    for (int i = 0; i < length; i++) {
-        // printf("%02X", data[i]);
-    }
-    // putchar('\r');
-}
-
-/**
  * @brief USB HID Host interface callback
  *
  * @param[in] hid_device_handle  HID Device handle
@@ -656,19 +596,26 @@ void hid_host_interface_callback(hid_host_device_handle_t hid_device_handle, con
         case HID_HOST_INTERFACE_EVENT_INPUT_REPORT:
             ESP_ERROR_CHECK(hid_host_device_get_raw_input_report_data(hid_device_handle, data, 64, &data_length));
 
-            if (HID_SUBCLASS_BOOT_INTERFACE == dev_params.sub_class) {
-                if (HID_PROTOCOL_KEYBOARD == dev_params.proto) {
+            if (HID_PROTOCOL_KEYBOARD == dev_params.proto) {
+                // The keyboard parser expects boot protocol reports
+                if (HID_SUBCLASS_BOOT_INTERFACE == dev_params.sub_class) {
                     hid_host_keyboard_report_callback(data, data_length);
-                } else if (HID_PROTOCOL_MOUSE == dev_params.proto) {
-                    hid_host_mouse_report_callback(data, data_length);
                 }
+            } else if (HID_PROTOCOL_MOUSE == dev_params.proto) {
+                hid_mouse_handle_report(data, data_length);
             } else {
-                hid_host_generic_report_callback(data, data_length);
+                // Anything that is neither a keyboard nor a mouse is assumed to be a gamepad
+                hid_gamepad_handle_report(data, data_length);
             }
 
             break;
         case HID_HOST_INTERFACE_EVENT_DISCONNECTED:
             ESP_LOGI(TAG, "HID Device, protocol '%s' DISCONNECTED", hid_proto_name_str[dev_params.proto]);
+            if (HID_PROTOCOL_NONE == dev_params.proto) {
+                hid_gamepad_disconnect();
+            } else if (HID_PROTOCOL_MOUSE == dev_params.proto) {
+                hid_mouse_disconnect();
+            }
             ESP_ERROR_CHECK(hid_host_device_close(hid_device_handle));
             break;
         case HID_HOST_INTERFACE_EVENT_TRANSFER_ERROR:
@@ -679,6 +626,36 @@ void hid_host_interface_callback(hid_host_device_handle_t hid_device_handle, con
                      hid_proto_name_str[dev_params.proto], event);
             break;
     }
+}
+
+// Largest enable report any of the gamepad quirks sends
+#define MAX_ENABLE_REPORT_LENGTH 8
+
+/**
+ * @brief Nudge a gamepad that has to be told to start sending input reports
+ *
+ * @param[in] hid_device_handle  HID Device handle
+ * @param[in] quirk              Quirks of this gamepad, may be NULL
+ */
+static void hid_host_gamepad_start_reporting(hid_host_device_handle_t   hid_device_handle,
+                                             const hid_gamepad_quirk_t* quirk) {
+    uint8_t report[MAX_ENABLE_REPORT_LENGTH];
+
+    if (quirk == NULL || quirk->enable_report == NULL) {
+        return;
+    }
+
+    if (quirk->enable_report_length > sizeof(report)) {
+        ESP_LOGE(TAG, "Enable report of the %s does not fit", quirk->name);
+        return;
+    }
+
+    // The request takes a writable buffer
+    memcpy(report, quirk->enable_report, quirk->enable_report_length);
+
+    esp_err_t err = hid_class_request_set_report(hid_device_handle, HID_REPORT_TYPE_FEATURE, quirk->enable_report_id,
+                                                 report, quirk->enable_report_length);
+    ESP_LOGI(TAG, "Asked the %s to start reporting: %s", quirk->name, esp_err_to_name(err));
 }
 
 /**
@@ -698,16 +675,34 @@ void hid_host_device_event(hid_host_device_handle_t hid_device_handle, const hid
 
             const hid_host_device_config_t dev_config = {.callback = hid_host_interface_callback, .callback_arg = NULL};
 
-            if (dev_params.proto != HID_PROTOCOL_NONE) {
-                ESP_ERROR_CHECK(hid_host_device_open(hid_device_handle, &dev_config));
-                if (HID_SUBCLASS_BOOT_INTERFACE == dev_params.sub_class) {
+            ESP_ERROR_CHECK(hid_host_device_open(hid_device_handle, &dev_config));
+            if (HID_SUBCLASS_BOOT_INTERFACE == dev_params.sub_class) {
+                if (HID_PROTOCOL_KEYBOARD == dev_params.proto) {
                     ESP_ERROR_CHECK(hid_class_request_set_protocol(hid_device_handle, HID_REPORT_PROTOCOL_BOOT));
-                    if (HID_PROTOCOL_KEYBOARD == dev_params.proto) {
-                        ESP_ERROR_CHECK(hid_class_request_set_idle(hid_device_handle, 0, 0));
-                    }
+                    ESP_ERROR_CHECK(hid_class_request_set_idle(hid_device_handle, 0, 0));
+                } else if (HID_PROTOCOL_MOUSE == dev_params.proto) {
+                    // Report protocol so mice report their scroll wheel as well
+                    hid_class_request_set_protocol(hid_device_handle, HID_REPORT_PROTOCOL_REPORT);
                 }
-                ESP_ERROR_CHECK(hid_host_device_start(hid_device_handle));
             }
+            if (HID_PROTOCOL_MOUSE == dev_params.proto) {
+                // The report layout differs per mouse, so learn it from the report descriptor
+                size_t   report_desc_len = 0;
+                uint8_t* report_desc     = hid_host_get_report_descriptor(hid_device_handle, &report_desc_len);
+                hid_mouse_connect(report_desc, report_desc_len);
+            }
+            if (HID_PROTOCOL_NONE == dev_params.proto) {
+                // The report layout differs per gamepad, so learn it from the report descriptor
+                size_t              report_desc_len = 0;
+                uint8_t*            report_desc = hid_host_get_report_descriptor(hid_device_handle, &report_desc_len);
+                hid_host_dev_info_t info;
+                memset(&info, 0, sizeof(info));
+                hid_host_get_device_info(hid_device_handle, &info);
+                ESP_LOGI(TAG, "Gamepad %04X:%04X", info.VID, info.PID);
+                hid_gamepad_connect(report_desc, report_desc_len, info.VID, info.PID);
+                hid_host_gamepad_start_reporting(hid_device_handle, hid_gamepad_find_quirk(info.VID, info.PID));
+            }
+            ESP_ERROR_CHECK(hid_host_device_start(hid_device_handle));
             break;
         default:
             break;
